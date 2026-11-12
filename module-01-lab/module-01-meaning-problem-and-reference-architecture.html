@@ -1,0 +1,1452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 1: The enterprise meaning problem and reference architecture</title>
+<meta name="description" content="Module 1 of Enterprise Semantic Intelligence (StackRoute): why the same term gives different numbers, six kinds of semantic inconsistency, three kinds of authority, semantic architecture patterns, the reference architecture, text-to-SQL failures on raw schemas, the three evaluation sets, architecture decision records, a case study and hands-on exercises.">
+<style>
+/* ---------- design tokens ---------- */
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --card2:#F9FAFB;
+  --ink:#1B2333; --ink2:#3C465A; --muted:#5E687D; --rule:#D5DAE3; --rule2:#E7EAF0;
+  --code-bg:#161C2A; --code-ink:#E3E8F4; --code-mute:#8D97AF;
+  --biz:#6A3FC0; --biz-ink:#4A2A8E; --biz-t:#ECE4FB;
+  --tech:#1F5FC2; --tech-ink:#17468F; --tech-t:#DFEAFB;
+  --drv:#0A7C72; --drv-ink:#07594F; --drv-t:#D5F1ED;
+  --prob:#A86E00; --prob-ink:#6B4700; --prob-t:#FFEFC7;
+  --pol:#BF3049; --pol-ink:#8B1D32; --pol-t:#FAE1E6;
+  --usr:#4B556B; --usr-t:#E7EAF0;
+  --focus:#1F5FC2;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#111726; --card:#19213A; --card2:#1E2742;
+  --ink:#E8ECF6; --ink2:#C4CBDE; --muted:#9FA8C0; --rule:#2E3859; --rule2:#27304F;
+  --code-bg:#0C1120;
+  --biz:#A88CFF; --biz-ink:#CBBAFF; --biz-t:#2A2150;
+  --tech:#6F9BFF; --tech-ink:#A9C2FF; --tech-t:#17284F;
+  --drv:#2FC3AF; --drv-ink:#80E0D3; --drv-t:#0F3530;
+  --prob:#EFB23A; --prob-ink:#F5CC76; --prob-t:#3A2E12;
+  --pol:#FF6F87; --pol-ink:#FFA4B4; --pol-t:#3F1B27;
+  --usr:#B2B9D4; --usr-t:#262E52;
+  --focus:#8FB0FF;
+  color-scheme:dark;
+}
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.09rem;line-height:1.66;overflow-x:hidden}
+a{color:var(--tech-ink);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+code,pre,kbd{font-family:var(--mono)}
+p code,li code,td code,figcaption code,.note code{font-size:.88em;background:var(--rule2);padding:.08em .36em;border-radius:5px;overflow-wrap:anywhere}
+h1,h2,h3,h4{line-height:1.14;margin:0;color:var(--ink)}
+h2{font-size:clamp(1.8rem,3.2vw,2.5rem);font-weight:800;letter-spacing:-.02em}
+h3{font-size:clamp(1.35rem,2.2vw,1.7rem);font-weight:800;margin-top:3rem}
+h4{font-size:1.16rem;font-weight:700;margin-top:1.8rem}
+p{margin:1rem 0} ul,ol{padding-left:1.4rem} li{margin:.4rem 0}
+/* ---------- layout ---------- */
+.shell{display:grid;grid-template-columns:286px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow:auto;background:var(--card);border-right:1px solid var(--rule);padding:26px 20px 36px}
+.main{min-width:0}
+.wrap{max-width:70rem;margin:0 auto;padding:0 38px}
+.prose{max-width:46rem}
+.sec{padding:66px 0 36px;border-top:1px solid var(--rule)}
+.sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.sec-num{font-weight:800;font-size:clamp(1.8rem,3.2vw,2.5rem);color:var(--muted)}
+.lede{font-size:1.22rem;color:var(--ink2);max-width:45rem}
+@media (max-width:1080px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:min(320px,86vw);z-index:60;transform:translateX(-102%);transition:transform .25s}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(8,12,28,.45)}
+  .wrap{padding:0 20px}
+}
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:58px}
+.where{flex:1;min-width:0;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--tech)}
+.ib{border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:10px;height:38px;padding:0 12px;font:600 .93rem var(--body);cursor:pointer}
+.ib:hover{border-color:var(--ink2)}
+#menuBtn{display:none}
+@media (max-width:1080px){#menuBtn{display:inline-block}}
+/* ---------- sidebar ---------- */
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.brand svg{width:42px;height:42px;flex:none}
+.brand b{display:block;font-size:1.02rem;line-height:1.2}
+.brand span{font-size:.85rem;color:var(--muted)}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:0}
+.toc a{display:grid;grid-template-columns:2.7rem 1fr;gap:4px;padding:7px 10px;border-radius:10px;color:var(--ink2);text-decoration:none;font-size:.95rem;line-height:1.3}
+.toc a .n{font-weight:700;color:var(--muted)}
+.toc a:hover{background:var(--card2);color:var(--ink)}
+.toc a.active{background:var(--tech-t);color:var(--ink)}
+.toc a.active .n{color:var(--tech-ink)}
+.toc a.done .n{color:var(--drv)}
+.toc .sub a{font-size:.88rem;color:var(--muted);padding:4px 10px}
+.legend{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px;font-size:.87rem;color:var(--muted);display:grid;gap:6px}
+.legend span{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:4px;border:2px solid;flex:none}
+/* ---------- hero ---------- */
+.hero{padding:58px 0 30px}
+.hero .line{font-weight:700;color:var(--muted);margin-bottom:16px}
+.hero h1{font-size:clamp(2.5rem,6vw,4.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.02}
+.hero .sub{font-size:clamp(1.12rem,1.7vw,1.34rem);color:var(--ink2);max-width:46rem;margin-top:20px}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.pill{display:inline-flex;flex-wrap:wrap;gap:4px 8px;align-items:center;border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:6px 14px;font-size:.93rem;color:var(--ink2)}
+.pill code{background:none;padding:0}
+/* ---------- figures ---------- */
+.fig{margin:2rem 0 2.3rem;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:20px 20px 12px}
+.fig .scroll{overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;min-width:640px}
+.fig figcaption{font-size:.98rem;color:var(--muted);border-top:1px solid var(--rule2);margin-top:12px;padding:12px 4px 4px}
+.fig figcaption b{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .t{font-size:18px;font-weight:700}
+svg .tl{font-size:22px;font-weight:800}
+svg .ts{font-size:15px;fill:var(--muted)}
+svg .tm{font-size:15.5px;fill:var(--ink2)}
+svg .lab{font-size:14.5px;font-weight:700;fill:var(--ink2)}
+svg .mono{font-family:var(--mono);font-size:14px}
+svg .bx{fill:var(--card);stroke:var(--rule);stroke-width:2}
+svg .bx2{fill:var(--card2);stroke:var(--rule);stroke-width:2}
+svg .biz{fill:var(--biz-t);stroke:var(--biz);stroke-width:2.5}
+svg .tech{fill:var(--tech-t);stroke:var(--tech);stroke-width:2.5}
+svg .drv{fill:var(--drv-t);stroke:var(--drv);stroke-width:2.5}
+svg .prob{fill:var(--prob-t);stroke:var(--prob);stroke-width:2.5}
+svg .pol{fill:var(--pol-t);stroke:var(--pol);stroke-width:2.5}
+svg .usr{fill:var(--usr-t);stroke:var(--usr);stroke-width:2.5}
+svg .asst{fill:var(--ink);stroke:var(--ink);stroke-width:2}
+svg text.on{fill:var(--bg)}
+svg .ln{stroke:var(--ink2);stroke-width:2.5;fill:none}
+svg .ln-pol{stroke:var(--pol);stroke-width:3;fill:none}
+svg .ln-tech{stroke:var(--tech);stroke-width:3;fill:none}
+svg .ln-drv{stroke:var(--drv);stroke-width:3;fill:none}
+svg .ln-prob{stroke:var(--prob);stroke-width:3;fill:none}
+svg .dash{stroke-dasharray:7 7}
+svg .zone{fill:none;stroke:var(--rule);stroke-width:2;stroke-dasharray:8 6}
+svg .ah{fill:var(--ink2)} svg .ah-pol{fill:var(--pol)} svg .ah-tech{fill:var(--tech)} svg .ah-drv{fill:var(--drv)} svg .ah-prob{fill:var(--prob)}
+svg .ink-pol{fill:var(--pol-ink)} svg .ink-tech{fill:var(--tech-ink)} svg .ink-drv{fill:var(--drv-ink)} svg .ink-prob{fill:var(--prob-ink)} svg .ink-biz{fill:var(--biz-ink)}
+svg .pick{cursor:pointer;outline:none}
+svg .pick:focus-visible rect{stroke:var(--focus);stroke-width:5}
+svg.dim .pick{opacity:.4;transition:opacity .2s}
+svg.dim .pick.sel{opacity:1}
+svg .pick.sel rect{stroke-width:4.5}
+/* ---------- callouts ---------- */
+.note{border:1px solid var(--rule);background:var(--card);border-radius:14px;padding:16px 20px;margin:1.5rem 0;max-width:46rem}
+.note h5{margin:0 0 6px;font:700 1rem var(--body);display:flex;align-items:center;gap:10px}
+.note p{margin:.5rem 0}.note p:last-child{margin-bottom:0}
+.note .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:.9rem;font-weight:800;background:var(--usr);color:var(--card)}
+.note.like{background:var(--prob-t);border-color:color-mix(in srgb,var(--prob) 40%,transparent)}
+.note.like .ic{background:var(--prob);color:#fff}
+.note.word{background:var(--tech-t);border-color:color-mix(in srgb,var(--tech) 35%,transparent)}
+.note.word .ic{background:var(--tech);color:#fff}
+.note.warn{background:var(--pol-t);border-color:color-mix(in srgb,var(--pol) 35%,transparent)}
+.note.warn .ic{background:var(--pol);color:#fff}
+.note.lab{background:var(--drv-t);border-color:color-mix(in srgb,var(--drv) 35%,transparent)}
+.note.lab .ic{background:var(--drv);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.5rem 0}
+.two .note{margin:0}
+.two>*,.g2>*{min-width:0}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+/* ---------- steps ---------- */
+.steps{list-style:none;padding:0;margin:1.5rem 0;display:grid;gap:12px;max-width:52rem}
+.steps>li{display:grid;grid-template-columns:50px 1fr;gap:14px;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin:0}
+.steps .k{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:1.1rem;background:var(--usr-t)}
+.steps h4{margin:2px 0 4px;font-size:1.1rem}
+.steps p{margin:.3rem 0}
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto;margin:1.5rem 0;border:1px solid var(--rule);border-radius:14px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.98rem;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:11px 15px;border-bottom:1px solid var(--rule2)}
+thead th{background:var(--card2);font-weight:700}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{font-weight:700}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.82rem;font-weight:700}
+.tag.biz{background:var(--biz-t);color:var(--biz-ink)} .tag.tech{background:var(--tech-t);color:var(--tech-ink)} .tag.drv{background:var(--drv-t);color:var(--drv-ink)} .tag.prob{background:var(--prob-t);color:var(--prob-ink)} .tag.pol{background:var(--pol-t);color:var(--pol-ink)} .tag.usr{background:var(--usr-t);color:var(--ink2)}
+/* ---------- code ---------- */
+.code{margin:1.3rem 0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;overflow:hidden;max-width:56rem}
+.code .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);font:600 .86rem var(--mono);color:var(--code-mute)}
+.code pre{margin:0;padding:14px 16px;overflow-x:auto;font-size:.92rem;line-height:1.58}
+.copy{background:transparent;border:1px solid rgba(255,255,255,.22);color:#DCE2F5;border-radius:8px;padding:3px 10px;font:600 .8rem var(--body);cursor:pointer}
+.c-k{color:#FFB86B}.c-s{color:#9BE29B}.c-c{color:#8D97AF;font-style:italic}.c-n{color:#FFD580}.c-bad{color:#FF8FA3}.c-ok{color:#7FE0A0}
+/* ---------- glossary terms ---------- */
+.kw{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:help;border-bottom:2px dotted var(--tech)}
+.kw:hover,.kw:focus-visible{background:var(--tech-t);border-radius:3px}
+.tip{position:absolute;z-index:80;max-width:340px;background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:12px;font-size:.93rem;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .15s}
+.tip.show{opacity:1}
+.tip b{display:block;margin-bottom:3px;font-size:1.02rem}
+/* ---------- simulations ---------- */
+.sim{margin:2rem 0 2.4rem;border:2px solid var(--rule);border-radius:18px;background:var(--card);overflow:hidden}
+.sim-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 20px;background:var(--card2);border-bottom:1px solid var(--rule)}
+.sim-h h4{margin:0;font-size:1.1rem}
+.sim-h .try{font-size:.83rem;font-weight:700;color:var(--drv-ink);background:var(--drv-t);border-radius:999px;padding:3px 10px}
+.sim-b{padding:18px 20px}
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:13px}
+.chip{border:1.5px solid var(--rule);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:600 .93rem var(--body);cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--ink2)}
+.chip[aria-pressed="true"]{background:var(--tech-t);border-color:var(--tech)}
+.btn{border:1.5px solid var(--ink2);background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 16px;font:700 .95rem var(--body);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.out{background:var(--card2);border:1px solid var(--rule);border-radius:12px;padding:13px 15px;font-size:.98rem}
+.out p{margin:.4rem 0}.out p:first-child{margin-top:0}.out p:last-child{margin-bottom:0}
+.lbl{font-size:.88rem;font-weight:700;color:var(--muted);margin:0 0 6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.g2{grid-template-columns:1fr}}
+.field{display:grid;gap:6px;font-weight:700;font-size:.96rem;margin-bottom:10px}
+.field .v{font-family:var(--mono);color:var(--tech-ink)}
+input[type=range]{width:100%;accent-color:var(--tech)}
+select,textarea,input[type=text]{font:inherit;font-weight:400;border:1.5px solid var(--rule);border-radius:10px;padding:8px 10px;background:var(--card);color:var(--ink);width:100%}
+.big{font-size:2.3rem;font-weight:800;line-height:1.1}
+.rows{display:grid;gap:5px;font-size:.9rem}
+.row{display:grid;grid-template-columns:3.4rem 1fr 5.2rem 5.2rem 5rem;gap:8px;align-items:center;padding:5px 10px;border:1.5px solid var(--rule);border-radius:9px;background:var(--card)}
+.row.hd{border:0;background:none;font-weight:700;color:var(--muted)}
+.row.in{border-color:var(--tech);background:var(--tech-t)}
+.row.dup{border-style:dashed}
+.ci{position:relative;height:34px;background:var(--rule2);border-radius:8px;margin:6px 0 2px}
+.ci i{position:absolute;top:6px;bottom:6px;border-radius:6px}
+.ci b{position:absolute;top:0;bottom:0;width:3px;background:var(--ink)}
+.axis{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.verdict{font-weight:700}
+.verdict.ok{color:var(--drv-ink)} .verdict.no{color:var(--pol-ink)}
+/* ---------- quiz, glossary, refs ---------- */
+.quiz{display:grid;gap:16px;max-width:52rem}
+.q{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:15px 17px}
+.q p{margin:.2rem 0 .8rem;font-weight:700}
+.q .opts{display:grid;gap:8px}
+.q button{text-align:left;border:1.5px solid var(--rule);background:var(--card2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:.98rem;cursor:pointer}
+.q button.right{border-color:var(--drv);background:var(--drv-t)}
+.q button.wrong{border-color:var(--pol);background:var(--pol-t)}
+.q .why{display:none;margin-top:10px;color:var(--ink2);font-size:.98rem}
+.q.done .why{display:block}
+.gloss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px;margin:1.5rem 0}
+.gloss div{border-bottom:1px solid var(--rule2);padding:8px 0}
+.gloss p{margin:.2rem 0 0;font-size:.97rem;color:var(--ink2)}
+@media (max-width:760px){.gloss{grid-template-columns:1fr}}
+.refs{max-width:52rem;font-size:.97rem}
+.refs li{margin:.7rem 0}
+footer{padding:44px 0 72px;color:var(--muted);font-size:.93rem;border-top:1px solid var(--rule)}
+@media print{.side,.top,.ctrls{display:none!important}.shell{display:block}.fig,.sim,.note{break-inside:avoid}body{background:#fff}}
+
+#handson .tbl td code{white-space:nowrap}
+.drill{display:grid;gap:12px}
+.drill .q p{font-weight:400;margin:.1rem 0 .7rem}
+.drill .q .opts{display:flex;flex-wrap:wrap;gap:8px}
+.drill.own .q .opts{display:grid}
+.drill .score{font-weight:700;color:var(--muted);font-size:.93rem}
+.rec{display:block;white-space:pre-wrap;font-family:var(--mono);font-size:.84rem;background:var(--card2);border:1px solid var(--rule2);border-radius:8px;padding:8px 10px;margin:8px 0;overflow-x:auto}
+details.note summary{list-style-position:inside}
+.row.dup{background:var(--biz-t);border-color:var(--biz)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-pol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-pol" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-tech" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-tech" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-drv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-drv" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-prob" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-prob" d="M0,0 L10,5 L0,10 z"/></marker>
+</defs></svg>
+<div class="shell">
+<aside class="side" id="side" aria-label="Module contents">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="var(--ink)"/><circle cx="15" cy="16" r="5" fill="var(--biz)"/><circle cx="33" cy="16" r="5" fill="var(--tech)"/><circle cx="24" cy="33" r="5" fill="var(--drv)"/><path d="M15 16 L33 16 L24 33 Z" fill="none" stroke="var(--bg)" stroke-width="2.5"/></svg>
+    <div><b>Enterprise Semantic Intelligence</b><span>StackRoute, an NIIT venture</span></div>
+  </div>
+  <nav><ol class="toc" id="toc">
+    <li><a href="#drift"><span class="n">1.0</span><span>Same term, different numbers</span></a></li>
+    <li><a href="#six"><span class="n">1.1</span><span>Six kinds of semantic inconsistency</span></a></li>
+    <li><a href="#authority"><span class="n">1.2</span><span>Authority: who may be trusted for what</span></a></li>
+    <li class="sub"><a href="#three-authorities"><span class="n"></span><span>Three kinds of authority</span></a></li>
+    <li class="sub"><a href="#prob"><span class="n"></span><span>Authoritative vs probabilistic</span></a></li>
+    <li><a href="#patterns"><span class="n">1.3</span><span>Semantic architecture patterns</span></a></li>
+    <li><a href="#reference"><span class="n">1.4</span><span>The reference architecture</span></a></li>
+    <li><a href="#llm"><span class="n">1.5</span><span>Why LLMs raise the stakes</span></a></li>
+    <li class="sub"><a href="#evalsets"><span class="n"></span><span>Three evaluation sets</span></a></li>
+    <li class="sub"><a href="#wilson"><span class="n"></span><span>Uncertainty on 40 questions</span></a></li>
+    <li><a href="#adr"><span class="n">1.6</span><span>Architecture decision records</span></a></li>
+    <li><a href="#case"><span class="n">1.7</span><span>Case study: the retail dispute</span></a></li>
+    <li><a href="#handson"><span class="n">1.8</span><span>Hands-on</span></a></li>
+    <li><a href="#recap"><span class="n">1.9</span><span>Recap and checkpoint quiz</span></a></li>
+    <li><a href="#refs"><span class="n">Ref</span><span>References</span></a></li>
+    <li><a href="#glossary"><span class="n">A-Z</span><span>Glossary</span></a></li>
+  </ol></nav>
+  <div class="legend">
+    <div>Colour code used in the architecture diagrams</div>
+    <span><i class="sw" style="background:var(--biz-t);border-color:var(--biz)"></i>Business authority</span>
+    <span><i class="sw" style="background:var(--tech-t);border-color:var(--tech)"></i>Technical authority</span>
+    <span><i class="sw" style="background:var(--drv-t);border-color:var(--drv)"></i>Derived from other assets</span>
+    <span><i class="sw" style="background:var(--prob-t);border-color:var(--prob)"></i>Probabilistic</span>
+    <span><i class="sw" style="background:var(--pol-t);border-color:var(--pol)"></i>Policy, access and risk</span>
+    <span><i class="sw" style="background:var(--ink);border-color:var(--ink)"></i>The assistant</span>
+  </div>
+</aside>
+<div class="main">
+<header class="top"><div class="wrap">
+  <button class="ib" id="menuBtn" aria-controls="side" aria-expanded="false">Contents</button>
+  <div class="where" id="where">Module 1: The enterprise meaning problem</div>
+  <button class="ib" id="themeBtn" aria-label="Switch between light and dark theme">Theme</button>
+</div><div class="bar" id="bar"></div></header>
+
+<div class="wrap">
+<section class="hero" aria-labelledby="title">
+  <div class="line">Enterprise Semantic Intelligence, Module 1 of 8, 1.5 hours</div>
+  <h1 id="title">The enterprise meaning problem</h1>
+  <p class="sub">This module starts from a dispute between departments of one retailer: three of them report different counts of active customers from the same warehouse, and every query is valid. It names the ways business meaning goes wrong, introduces the architecture that the remaining seven modules build, and explains how the programme measures whether that architecture helps.</p>
+  <div class="pills">
+    <span class="pill">Case study: the retail "active customer" dispute</span>
+    <span class="pill">Outputs: failure classification, component ownership, ADR 1</span>
+    <span class="pill">Hands-on: four exercises in section 1.8</span>
+  </div>
+  <figure class="fig" style="margin-top:30px">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="The journey of this module in five stops: the dispute, six kinds of inconsistency, three kinds of authority, the reference architecture, and a measured baseline.">
+      <line x1="110" y1="110" x2="990" y2="110" stroke="var(--rule)" stroke-width="10" stroke-linecap="round"/>
+      <g><circle cx="110" cy="110" r="30" class="pol"/><text x="110" y="117" text-anchor="middle" class="t">1</text><text x="110" y="172" text-anchor="middle" class="t">The dispute</text><text x="110" y="196" text-anchor="middle" class="ts">one term,</text><text x="110" y="216" text-anchor="middle" class="ts">three numbers</text></g>
+      <g><circle cx="330" cy="110" r="30" class="usr"/><text x="330" y="117" text-anchor="middle" class="t">2</text><text x="330" y="172" text-anchor="middle" class="t">Six kinds</text><text x="330" y="196" text-anchor="middle" class="ts">a name for</text><text x="330" y="216" text-anchor="middle" class="ts">each failure</text></g>
+      <g><circle cx="550" cy="110" r="30" class="biz"/><text x="550" y="117" text-anchor="middle" class="t">3</text><text x="550" y="172" text-anchor="middle" class="t">Authority</text><text x="550" y="196" text-anchor="middle" class="ts">who may be</text><text x="550" y="216" text-anchor="middle" class="ts">trusted for what</text></g>
+      <g><circle cx="770" cy="110" r="30" class="tech"/><text x="770" y="117" text-anchor="middle" class="t">4</text><text x="770" y="172" text-anchor="middle" class="t">Architecture</text><text x="770" y="196" text-anchor="middle" class="ts">nine components,</text><text x="770" y="216" text-anchor="middle" class="ts">one owner each</text></g>
+      <g><circle cx="990" cy="110" r="33" fill="var(--ink)"/><text x="990" y="117" text-anchor="middle" class="t on">5</text><text x="990" y="172" text-anchor="middle" class="t">Baseline</text><text x="990" y="196" text-anchor="middle" class="ts">a score to improve</text><text x="990" y="216" text-anchor="middle" class="ts">module by module</text></g>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.1.</b> The five parts of this module, in the order they are covered.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="drift" aria-labelledby="drift-h">
+  <div class="sec-head"><span class="sec-num">1.0</span><h2 id="drift-h">Same term, different numbers</h2></div>
+  <p class="lede">The lab enterprise is a retailer. Its marketing, finance and customer-service teams each report a different number of active customers, although all three read from the same warehouse.</p>
+  <div class="prose">
+    <p>In the scenario used through this programme, the second-quarter business review opens with marketing reporting 1.42 million active customers, finance reporting 1.18 million and the customer-service dashboard showing 1.61 million. These figures are written for teaching, and the lab dataset is built to contain the same disagreement at a smaller scale. When the teams compare their SQL, each query turns out to be valid, so the argument cannot be settled by finding a bug.</p>
+    <p>The teams disagree because they have never agreed on what "active" means, which period it covers or what counts as one customer. A warehouse stores the values and has no place to record that agreement, so each dashboard and spreadsheet carries its author's own reading. An AI assistant pointed at the same tables has to pick a reading as well, and it will do so without telling anyone.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 430" role="img" aria-label="One customers table feeds three teams. Marketing counts logins in the last 90 days and reports 1.42 million. Finance counts customers with a paid order in the last 12 months and reports 1.18 million. Customer service counts accounts with status ACTIVE and reports 1.61 million.">
+      <rect x="400" y="20" width="300" height="92" rx="16" class="bx" style="stroke:var(--ink2);stroke-width:2.5"/>
+      <text x="550" y="58" text-anchor="middle" class="tl">Warehouse</text>
+      <text x="550" y="86" text-anchor="middle" class="ts">customers, orders, sessions</text>
+      <path d="M470 112 L210 196" class="ln" marker-end="url(#ah)"/><path d="M550 112 V196" class="ln" marker-end="url(#ah)"/><path d="M630 112 L890 196" class="ln" marker-end="url(#ah)"/>
+      <rect x="40" y="200" width="320" height="200" rx="16" class="bx2"/>
+      <text x="62" y="234" class="t">Marketing</text>
+      <text x="62" y="262" class="tm">"Active" = logged in or opened</text>
+      <text x="62" y="284" class="tm">the app in the last 90 days</text>
+      <text x="62" y="312" class="ts">counted per CRM profile</text>
+      <text x="62" y="372" class="tl ink-pol">1.42 million</text>
+      <rect x="390" y="200" width="320" height="200" rx="16" class="bx2"/>
+      <text x="412" y="234" class="t">Finance</text>
+      <text x="412" y="262" class="tm">"Active" = at least one paid, non-</text>
+      <text x="412" y="284" class="tm">refunded order in the last 12 months</text>
+      <text x="412" y="312" class="ts">counted per ERP billing account</text>
+      <text x="412" y="372" class="tl ink-pol">1.18 million</text>
+      <rect x="740" y="200" width="320" height="200" rx="16" class="bx2"/>
+      <text x="762" y="234" class="t">Customer service</text>
+      <text x="762" y="262" class="tm">"Active" = account status</text>
+      <text x="762" y="284" class="tm">flag is ACTIVE, any age</text>
+      <text x="762" y="312" class="ts">counted per account row</text>
+      <text x="762" y="372" class="tl ink-pol">1.61 million</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.2.</b> One warehouse, three teams and three counts of active customers. The definitions differ in which behaviour counts, which period applies and what is counted as one customer.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Net revenue drifts in a similar way. The table below is also a teaching scenario. It shows one term computed in three places, where each place applies rules that the one before it does not know about. A rule added to the finance workbook in March does not reach the dashboard or any tool that reads the warehouse directly.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Where "net revenue" is computed</th><th>What it subtracts from gross sales</th><th>Who reads it</th></tr></thead>
+    <tbody>
+      <tr><td>Warehouse: a dbt model</td><td>Returns</td><td>Analysts writing SQL</td></tr>
+      <tr><td>BI: a Metabase measure</td><td>Returns and discounts</td><td>Sales managers, on a dashboard</td></tr>
+      <tr><td>Spreadsheet: the finance month-end workbook</td><td>Returns, discounts and tax, converted at the month-end exchange rate</td><td>The CFO's office</td></tr>
+    </tbody>
+  </table></div>
+  <div class="sim" id="sim-def">
+    <div class="sim-h"><span class="try">Try it</span><h4>Count "active customers" three ways on 12 illustrative rows</h4></div>
+    <div class="sim-b">
+      <div class="ctrls" role="group" aria-label="Choose a definition">
+        <button class="chip" data-def="mkt" aria-pressed="true">Marketing: seen in 90 days</button>
+        <button class="chip" data-def="fin" aria-pressed="false">Finance: paid order in 12 months</button>
+        <button class="chip" data-def="svc" aria-pressed="false">Service: status is ACTIVE</button>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:700;font-size:.93rem"><input type="checkbox" id="def-golden"> Count people, using the golden key</label>
+      </div>
+      <div class="g2" style="align-items:start">
+        <div class="rows" id="def-rows"></div>
+        <div>
+          <p class="lbl">Active customers under this definition</p>
+          <div class="big" id="def-n"></div>
+          <div class="out" id="def-out" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <h3>Learning outcomes</h3>
+  <div class="prose">
+    <p>After this module you should be able to:</p>
+    <ol>
+      <li><a href="#six">classify</a> a semantic failure as one of six kinds and name the mechanism that resolves it;</li>
+      <li><a href="#authority">state</a> which component holds the authority behind a given claim;</li>
+      <li><a href="#patterns">compare</a> five semantic architecture patterns and choose between centralised and federated ownership for a described enterprise;</li>
+      <li><a href="#reference">describe</a> the nine components of the reference architecture, including what each one cannot guarantee;</li>
+      <li><a href="#llm">explain</a> why a text-to-SQL prompt fails on a raw schema and why the held-out test set stays sealed;</li>
+      <li><a href="#adr">write</a> an architecture decision record using the five-field template.</li>
+    </ol>
+  </div>
+  <h3>How the 90 minutes run</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Minutes</th><th>Segment</th><th>Section</th><th>In the session</th></tr></thead>
+    <tbody>
+      <tr><td>0 to 8</td><td>The dispute</td><td>1.0</td><td>The three-definitions simulation on the shared screen</td></tr>
+      <tr><td>8 to 18</td><td>Six kinds of inconsistency</td><td>1.1</td><td>Three cases from the "Diagnose eight failures" simulation, taken as a room poll</td></tr>
+      <tr><td>18 to 26</td><td>Authority</td><td>1.2</td><td>Two claims from the claims simulation, discussed</td></tr>
+      <tr><td>26 to 35</td><td>Architecture patterns</td><td>1.3</td><td>Facilitator demonstration of patterns at reference enterprises</td></tr>
+      <tr><td>35 to 42</td><td>Reference architecture</td><td>1.4</td><td>Walk through the diagram and trace one question; the six contracts are left for self-study</td></tr>
+      <tr><td>42 to 49</td><td>LLMs and evaluation</td><td>1.5</td><td>One failure example; the three evaluation sets; the interval simulation</td></tr>
+      <tr><td>49 to 54</td><td>Architecture decision records</td><td>1.6</td><td>The five fields and the worked example</td></tr>
+      <tr><td>54 to 62</td><td>Case study</td><td>1.7</td><td>Group discussion of the decision and its limits</td></tr>
+      <tr><td>62 to 84</td><td>Hands-on, in pairs</td><td>1.8</td><td>Python lab: setup, exercise 1, exercise 2 and exercise 4</td></tr>
+      <tr><td>84 to 90</td><td>Review</td><td>1.9</td><td>Pairs swap and review ADR 1. The checkpoint quiz is completed after the session.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>The page contains more than can be covered in 90 minutes. Exercise 3 in section 1.8 and the cases not used in the session are intended for self-study afterwards.</p></div>
+  <div class="note">
+    <h5><span class="ic">i</span>If you have taken Agentic AI Foundations</h5>
+    <p>That programme covers how to build an agent with tools and a loop. This programme covers the governed business meaning that those tools draw on. You will already know the text-to-SQL and RAG failure modes at the start of 1.5. The rest of 1.5, on the evaluation sets and on reporting uncertainty, is new material that the hands-on exercises use.</p>
+  </div>
+</section>
+
+<section class="sec" id="six" aria-labelledby="six-h">
+  <div class="sec-head"><span class="sec-num">1.1</span><h2 id="six-h">Six kinds of semantic inconsistency</h2></div>
+  <p class="lede">The programme sorts semantic failures into six kinds. The classification is useful because each kind is resolved by a different mechanism, and each mechanism belongs to a particular component of the architecture.</p>
+  <div class="prose">
+    <p>Database researchers have studied this problem under the name semantic heterogeneity at least since the federated-database work that Sheth and Larson surveyed in 1990. The six kinds below are this programme's own working taxonomy, chosen so that every kind points to a component that can own the fix. Other authors divide the problem differently, and a single failure in practice often involves two or three kinds together.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 480" role="img" aria-label="Six kinds of semantic inconsistency in a grid, each with a retail example: terminological, structural, contextual, temporal, granularity and identity.">
+      <g><rect x="20" y="20" width="340" height="210" rx="16" class="biz"/><text x="42" y="56" class="t">1 Terminological</text><text x="42" y="84" class="tm">One word, several meanings, or</text><text x="42" y="106" class="tm">several words for one meaning</text><text x="42" y="146" class="lab">Example</text><text x="42" y="170" class="ts">"Active customer" means three</text><text x="42" y="192" class="ts">things; "client" and "customer"</text><text x="42" y="214" class="ts">mean the same thing</text></g>
+      <g><rect x="380" y="20" width="340" height="210" rx="16" class="tech"/><text x="402" y="56" class="t">2 Structural</text><text x="402" y="84" class="tm">One concept, modelled in</text><text x="402" y="106" class="tm">different shapes</text><text x="402" y="146" class="lab">Example</text><text x="402" y="170" class="ts">CRM keeps address in one text</text><text x="402" y="192" class="ts">column; ERP splits it across a</text><text x="402" y="214" class="ts">separate table with five columns</text></g>
+      <g><rect x="740" y="20" width="340" height="210" rx="16" class="biz"/><text x="762" y="56" class="t">3 Contextual</text><text x="762" y="84" class="tm">Meaning depends on who asks</text><text x="762" y="106" class="tm">or in which unit</text><text x="762" y="146" class="lab">Example</text><text x="762" y="170" class="ts">"Revenue" is booked value for</text><text x="762" y="192" class="ts">sales and recognised value for</text><text x="762" y="214" class="ts">finance; INR here, EUR there</text></g>
+      <g><rect x="20" y="250" width="340" height="210" rx="16" class="tech"/><text x="42" y="286" class="t">4 Temporal</text><text x="42" y="314" class="tm">Different periods, calendars or</text><text x="42" y="336" class="tm">points in time</text><text x="42" y="376" class="lab">Example</text><text x="42" y="400" class="ts">90 days against 12 months; fiscal</text><text x="42" y="422" class="ts">quarter against calendar quarter;</text><text x="42" y="444" class="ts">last year's supplier, not today's</text></g>
+      <g><rect x="380" y="250" width="340" height="210" rx="16" class="tech"/><text x="402" y="286" class="t">5 Granularity</text><text x="402" y="314" class="tm">Facts recorded at different</text><text x="402" y="336" class="tm">levels of detail</text><text x="402" y="376" class="lab">Example</text><text x="402" y="400" class="ts">Orders per order, returns per</text><text x="402" y="422" class="ts">order line. Join them and each</text><text x="402" y="444" class="ts">order is counted once per return</text></g>
+      <g><rect x="740" y="250" width="340" height="210" rx="16" class="tech"/><text x="762" y="286" class="t">6 Identity</text><text x="762" y="314" class="tm">One real-world thing, several</text><text x="762" y="336" class="tm">identifiers</text><text x="762" y="376" class="lab">Example</text><text x="762" y="400" class="ts">One shopper is C-1042 in CRM,</text><text x="762" y="422" class="ts">880031 in ERP and M-77 in the</text><text x="762" y="444" class="ts">master data hub</text></g>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.3.</b> The six kinds of semantic inconsistency, each with a retail example. Violet boxes are resolved by a business decision recorded in the glossary. Blue boxes are resolved by a model or matching rule that a component enforces.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The table gives, for each kind, a question that helps you recognise it, the mechanism that resolves it, and the component that owns that mechanism. Most kinds have one owner. Contextual and temporal problems have two, because part of the fix sits in a definition and part in a calculation or a relationship.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Kind</th><th>Diagnostic question</th><th>Mechanism that resolves it</th><th>Owning component</th><th>Built in</th></tr></thead>
+    <tbody>
+      <tr><td>Terminological</td><td>Do we mean the same thing by this word?</td><td>One governed term per meaning, each with a stable identifier, an owner and a certification status</td><td>Business glossary</td><td>Module 2</td></tr>
+      <tr><td>Structural</td><td>Is the same concept shaped differently in two systems?</td><td>A logical data model, with mappings from each physical schema</td><td>Enterprise data model</td><td>Module 2</td></tr>
+      <tr><td>Contextual</td><td>Does the answer change with the domain, unit or currency?</td><td>Domain-scoped terms linked by <button class="kw" data-k="skos">SKOS</button> relations; filters and units written into the metric</td><td>Glossary and metrics layer</td><td>Modules 2 and 3</td></tr>
+      <tr><td>Temporal</td><td>Over which period, as of when, on whose calendar?</td><td>Time logic and effective-dated definitions in the metrics layer; validity periods on graph relationships</td><td>Metrics layer and knowledge graph</td><td>Modules 3 and 4</td></tr>
+      <tr><td>Granularity</td><td>What does one row stand for on each side of this join?</td><td>Declared grain and join paths, so the engine refuses or corrects a fan-out</td><td>Metrics semantic layer</td><td>Module 3</td></tr>
+      <tr><td>Identity</td><td>Are these two records the same real-world thing?</td><td>Matching rules, a crosswalk and one golden key per entity</td><td>Master and reference data</td><td>Module 2</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Four terms from the table are used in every later module. A <button class="kw" data-k="glossary">business glossary</button> holds governed definitions. <button class="kw" data-k="grain">Grain</button> is what one row of a table stands for. A <button class="kw" data-k="fanout">fan-out</button> is the row multiplication that results from joining tables of different grain. A <button class="kw" data-k="crosswalk">crosswalk</button> maps each system's identifier for an entity to a single <button class="kw" data-k="golden">golden key</button>.</p>
+  </div>
+  <h3>Applying the classification to the dispute</h3>
+  <div class="prose">
+    <p>The "active customer" dispute in 1.0 contains three of the six kinds at once. This explains why comparing SQL did not resolve it: each team's query was correct for that team's definition, period and notion of a customer.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Difference between the teams</th><th>Kind</th><th>Who should own the fix</th></tr></thead>
+    <tbody>
+      <tr><td>Login, paid order or status flag</td><td>Terminological: one word carries three meanings</td><td>The glossary, through its governance process. It may end with three named terms, for example "engaged customer", "paying customer" and "open account".</td></tr>
+      <tr><td>90 days, 12 months or no window</td><td>Temporal</td><td>The metrics layer, which writes the window into each metric definition</td></tr>
+      <tr><td>CRM profile, ERP billing account or account row</td><td>Identity, with a granularity side effect when accounts are joined to orders</td><td>Master data, through the crosswalk and golden key</td></tr>
+    </tbody>
+  </table></div>
+  <div class="sim" id="sim-classify">
+    <div class="sim-h"><span class="try">Try it</span><h4>Diagnose eight failures</h4></div>
+    <div class="sim-b">
+      <p class="lbl" id="cl-count"></p>
+      <div class="out" id="cl-case" style="font-size:1.05rem"></div>
+      <div class="ctrls" id="cl-opts" role="group" aria-label="Pick the kind of inconsistency" style="margin-top:12px"></div>
+      <div class="out" id="cl-fb" aria-live="polite">Pick the kind that best explains the failure.</div>
+      <div class="ctrls" style="margin:12px 0 0"><button class="btn" id="cl-next">Next case</button><span class="pill" id="cl-score"></span></div>
+    </div>
+  </div>
+  <div class="note">
+    <h5><span class="ic">i</span>Contextual or terminological?</h5>
+    <p>These two kinds overlap. "Revenue" as used by sales and by finance can be treated as one term with two contexts or as two separate terms. A workable test is to ask whether the two groups would accept different names. If they would, create two terms and treat the problem as terminological. If both groups need to keep the same word, scope the term by domain and treat it as contextual. Module 2 practises this with <button class="kw" data-k="skos">SKOS</button> mappings.</p>
+  </div>
+</section>
+
+<section class="sec" id="authority" aria-labelledby="authority-h">
+  <div class="sec-head"><span class="sec-num">1.2</span><h2 id="authority-h">Authority: who may be trusted for what</h2></div>
+  <p class="lede">Resolving the dispute takes three separate activities. An accountable person decides what the term means, a system applies that decision consistently, and someone checks that the underlying data is correct. The programme treats these as three kinds of authority.</p>
+  <section id="three-authorities" aria-labelledby="ta-h">
+    <h3 id="ta-h" style="margin-top:1.6rem">Three kinds of authority</h3>
+    <div class="prose">
+      <p>Business authority belongs to the owner who approves a definition through the governance process. A catalog is where that approval is recorded. Technical authority is what a component can enforce or compute in one fixed way, such as a semantic layer that always calculates net revenue with the same formula. Data quality assurance is the separate work of checking the source data itself. When these are confused, an organisation can install every tool on its plan and still find that people do not trust the numbers.</p>
+    </div>
+    <figure class="fig">
+      <div class="scroll">
+      <svg viewBox="0 0 1100 360" role="img" aria-label="Three kinds of authority side by side. Business authority: an accountable owner approves a definition through governance. Technical authority: a component enforces or computes something one way. Data quality assurance: a separate discipline checks that the source values are correct.">
+        <rect x="20" y="20" width="340" height="320" rx="16" class="biz"/>
+        <text x="42" y="58" class="tl">Business authority</text>
+        <text x="42" y="92" class="tm">What an accountable owner has</text>
+        <text x="42" y="114" class="tm">approved through governance</text>
+        <text x="42" y="156" class="lab">Question it answers</text>
+        <text x="42" y="180" class="ts">"Is this what we mean?"</text>
+        <text x="42" y="222" class="lab">Example</text>
+        <text x="42" y="246" class="ts">The CFO's office certifies the</text>
+        <text x="42" y="268" class="ts">definition of net revenue</text>
+        <text x="42" y="310" class="lab ink-biz">Approved by a named owner</text>
+        <rect x="380" y="20" width="340" height="320" rx="16" class="tech"/>
+        <text x="402" y="58" class="tl">Technical authority</text>
+        <text x="402" y="92" class="tm">What a component can enforce</text>
+        <text x="402" y="114" class="tm">or compute in exactly one way</text>
+        <text x="402" y="156" class="lab">Question it answers</text>
+        <text x="402" y="180" class="ts">"Is it applied the same everywhere?"</text>
+        <text x="402" y="222" class="lab">Example</text>
+        <text x="402" y="246" class="ts">The semantic layer computes net</text>
+        <text x="402" y="268" class="ts">revenue with one formula and grain</text>
+        <text x="402" y="310" class="lab ink-tech">Applies the approved rule</text>
+        <rect x="740" y="20" width="340" height="320" rx="16" class="pol"/>
+        <text x="762" y="58" class="tl">Data quality assurance</text>
+        <text x="762" y="92" class="tm">The separate discipline that</text>
+        <text x="762" y="114" class="tm">checks the source data itself</text>
+        <text x="762" y="156" class="lab">Question it answers</text>
+        <text x="762" y="180" class="ts">"Are the values right?"</text>
+        <text x="762" y="222" class="lab">Example</text>
+        <text x="762" y="246" class="ts">A test catches orders loaded</text>
+        <text x="762" y="268" class="ts">twice by a failed pipeline retry</text>
+        <text x="762" y="310" class="lab ink-pol">Checks the input separately</text>
+      </svg>
+      </div>
+      <figcaption><b>Figure 1.4.</b> Three kinds of authority. A certified metric definition applied correctly to duplicated order rows still returns the wrong revenue, which is why data quality assurance is shown as a separate responsibility.</figcaption>
+    </figure>
+    <div class="note like">
+      <h5><span class="ic">~</span>An analogy</h5>
+      <p>In a restaurant chain, head office approves the recipe for each dish, which corresponds to business authority. Recipe cards and portion scales make every branch prepare the dish the same way, which corresponds to technical authority. The check on deliveries at the back door, which rejects milk that has gone off, corresponds to data quality assurance. A branch that follows the approved recipe exactly with spoiled milk still serves a bad dish.</p>
+    </div>
+  </section>
+  <section id="prob" aria-labelledby="prob-h">
+    <h3 id="prob-h">Authoritative knowledge and probabilistic retrieval</h3>
+    <div class="prose">
+      <p>The programme also separates components by how they produce an answer. The glossary, data model, master data, <button class="kw" data-k="ontology">ontology</button>, <button class="kw" data-k="kg">knowledge graph</button> and <button class="kw" data-k="semlayer">metrics semantic layer</button> return the same answer each time for the same question, and the answer can be traced to a governed asset with an owner. The programme calls these authoritative. Search based on <button class="kw" data-k="embedding">embeddings</button> works differently. It returns the passages closest in meaning to the question, ranked by a similarity score, and it can miss the right passage or rank an outdated one first. That makes it suitable for finding a policy paragraph and unsuitable as a source of definitions.</p>
+      <p>For example, the metrics layer can state that net revenue for Europe last quarter was 48.2 million (an illustrative figure) under version 2 of the definition, and that statement will be the same for every user who asks. A search for "supplier termination policy" returns the five most similar passages, of which perhaps three are relevant.</p>
+      <p>The assistant built in Module 6 uses both kinds of source. It labels each claim in an answer as a retrieved fact, a calculated metric, an inferred relationship or a model interpretation. This label is the claim's <button class="kw" data-k="provenance">provenance</button>.</p>
+    </div>
+    <div class="sim" id="sim-auth">
+      <div class="sim-h"><span class="try">Try it</span><h4>May the assistant make this claim, and on whose authority? (illustrative claims)</h4></div>
+      <div class="sim-b">
+        <div class="ctrls" id="au-claims" role="group" aria-label="Pick a claim"></div>
+        <div class="out" id="au-out" aria-live="polite">Pick a claim to see which component, if any, has the authority behind it.</div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<section class="sec" id="patterns" aria-labelledby="patterns-h">
+  <div class="sec-head"><span class="sec-num">1.3</span><h2 id="patterns-h">Semantic architecture patterns</h2></div>
+  <p class="lede">The programme compares five patterns. Two of them describe who owns business meaning in the organisation, and the other three describe the technical mechanism that carries it. An enterprise can sit between the two ownership patterns and can use more than one mechanism.</p>
+  <div class="prose">
+    <p>Ownership is considered first because it is an organisational choice and costly to change later. In a centralised arrangement one team defines meaning for the whole enterprise. In a federated arrangement each domain defines its own terms, and a small central group maintains the parts that must be shared, such as golden keys and the rules for mapping between domains.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 400" role="img" aria-label="Centralised semantics: one central team owns a single model that marketing, finance and supply chain all consume. Federated semantics: each domain owns its own terms and model, and a small central group owns shared identifiers, cross-domain terms and mapping rules.">
+      <text x="270" y="30" text-anchor="middle" class="tl">Centralised</text>
+      <rect x="130" y="50" width="280" height="96" rx="16" class="biz"/>
+      <text x="270" y="88" text-anchor="middle" class="t">Central semantics team</text>
+      <text x="270" y="116" text-anchor="middle" class="ts">one glossary, one model</text>
+      <path d="M190 146 L110 246" class="ln" marker-end="url(#ah)"/><path d="M270 146 V246" class="ln" marker-end="url(#ah)"/><path d="M350 146 L430 246" class="ln" marker-end="url(#ah)"/>
+      <rect x="30" y="250" width="150" height="64" rx="12" class="usr"/><text x="105" y="288" text-anchor="middle" class="tm">Marketing</text>
+      <rect x="195" y="250" width="150" height="64" rx="12" class="usr"/><text x="270" y="288" text-anchor="middle" class="tm">Finance</text>
+      <rect x="360" y="250" width="150" height="64" rx="12" class="usr"/><text x="435" y="288" text-anchor="middle" class="tm">Supply chain</text>
+      <text x="270" y="350" text-anchor="middle" class="lab ink-drv">Consistent by construction</text>
+      <text x="270" y="374" text-anchor="middle" class="lab ink-pol">Every change queues at one team</text>
+      <line x1="550" y1="16" x2="550" y2="384" stroke="var(--rule)" stroke-width="2"/>
+      <text x="830" y="30" text-anchor="middle" class="tl">Federated</text>
+      <rect x="590" y="56" width="150" height="110" rx="12" class="biz"/><text x="665" y="94" text-anchor="middle" class="tm">Marketing</text><text x="665" y="118" text-anchor="middle" class="ts">own terms,</text><text x="665" y="138" text-anchor="middle" class="ts">own model</text>
+      <rect x="755" y="56" width="150" height="110" rx="12" class="biz"/><text x="830" y="94" text-anchor="middle" class="tm">Finance</text><text x="830" y="118" text-anchor="middle" class="ts">own terms,</text><text x="830" y="138" text-anchor="middle" class="ts">own model</text>
+      <rect x="920" y="56" width="150" height="110" rx="12" class="biz"/><text x="995" y="94" text-anchor="middle" class="tm">Supply chain</text><text x="995" y="118" text-anchor="middle" class="ts">own terms,</text><text x="995" y="138" text-anchor="middle" class="ts">own model</text>
+      <path d="M665 166 V226" class="ln dash"/><path d="M830 166 V226" class="ln dash"/><path d="M995 166 V226" class="ln dash"/>
+      <rect x="590" y="230" width="480" height="84" rx="14" class="tech"/>
+      <text x="830" y="264" text-anchor="middle" class="t">Shared standards group</text>
+      <text x="830" y="292" text-anchor="middle" class="ts">golden keys, cross-domain terms, mapping rules</text>
+      <text x="830" y="350" text-anchor="middle" class="lab ink-drv">Domains move at their own speed</text>
+      <text x="830" y="374" text-anchor="middle" class="lab ink-pol">Cross-domain questions depend on mappings</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.5.</b> Centralised and federated ownership of semantics. Under each pattern, the first line states its main benefit and the second its main cost.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>The table adds the three mechanism patterns and gives the conditions and costs of each. The costs matter for ADR 1 in the hands-on section, where you choose an ownership pattern for the lab enterprise and record what the choice gives up.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Pattern</th><th>How it carries meaning</th><th>Use it when</th><th>What it costs or cannot do</th></tr></thead>
+    <tbody>
+      <tr><td>Centralised semantics</td><td>One team owns the glossary and one enterprise model. Every consumer reads from it.</td><td>Few domains, one regulator-facing reporting line, and a central team with capacity to keep up</td><td>Every change waits for the central team. Definitions drift from how domains really work, and domains build shadow definitions.</td></tr>
+      <tr><td>Federated semantics</td><td>Each domain owns its terms and models. A central group owns only shared identifiers, shared terms and the rules for mapping between domains.</td><td>Many domains with real differences in meaning, and domain teams with their own data skills</td><td>Every cross-domain question depends on a mapping somebody has to maintain. Without enforced standards it decays into silos.</td></tr>
+      <tr><td>Semantic layers in a data mesh</td><td>Each <button class="kw" data-k="dataproduct">data product</button> ships with its own semantic model and metrics. Global rules are automated in the platform.</td><td>You already run domain-owned data products and a self-serve platform</td><td>A metric that spans two products needs conformed keys and an owner. Mesh principles do not say who owns it.</td></tr>
+      <tr><td>Ontology-driven integration</td><td>A shared ontology is the contract. Sources are mapped to it and loaded into a graph that enforces it.</td><td>Relationship-heavy questions across many systems, and rules worth stating formally</td><td>Needs ontology engineering skill and modelling time before the first answer. The load pipeline is one more thing to keep fresh.</td></tr>
+      <tr><td>Virtual knowledge graphs</td><td>Mappings expose warehouse tables as a graph. Each graph query is rewritten to SQL, and the data stays where it is.</td><td>Freshness matters, copying is restricted, and the warehouse can carry the query load</td><td>It does not fix data quality, inconsistent identifiers or incompatible source semantics. Latency follows the source.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The third row borrows its vocabulary from <button class="kw" data-k="datamesh">data mesh</button>, which Zhamak Dehghani defined through four principles: domain ownership, data as a product, a self-serve data platform and federated computational governance. Federated semantics applies the fourth principle to business meaning. The pattern in the fifth row is known formally as ontology-based data access. In Module 4 you build one with Ontop and <button class="kw" data-k="r2rml">R2RML</button> mappings, query it in <button class="kw" data-k="sparql">SPARQL</button>, and compare it with a physical graph on latency, freshness, operating effort and consistency.</p>
+    <p>During the session the facilitator demonstrates these patterns using examples from reference enterprises. The demonstration is for comparison and is not assessed.</p>
+  </div>
+  <div class="note like">
+    <h5><span class="ic">~</span>An analogy</h5>
+    <p>Email is organised in a federated way. Each organisation controls its own mail domain and address book and can add a mailbox without asking anyone else. Messages still travel between organisations because two things are standardised for everyone: the format of an address and the protocol that mail servers use to pass a message on. Federated semantics divides responsibility along the same line, with domains owning their own terms and a few shared rules applying to all of them.</p>
+  </div>
+  <div class="sim" id="sim-pat">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which way does each situation lean?</h4></div>
+    <div class="sim-b">
+      <div class="ctrls" id="pat-q" role="group" aria-label="Pick a situation"></div>
+      <div class="out" id="pat-out" aria-live="polite">Pick a situation. Each one leans towards a pattern for a stated reason, and names the condition under which the lean reverses.</div>
+    </div>
+  </div>
+  <div class="note warn">
+    <h5><span class="ic">!</span>Practitioners disagree about ownership</h5>
+    <p>People who favour central models usually have regulated reporting in mind, where two definitions of a capital figure would be a compliance failure. People who favour federation usually have in mind an enterprise model that took so long to finish that the business had changed by the time it was delivered. Each group is describing a real risk. When you write ADR 1, consider which of the two risks is greater for the organisation in front of you.</p>
+  </div>
+</section>
+
+<section class="sec" id="reference" aria-labelledby="reference-h">
+  <div class="sec-head"><span class="sec-num">1.4</span><h2 id="reference-h">The reference architecture</h2></div>
+  <p class="lede">The programme builds nine components on one shared dataset, and later modules add them to the diagram below. The assistant is allowed to make a claim only when the claim can be traced to a component that has authority for it.</p>
+  <figure class="fig">
+    <div class="scroll">
+    <svg id="ra-svg" viewBox="0 0 1100 650" role="img" aria-label="Reference architecture in five layers. Source systems: CRM, ERP, master data hub and documents. Data products: the PostgreSQL warehouse with dbt models. Semantic assets: business glossary, enterprise data model, master and reference data, ontology, knowledge graph, metrics semantic layer and semantic retrieval index. A policy and authorization layer spans all of them. AI consumers: the semantic assistant, plus BI, notebooks and APIs. Select a component to explore it.">
+      <text x="30" y="26" class="lab">Source systems</text>
+      <rect x="30" y="36" width="200" height="54" rx="12" class="usr"/><text x="130" y="69" text-anchor="middle" class="tm">CRM</text>
+      <rect x="250" y="36" width="200" height="54" rx="12" class="usr"/><text x="350" y="69" text-anchor="middle" class="tm">ERP</text>
+      <rect x="470" y="36" width="200" height="54" rx="12" class="usr"/><text x="570" y="69" text-anchor="middle" class="tm">Master data hub</text>
+      <rect x="690" y="36" width="200" height="54" rx="12" class="usr"/><text x="790" y="69" text-anchor="middle" class="tm">Policy and SOP documents</text>
+      <path d="M460 92 V118" class="ln" marker-end="url(#ah)"/>
+      <text x="30" y="118" class="lab">Data products</text>
+      <rect x="30" y="126" width="860" height="54" rx="12" class="bx" style="stroke:var(--ink2)"/><text x="460" y="159" text-anchor="middle" class="tm">PostgreSQL warehouse with dbt models: sales, customers, products, suppliers, plants, shipments</text>
+      <path d="M460 182 V212" class="ln" marker-end="url(#ah)"/>
+      <rect x="18" y="216" width="884" height="268" rx="18" class="zone"/>
+      <text x="30" y="240" class="lab">Semantic assets</text>
+      <g class="pick" data-c="glossary" tabindex="0" role="button" aria-label="Business glossary"><rect x="30" y="252" width="200" height="100" rx="14" class="biz"/><text x="130" y="290" text-anchor="middle" class="t">Business glossary</text><text x="130" y="316" text-anchor="middle" class="ts">meaning of terms</text><text x="130" y="338" text-anchor="middle" class="lab ink-biz">Module 2</text></g>
+      <g class="pick" data-c="model" tabindex="0" role="button" aria-label="Enterprise data model"><rect x="250" y="252" width="200" height="100" rx="14" class="tech"/><text x="350" y="290" text-anchor="middle" class="t">Enterprise data model</text><text x="350" y="316" text-anchor="middle" class="ts">structure</text><text x="350" y="338" text-anchor="middle" class="lab ink-tech">Module 2</text></g>
+      <g class="pick" data-c="mdm" tabindex="0" role="button" aria-label="Master and reference data"><rect x="470" y="252" width="200" height="100" rx="14" class="tech"/><text x="570" y="290" text-anchor="middle" class="t">Master data</text><text x="570" y="316" text-anchor="middle" class="ts">identity, golden keys</text><text x="570" y="338" text-anchor="middle" class="lab ink-tech">Module 2</text></g>
+      <g class="pick" data-c="ontology" tabindex="0" role="button" aria-label="Ontology"><rect x="690" y="252" width="200" height="100" rx="14" class="tech"/><text x="790" y="290" text-anchor="middle" class="t">Ontology</text><text x="790" y="316" text-anchor="middle" class="ts">formal semantics</text><text x="790" y="338" text-anchor="middle" class="lab ink-tech">Module 4</text></g>
+      <g class="pick" data-c="kg" tabindex="0" role="button" aria-label="Knowledge graph"><rect x="30" y="368" width="273" height="100" rx="14" class="drv"/><text x="166" y="406" text-anchor="middle" class="t">Knowledge graph</text><text x="166" y="432" text-anchor="middle" class="ts">physical or virtual, derived</text><text x="166" y="454" text-anchor="middle" class="lab ink-drv">Module 4</text></g>
+      <g class="pick" data-c="metrics" tabindex="0" role="button" aria-label="Metrics semantic layer"><rect x="323" y="368" width="274" height="100" rx="14" class="tech"/><text x="460" y="406" text-anchor="middle" class="t">Metrics semantic layer</text><text x="460" y="432" text-anchor="middle" class="ts">interpretation and computation</text><text x="460" y="454" text-anchor="middle" class="lab ink-tech">Module 3</text></g>
+      <g class="pick" data-c="index" tabindex="0" role="button" aria-label="Semantic retrieval index"><rect x="617" y="368" width="273" height="100" rx="14" class="prob"/><text x="753" y="406" text-anchor="middle" class="t">Semantic retrieval index</text><text x="753" y="432" text-anchor="middle" class="ts">similarity, probabilistic</text><text x="753" y="454" text-anchor="middle" class="lab ink-prob">Module 5</text></g>
+      <g class="pick" data-c="policy" tabindex="0" role="button" aria-label="Policy and authorization layer"><rect x="930" y="126" width="150" height="358" rx="16" class="pol"/><text x="1005" y="270" text-anchor="middle" class="t">Policy and</text><text x="1005" y="294" text-anchor="middle" class="t">authorization</text><text x="1005" y="322" text-anchor="middle" class="ts">access, audit</text><text x="1005" y="346" text-anchor="middle" class="lab ink-pol">Module 7</text></g>
+      <path d="M902 300 H926" class="ln-pol" marker-start="url(#ah-pol)"/><path d="M902 420 H926" class="ln-pol" marker-start="url(#ah-pol)"/><path d="M892 153 H926" class="ln-pol" marker-start="url(#ah-pol)"/>
+      <path d="M460 486 V520" class="ln" marker-end="url(#ah)"/>
+      <text x="30" y="516" class="lab">AI and analytics consumers</text>
+      <g class="pick" data-c="assistant" tabindex="0" role="button" aria-label="Semantic assistant"><rect x="30" y="526" width="560" height="104" rx="16" class="asst"/><text x="310" y="568" text-anchor="middle" class="tl on">Semantic assistant</text><text x="310" y="598" text-anchor="middle" class="ts on">router plus LLM, interpretation only, Module 6</text></g>
+      <rect x="610" y="526" width="280" height="104" rx="16" class="usr"/><text x="750" y="568" text-anchor="middle" class="t">BI, notebooks, APIs</text><text x="750" y="598" text-anchor="middle" class="ts">read the same metrics layer</text>
+      <path d="M1005 486 V578 H894" class="ln-pol" marker-end="url(#ah-pol)"/>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.6.</b> The reference architecture. Meaning flows from source systems at the top to consumers at the bottom. The policy layer is drawn at the side because access is decided in one place and enforced at each store before a query runs. Select a component to see its details in the panel that follows.</figcaption>
+  </figure>
+  <div class="sim" id="sim-ra" style="margin-top:-6px">
+    <div class="sim-h"><span class="try">Explore</span><h4 id="ra-title">Select a component in the diagram</h4></div>
+    <div class="sim-b">
+      <div class="g2" style="align-items:start">
+        <div><p class="lbl">Primary responsibility</p><p id="ra-resp" style="margin-top:0">Nine components are selectable: seven semantic assets, the policy layer and the assistant.</p><p class="lbl">Authority</p><p id="ra-auth" style="margin-top:0"></p></div>
+        <div><p class="lbl">What it cannot guarantee</p><p id="ra-not" style="margin-top:0"></p><p class="lbl">Reference tool and module</p><p id="ra-tool" style="margin-top:0"></p></div>
+      </div>
+      <p class="lbl" style="margin-top:8px">Or trace a question through the architecture</p>
+      <div class="ctrls" id="ra-q" role="group" aria-label="Pick a question" style="margin-bottom:0"></div>
+    </div>
+  </div>
+  <h3>What each component has authority for</h3>
+  <div class="prose">
+    <p>The table lists what each component holds and the kind of authority it has. The rules for the assistant in Module 6 are written in terms of the third column.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Component</th><th>Holds</th><th>Kind of authority</th></tr></thead>
+    <tbody>
+      <tr><td>Business glossary</td><td>Governed terms with owners, stewards, certification status and a stable identifier per term</td><td><span class="tag biz">Business</span> for the meaning of terms, conferred by the governance process</td></tr>
+      <tr><td>Enterprise data model</td><td>Business entities, attributes and structural relationships, linking glossary terms to physical schemas</td><td><span class="tag tech">Technical</span> for structure</td></tr>
+      <tr><td>Master and reference data</td><td>Golden records, crosswalks between system identifiers, code lists</td><td><span class="tag tech">Identity</span> Authoritative for identity within its stewardship scope and approved matching rules. Stewards approve the rules; the crosswalk enforces them.</td></tr>
+      <tr><td>Ontology</td><td>Classes, hierarchies, property domains and ranges, OWL axioms for inference, SHACL shapes for validation</td><td><span class="tag tech">Technical</span> for formal semantics. Business authority still comes from the glossary's governance.</td></tr>
+      <tr><td>Knowledge graph</td><td>Connected entities, facts and relationships with validity periods, built from source systems under the ontology</td><td><span class="tag drv">Derived</span>. Only as reliable as its sources, entity identities and data quality checks.</td></tr>
+      <tr><td>Metrics semantic layer</td><td>Governed measures, calculations, grain, join paths and time logic</td><td><span class="tag tech">Technical</span> for interpretation and computation. It has none for source-data correctness.</td></tr>
+      <tr><td>Semantic retrieval index</td><td>Similarity search over documents and metadata, with entitlement and glossary tags on every chunk</td><td><span class="tag prob">Probabilistic</span>. Never a source of definitions.</td></tr>
+      <tr><td>Policy and authorization layer</td><td>Row, column, graph and document entitlements, each enforced at a named point; audit logging</td><td><span class="tag pol">Access</span></td></tr>
+      <tr><td>Semantic assistant</td><td>Language understanding, routing, evidence composition and answer generation with a provenance label on every claim</td><td><span class="tag usr">Interpretation only</span>. Every claim traces to a component above.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note word">
+    <h5><span class="ic">Aa</span>OWL and SHACL</h5>
+    <p><button class="kw" data-k="owl">OWL</button> describes what follows logically from the facts you hold, which lets a reasoner infer facts that were never entered. <button class="kw" data-k="shacl">SHACL</button> describes the shape that valid data must have, which lets a store reject a bad load. Module 4 uses both. Both operate on data expressed in <button class="kw" data-k="rdf">RDF</button>, the graph data format introduced in that module.</p>
+  </div>
+  <h3>Six integration contracts</h3>
+  <div class="prose"><p>The components are connected by six contracts, and each one is implemented in a lab.</p></div>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>One identifier per glossary term</h4><p>The data model, the ontology, the metrics and the document chunks all reference it, so a change to a term can be traced to every dependent asset. Modules 2 and 7.</p></div></li>
+    <li><span class="k">2</span><div><h4>One golden key per entity</h4><p>Crosswalks map CRM, ERP and master data identifiers to it. The graph and the metrics layer join on that key for cross-system questions and keep source identifiers for <button class="kw" data-k="lineage">lineage</button>, reconciliation and local joins within one system. Modules 2, 3 and 4.</p></div></li>
+    <li><span class="k">3</span><div><h4>Metrics only through the semantic layer</h4><p>The assistant never generates raw SQL against fact tables. The price is that it cannot answer a question no modelled metric covers. You weigh that trade in ADR 2. Modules 3 and 6.</p></div></li>
+    <li><span class="k">4</span><div><h4>The ontology is the graph's schema contract</h4><p>SHACL shapes are enforced on every write to the physical graph, and R2RML mappings expose warehouse tables as a virtual graph without copying them. Module 4.</p></div></li>
+    <li><span class="k">5</span><div><h4>Evidence carries its metadata</h4><p>Every chunk, graph fact and metric result carries source, timestamp, validity period and <button class="kw" data-k="entitlement">entitlement</button>. The assistant labels each claim as a retrieved fact, a calculated metric, an inferred relationship or a model interpretation. Modules 5 and 6.</p></div></li>
+    <li><span class="k">6</span><div><h4>One policy source, enforced at each store</h4><p>Authorization is decided once and enforced at a named point for each resource before any retrieval or query runs. The catalog records policies and does not enforce them elsewhere. The prompt is never the security boundary. Module 7.</p></div></li>
+  </ol>
+  <div class="note warn">
+    <h5><span class="ic">!</span>Cost of the full architecture</h5>
+    <p>Each of the nine components needs an owner and regular steward time, and each contract is a dependency that a release can break. An organisation whose questions are mostly totals and trends can get most of the benefit from the glossary, master data, the metrics layer and the policy layer. The ontology and knowledge graph justify their cost when people ask relationship questions that span systems. The retrieval index justifies its cost when the answers are held in documents.</p>
+  </div>
+</section>
+
+<section class="sec" id="llm" aria-labelledby="llm-h">
+  <div class="sec-head"><span class="sec-num">1.5</span><h2 id="llm-h">Why LLMs raise the stakes</h2></div>
+  <p class="lede">An analyst who is unsure what a column means can ask a colleague. A language model given the same column chooses the most likely interpretation and returns a confident answer. The ambiguity in the schema existed before LLMs, but there was usually a person in the loop who noticed it.</p>
+  <div class="prose">
+    <p><button class="kw" data-k="t2s">Text-to-SQL</button> asks a model to turn a question into a query, using the table and column names supplied in the prompt. On a raw schema those names carry little meaning. A column called <code>status</code> does not indicate which of the three "active" definitions it implements, and the schema contains nothing to warn that joining orders to returns multiplies rows.</p>
+    <p><button class="kw" data-k="rag">Retrieval-augmented generation</button> has a different weakness. When asked for a definition it returns the passages most similar to the question. If the most similar passage comes from a superseded policy or an old presentation, the model will repeat it as though it were current, because similarity scores carry no information about which document is authoritative.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 330" role="img" aria-label="A fan-out. One order of 1,000 rupees has two return lines. Joining orders to returns produces two rows, so summing the order amount gives 2,000 instead of 1,000.">
+      <text x="30" y="30" class="lab">orders (one row per order)</text>
+      <rect x="30" y="42" width="290" height="40" class="bx2"/><text x="44" y="68" class="mono">order_id</text><text x="190" y="68" class="mono">amount</text>
+      <rect x="30" y="82" width="290" height="44" class="bx"/><text x="44" y="110" class="mono">O-501</text><text x="190" y="110" class="mono">1,000</text>
+      <text x="30" y="176" class="lab">returns (one row per returned line)</text>
+      <rect x="30" y="188" width="290" height="40" class="bx2"/><text x="44" y="214" class="mono">order_id</text><text x="190" y="214" class="mono">refund</text>
+      <rect x="30" y="228" width="290" height="40" class="bx"/><text x="44" y="254" class="mono">O-501</text><text x="190" y="254" class="mono">150</text>
+      <rect x="30" y="268" width="290" height="40" class="bx"/><text x="44" y="294" class="mono">O-501</text><text x="190" y="294" class="mono">100</text>
+      <path d="M320 104 Q400 104 446 150" class="ln" marker-end="url(#ah)"/><path d="M320 268 Q400 268 446 206" class="ln" marker-end="url(#ah)"/>
+      <rect x="450" y="150" width="130" height="56" rx="12" class="usr"/><text x="515" y="184" text-anchor="middle" class="t">JOIN</text>
+      <path d="M580 178 H656" class="ln" marker-end="url(#ah)"/>
+      <text x="660" y="74" class="lab">joined result (two rows for one order)</text>
+      <rect x="660" y="86" width="410" height="40" class="bx2"/><text x="674" y="112" class="mono">order_id</text><text x="800" y="112" class="mono">amount</text><text x="930" y="112" class="mono">refund</text>
+      <rect x="660" y="126" width="410" height="40" class="pol"/><text x="674" y="152" class="mono">O-501</text><text x="800" y="152" class="mono">1,000</text><text x="930" y="152" class="mono">150</text>
+      <rect x="660" y="166" width="410" height="40" class="pol"/><text x="674" y="192" class="mono">O-501</text><text x="800" y="192" class="mono">1,000</text><text x="930" y="192" class="mono">100</text>
+      <text x="660" y="244" class="t ink-pol">SUM(amount) = 2,000</text>
+      <text x="660" y="272" class="ts">The order was worth 1,000. Net revenue should be</text>
+      <text x="660" y="294" class="ts">1,000 minus 250 = 750. The query reports 1,750.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.7.</b> A fan-out. The join key is correct and the SQL is valid, but the two tables have different grain, so the order amount is counted twice. Module 3 reproduces this join and corrects it in the semantic model.</figcaption>
+  </figure>
+  <div class="sim" id="sim-t2s">
+    <div class="sim-h"><span class="try">Try it</span><h4>Five plausible answers on the raw warehouse</h4></div>
+    <div class="sim-b">
+      <div class="ctrls" id="t2s-q" role="group" aria-label="Pick a question"></div>
+      <div class="g2" style="align-items:start">
+        <div><p class="lbl" id="t2s-lbl">What the model produced</p><div class="code" style="margin:0"><pre id="t2s-sql"></pre></div></div>
+        <div class="out" id="t2s-out" aria-live="polite"></div>
+      </div>
+      <p style="font-size:.93rem;color:var(--muted);margin-bottom:0">These five examples were written to illustrate the kinds of failure planted in the lab dataset. Exercise 2 in section 1.8 runs six more against a small warehouse.</p>
+    </div>
+  </div>
+  <h3>Published evidence and its limits</h3>
+  <div class="prose">
+    <p>Two public results are relevant here. Spider 2.0 is a benchmark of 632 text-to-SQL workflow problems taken from enterprise database use cases. It was published by the XLANG Lab and collaborators and presented at ICLR 2025. When it was released in November 2024, the project page reported that GPT-4o solved 10.1 percent of the tasks, compared with 86.6 percent on the earlier Spider 1.0 benchmark. The best agent tested, which was built on o1-preview, reached about 17 percent in the November 2024 preprint and 21.3 percent in the ICLR 2025 version.</p>
+    <p>Several things make Spider 2.0 harder than its predecessor, including schemas that often exceed 1,000 columns, more than one SQL dialect, multi-step workflows and long queries. The leaderboard has changed since release, so check it before quoting a current figure.</p>
+    <p>The second result comes from Sequeda, Allemang and Jacob at the data.world AI Lab. In 2023 they tested GPT-4 with zero-shot prompts (the question and the schema, with no worked examples) on 43 business questions over an insurance schema. Accuracy was 16 percent when the model queried the SQL database directly and 54 percent when the same questions were asked over a knowledge graph representation with an ontology. In a 2024 follow-up, Allemang and Sequeda added an ontology-based query check and a repair step and reported 72 percent, with a further 8 percent of questions answered "I don't know".</p>
+    <p>Both results have limits. The second study used one schema, one generation of model and 43 questions, and its authors work for a vendor of knowledge graph software. Models have improved since 2023, and a well-documented schema reduces the gap. The studies give reasonable grounds to expect that supplying governed business context improves accuracy, and that a system able to decline a question makes fewer errors than one that always answers. They do not tell you what accuracy to expect in your own enterprise, which is the reason the programme measures a baseline on its own warehouse.</p>
+  </div>
+  <section id="evalsets" aria-labelledby="evalsets-h">
+    <h3 id="evalsets-h">Three evaluation sets</h3>
+    <div class="prose">
+      <p>The programme defines three question sets of 40 questions each, and a separate group of 40 authorization tests. The development set is available while you build, and you may read its questions and answers. The validation set is used to tune retrieval and routing, and its score is tracked as a running scoreboard from this module onwards. The third set is a <button class="kw" data-k="heldout">held-out test set</button>. It is delivered encrypted and stays sealed until the capstone.</p>
+    </div>
+    <figure class="fig">
+      <div class="scroll">
+      <svg viewBox="0 0 1100 330" role="img" aria-label="Timeline across modules 1 to 8. The development set is used while building in every module. The validation set is scored as a running scoreboard from the Module 1 baseline onwards and used to tune retrieval and routing. The held-out test set stays sealed and encrypted until the capstone in Module 8, where it is scored once.">
+        <g class="ts"><text x="250" y="30" text-anchor="middle">M1</text><text x="360" y="30" text-anchor="middle">M2</text><text x="470" y="30" text-anchor="middle">M3</text><text x="580" y="30" text-anchor="middle">M4</text><text x="690" y="30" text-anchor="middle">M5</text><text x="800" y="30" text-anchor="middle">M6</text><text x="910" y="30" text-anchor="middle">M7</text><text x="1020" y="30" text-anchor="middle">M8</text></g>
+        <text x="20" y="84" class="t">Development</text><text x="20" y="106" class="ts">40 questions</text>
+        <rect x="200" y="58" width="870" height="56" rx="12" class="tech"/><text x="635" y="92" text-anchor="middle" class="tm">used freely while building; you may read every question and answer</text>
+        <text x="20" y="174" class="t">Validation</text><text x="20" y="196" class="ts">40 questions</text>
+        <rect x="200" y="148" width="870" height="56" rx="12" class="drv"/><text x="635" y="182" text-anchor="middle" class="tm">running scoreboard from the Module 1 baseline; tunes retrieval and routing</text>
+        <text x="20" y="264" class="t">Held-out test</text><text x="20" y="286" class="ts">40 questions</text>
+        <rect x="200" y="238" width="760" height="56" rx="12" class="bx2" style="stroke-dasharray:8 6"/><text x="580" y="272" text-anchor="middle" class="tm">sealed and encrypted; nobody building the system sees it</text>
+        <rect x="970" y="238" width="100" height="56" rx="12" class="pol"/><text x="1020" y="272" text-anchor="middle" class="t">scored</text>
+        <text x="1020" y="318" text-anchor="middle" class="lab ink-pol">once, in M8</text>
+      </svg>
+      </div>
+      <figcaption><b>Figure 1.8.</b> When each evaluation set is used. The held-out set includes ambiguous questions, questions with false premises, authorization challenges and questions where the correct response is to abstain. Its decryption key is released at the start of the capstone.</figcaption>
+    </figure>
+    <div class="prose">
+      <p>The test set is sealed because a score obtained on questions you have tuned against mostly shows how well the system fits those questions. Keeping one set unseen means the capstone score reflects questions that had no influence on the design.</p>
+      <p>The course design has the development and validation sets run against the raw warehouse in this module. The Python lab in 1.8 uses a scripted baseline of ten questions in their place, because it needs no model and no database server.</p>
+      <p>Whether the 40-question run is shown as a facilitator demonstration is a delivery decision. The course design does not specify when the raw-warehouse baseline is scored on the test set, given that the set is sealed during Module 1. This page assumes the facilitator runs the unchanged baseline harness on the test set once it is unsealed in Module 8, which would let the before and after figures come from the same 40 questions. Your facilitator will confirm the arrangement for your cohort.</p>
+    </div>
+    <div class="note like">
+      <h5><span class="ic">~</span>An analogy</h5>
+      <p>The three sets correspond to class tests, a pre-board exam and the board exam. Students see class tests in full and learn from them. The pre-board shows where they stand and what to revise. The board paper stays in a sealed envelope until the exam begins, so no student can have prepared for its particular questions.</p>
+    </div>
+  </section>
+  <section id="wilson" aria-labelledby="wilson-h">
+    <h3 id="wilson-h">Reporting uncertainty on 40 questions</h3>
+    <div class="prose">
+      <p>A set of 40 questions is large enough to show that a system has improved and too small to establish how it will perform in production. For this reason the programme reports every score with a <button class="kw" data-k="wilson">Wilson 95 percent confidence interval</button>. The interval is a range that would contain the true success rate in about 95 of 100 repetitions of the test with fresh questions of the same kind.</p>
+      <p>The programme uses the Wilson form because, unlike the simpler plus-or-minus formula, it never extends below 0 or above 100 percent and it remains reliable for small samples and for scores near either end. Brown, Cai and DasGupta compared the alternatives in 2001 and recommended it for small samples.</p>
+    </div>
+    <div class="code"><div class="hd"><span>Wilson score interval for k correct out of n, z = 1.96</span><button class="copy">Copy</button></div><pre>p      = k / n
+centre = (p + z*z/(2*n)) / (1 + z*z/n)
+half   = z * sqrt(p*(1-p)/n + z*z/(4*n*n)) / (1 + z*z/n)
+range  = centre - half  to  centre + half</pre></div>
+    <div class="sim" id="sim-wil">
+      <div class="sim-h"><span class="try">Try it</span><h4>How sure can 40 questions make you? (set your own scores)</h4></div>
+      <div class="sim-b">
+        <div class="g2">
+          <label class="field"><span>Baseline: <span class="v" id="w-a-n">8</span> of 40 correct</span><input type="range" id="w-a" min="0" max="40" value="8"></label>
+          <label class="field"><span>Capstone: <span class="v" id="w-b-n">30</span> of 40 correct</span><input type="range" id="w-b" min="0" max="40" value="30"></label>
+        </div>
+        <p class="lbl" id="w-a-t"></p><div class="ci"><i id="w-a-i" style="background:var(--pol)"></i><b id="w-a-p"></b></div>
+        <p class="lbl" id="w-b-t" style="margin-top:10px"></p><div class="ci"><i id="w-b-i" style="background:var(--drv)"></i><b id="w-b-p"></b></div>
+        <div class="axis"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+        <div class="out" id="w-out" style="margin-top:12px" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="note">
+      <h5><span class="ic">i</span>Comparing the baseline with the capstone</h5>
+      <p>Under the arrangement assumed above, the baseline and the capstone are scored on the same 40 questions, so the two results are paired. Checking whether the two intervals overlap is a conservative comparison for paired data. If a reviewer asks for a formal test, McNemar's test on the questions whose outcome changed is the usual choice.</p>
+    </div>
+  </section>
+</section>
+
+<section class="sec" id="adr" aria-labelledby="adr-h">
+  <div class="sec-head"><span class="sec-num">1.6</span><h2 id="adr-h">Architecture decision records</h2></div>
+  <p class="lede">An architecture decision record is a short document that states one architectural decision, the situation that led to it and what it costs. The programme uses these records to keep the reasoning behind each of its five main design choices.</p>
+  <div class="prose">
+    <p>An <button class="kw" data-k="adr">architecture decision record</button> (ADR) is a text file of one or two pages, kept in the same Git repository as the work it describes. Michael Nygard proposed the format in 2011 with five fields: title, context, decision, status and consequences. Most templates now place status second, and this page follows that order. The programme uses those fields and asks for two additional things. The decision field should list the options that were rejected, and the consequences field should end with a condition under which the decision ought to be revisited.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 300" role="img" aria-label="The five fields of an architecture decision record in order: title, status, context, decision and consequences, each with the question it answers.">
+      <g><rect x="20" y="40" width="196" height="220" rx="14" class="bx2"/><text x="38" y="76" class="t">1 Title</text><text x="38" y="106" class="ts">A number and a short</text><text x="38" y="128" class="ts">phrase naming the</text><text x="38" y="150" class="ts">decision</text><text x="38" y="230" class="lab">What did we decide on?</text></g>
+      <g><rect x="236" y="40" width="196" height="220" rx="14" class="bx2"/><text x="254" y="76" class="t">2 Status</text><text x="254" y="106" class="ts">Proposed, accepted,</text><text x="254" y="128" class="ts">deprecated or</text><text x="254" y="150" class="ts">superseded</text><text x="254" y="230" class="lab">Is it still in force?</text></g>
+      <g><rect x="452" y="40" width="196" height="220" rx="14" class="tech"/><text x="470" y="76" class="t">3 Context</text><text x="470" y="106" class="ts">The forces at play:</text><text x="470" y="128" class="ts">facts, constraints,</text><text x="470" y="150" class="ts">competing needs.</text><text x="470" y="172" class="ts">No opinion yet.</text><text x="470" y="230" class="lab">Why was this hard?</text></g>
+      <g><rect x="668" y="40" width="196" height="220" rx="14" class="biz"/><text x="686" y="76" class="t">4 Decision</text><text x="686" y="106" class="ts">One active sentence:</text><text x="686" y="128" class="ts">"We will ..."</text><text x="686" y="150" class="ts">and the options</text><text x="686" y="172" class="ts">you rejected</text><text x="686" y="230" class="lab">What will we do?</text></g>
+      <g><rect x="884" y="40" width="196" height="220" rx="14" class="pol"/><text x="902" y="76" class="t">5 Consequences</text><text x="902" y="106" class="ts">What gets easier,</text><text x="902" y="128" class="ts">what gets harder,</text><text x="902" y="150" class="ts">and what would</text><text x="902" y="172" class="ts">make you revisit it</text><text x="902" y="230" class="lab">What did it cost?</text></g>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.9.</b> The five fields of an architecture decision record and the question each one answers. The consequences field should name at least one cost.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>An ADR is not edited when a decision changes. A new record is written that supersedes the earlier one, and the earlier one stays in the repository with its status updated. A reader can then follow how the design changed over time and why.</p>
+  </div>
+  <div class="note like">
+    <h5><span class="ic">~</span>An analogy</h5>
+    <p>A court judgment sets out the facts, the ruling and the reasoning. If a later court overrules it, the original judgment remains on the record. ADRs are kept in the same way.</p>
+  </div>
+  <h3>A worked example</h3>
+  <div class="prose"><p>The example records a decision made for the programme's reference stack, which the facilitator uses for demonstrations. It does not anticipate any of the five ADRs you will write.</p></div>
+  <div class="code"><div class="hd"><span>adr/0000-single-postgresql-engine.md (worked example)</span><button class="copy">Copy</button></div><pre><span class="c-k"># ADR 0: One PostgreSQL engine for warehouse, vectors and full-text search</span>
+
+<span class="c-k">## Status</span>
+Accepted
+
+<span class="c-k">## Context</span>
+The labs need a relational warehouse, a vector index and keyword search.
+The stack has to run on one laptop with 16 to 32 GB of RAM.
+Module 5 requires an entitlement filter to run before ranking, inside the
+engine, so unauthorized chunks never enter the candidate set.
+Dedicated vector databases scale further and offer more index types.
+
+<span class="c-k">## Decision</span>
+We will use PostgreSQL 16 with pgvector and tsvector as the single engine
+for all three. We considered a separate vector database and rejected it
+for the labs.
+
+<span class="c-k">## Consequences</span>
+Easier: one container, one set of roles and row-level security policies,
+hybrid search and the entitlement filter in one SQL statement.
+Harder: vector search will not scale as a dedicated engine does; the
+lab's retrieval latency says little about a production deployment.
+Revisit if: the document corpus grows beyond what one node serves within
+the latency objective set in Module 7.</pre></div>
+  <h3>The five ADRs in this programme</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>ADR</th><th>Decision</th><th>Written in</th></tr></thead>
+    <tbody>
+      <tr><td>ADR 1</td><td>Centralised or federated semantics for the lab enterprise, the retailer in section 1.7</td><td>Module 1</td></tr>
+      <tr><td>ADR 2</td><td>Metric layer or direct SQL access for the assistant</td><td>Module 3</td></tr>
+      <tr><td>ADR 3</td><td>Physical or virtual knowledge graph</td><td>Module 4</td></tr>
+      <tr><td>ADR 4</td><td>Retrieval or graph traversal for relationship questions</td><td>Module 6</td></tr>
+      <tr><td>ADR 5</td><td>Centralised or distributed authorization</td><td>Module 7</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>The five records are compiled into one architecture summary for the capstone review panel in Module 8.</p></div>
+  <div class="prose"><p>Exercise 4 in section 1.8 asks you to write ADR 1 and provides a scaffold for it.</p></div>
+</section>
+
+<section class="sec" id="case" aria-labelledby="case-h">
+  <div class="sec-head"><span class="sec-num">1.7</span><h2 id="case-h">Case study: the retail "active customer" dispute</h2></div>
+  <p class="lede">This case returns to the retailer from section 1.0 and follows the dispute through to a decision. The company and its figures are fictional and were written for this course. The facts given here are also the facts you need for ADR 1 in the hands-on section.</p>
+  <h3>The company</h3>
+  <div class="prose">
+    <p>The retailer operates 310 stores and an e-commerce site with a mobile app. It is a listed company and publishes its number of active customers in each quarterly investor presentation. Four business domains use customer data: marketing, finance, supply chain and customer service.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Area</th><th>Facts</th></tr></thead>
+    <tbody>
+      <tr><td>Data team</td><td>A central data engineering team of nine builds and runs the warehouse. Marketing has three analysts and finance has two. Supply chain has two data engineers of its own. Customer service has no data staff.</td></tr>
+      <tr><td>Systems</td><td>A CRM, an ERP, and a customer master data hub introduced two years ago that so far covers about 60 percent of customers. The warehouse runs on PostgreSQL with dbt models, and Metabase is the BI tool.</td></tr>
+      <tr><td>Reporting obligations</td><td>Statutory accounts, and the quarterly investor presentation, which quotes active customers and net revenue.</td></tr>
+      <tr><td>Change requests</td><td>The central team takes about three weeks to deliver a change to a shared model. Marketing asks for definition changes roughly twice a month.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>The dispute</h3>
+  <div class="prose">
+    <p>At the second-quarter business review, marketing reported 1.42 million active customers, finance reported 1.18 million, and the customer-service dashboard showed 1.61 million. The chief executive asked which figure would go into the investor presentation, and nobody in the room could answer with authority. In the same month a pilot AI assistant, connected directly to the warehouse, told a regional manager that the company had 1.61 million active customers. It had used the status flag, which was the first plausible column it found.</p>
+    <p>Two analysts were already spending about three working days each month reconciling the marketing and finance figures by hand. The same gap reappeared the following month.</p>
+  </div>
+  <h3>Analysis</h3>
+  <div class="prose">
+    <p>A working group applied the classification from section 1.1 and found the three differences shown there: the behaviour that counts as active (terminological), the period (temporal) and the unit that is counted (identity). It then asked who held the authority to settle each one. The finance controller was accountable for any figure published to investors. No one was accountable for the marketing or customer-service definitions, which had been written by analysts and never approved.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 330" role="img" aria-label="Before and after. Before: one ungoverned term, active customer, with three meanings. After: three governed terms. Engaged customer, owned by marketing, 90 days. Paying customer, owned by the finance controller, 12 months, used in external reporting. Open account, owned by customer service, no time window. All three are counted per golden key.">
+      <text x="30" y="34" class="lab">Before</text>
+      <rect x="30" y="46" width="300" height="250" rx="16" class="pol"/>
+      <text x="52" y="84" class="t">"Active customer"</text>
+      <text x="52" y="112" class="tm">one word, no owner</text>
+      <text x="52" y="152" class="ts">login in 90 days, or</text>
+      <text x="52" y="174" class="ts">paid order in 12 months, or</text>
+      <text x="52" y="196" class="ts">status flag is ACTIVE</text>
+      <text x="52" y="236" class="ts">counted per profile, per billing</text>
+      <text x="52" y="258" class="ts">account or per account row</text>
+      <path d="M330 170 H376" class="ln" marker-end="url(#ah)"/>
+      <text x="380" y="34" class="lab">After</text>
+      <rect x="380" y="46" width="226" height="190" rx="16" class="biz"/><text x="398" y="82" class="t">Engaged customer</text><text x="398" y="110" class="tm">logged in or opened the</text><text x="398" y="132" class="tm">app in the last 90 days</text><text x="398" y="170" class="ts">owner: head of</text><text x="398" y="190" class="ts">marketing analytics</text>
+      <rect x="617" y="46" width="226" height="190" rx="16" class="biz"/><text x="635" y="82" class="t">Paying customer</text><text x="635" y="110" class="tm">paid, non-refunded order</text><text x="635" y="132" class="tm">in the last 12 months</text><text x="635" y="170" class="ts">owner: finance controller</text><text x="635" y="190" class="ts">used in investor reporting</text>
+      <rect x="854" y="46" width="226" height="190" rx="16" class="biz"/><text x="872" y="82" class="t">Open account</text><text x="872" y="110" class="tm">status flag is ACTIVE,</text><text x="872" y="132" class="tm">no time window</text><text x="872" y="170" class="ts">owner: head of</text><text x="872" y="190" class="ts">customer service</text>
+      <rect x="380" y="250" width="700" height="46" rx="12" class="tech"/><text x="730" y="279" text-anchor="middle" class="tm">all three are counted per golden key, where master data covers the customer</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 1.10.</b> The outcome of the dispute in the case: one ungoverned term replaced by three governed terms, each with an owner and a stated period.</figcaption>
+  </figure>
+  <h3>The decision and its limits</h3>
+  <div class="prose">
+    <p>The group considered three options. It could adopt finance's definition for everyone, keep one term and scope it by domain, or create three separately named terms. It chose three terms, on the grounds that each team had a legitimate use for its own population and that different names would stop the figures being compared as if they measured the same thing. "Paying customer" became the figure used in investor reporting.</p>
+    <p>The decision left two things unresolved. Master data covers only about 60 percent of customers, so the count per golden key is reliable for that portion and is still a count of source records for the rest. The company also had to decide whether to restate the active customer figures it had already published under the old, unwritten definition.</p>
+  </div>
+  <h3>Questions for discussion</h3>
+  <div class="prose">
+    <ol>
+      <li>The group chose three terms over one term scoped by domain. What would have been easier under the other option, and what would have been harder?</li>
+      <li>Who should approve a future change to the 90-day window in "engaged customer", and who should be told about it?</li>
+      <li>The AI assistant gave a wrong figure to a regional manager. Which components of the reference architecture, and which integration contract, would have prevented that answer?</li>
+      <li>How should the 40 percent of customers outside master data be handled when "paying customer" is reported to investors?</li>
+    </ol>
+  </div>
+  <details class="note">
+    <summary style="font-weight:700;cursor:pointer">Points to draw out</summary>
+    <p>Question 1: one scoped term would have kept a single word on every report and avoided renaming the figure on existing reports, and people would have gone on comparing figures that measure different things. Question 2: the term's owner approves, and the owners of every asset that references the term's identifier are told, which is what the first integration contract makes possible.</p>
+    <p>Question 3: a glossary with a certified term, a metrics layer that computes it, and the contract that the assistant computes metrics only through that layer. Question 4: there is no single right answer. The options include reporting the figure with a stated coverage, counting unmatched records as separate customers and saying so, or delaying the change until coverage improves.</p>
+  </details>
+</section>
+
+<section class="sec" id="handson" aria-labelledby="handson-h">
+  <div class="sec-head"><span class="sec-num">1.8</span><h2 id="handson-h">Hands-on</h2></div>
+  <p class="lede">Four exercises in Python, done in pairs. You need Python 3.13 and VS Code and nothing else. The lab uses only the Python standard library, and its warehouse is a SQLite file that Python creates on your machine. There is no database server, no package to install and no API key.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Exercise</th><th>File</th><th>What you produce</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td>Setup</td><td style="font-weight:400"><code>setup_warehouse.py</code></td><td style="font-weight:400">The lab warehouse <code>retail.db</code></td><td>3 min</td></tr>
+      <tr><td>1. Count active customers three ways</td><td style="font-weight:400"><code>lab1_three_definitions.py</code></td><td style="font-weight:400">Two SQL queries and four counts</td><td>5 min</td></tr>
+      <tr><td>2. Run a baseline and classify its failures</td><td style="font-weight:400"><code>lab2_baseline.py</code></td><td style="font-weight:400">A kind of inconsistency for each of six failed questions, and the owning component if time allows</td><td>7 min</td></tr>
+      <tr><td>3. Report a score with its uncertainty</td><td style="font-weight:400"><code>lab3_wilson.py</code></td><td style="font-weight:400">A working <code>wilson()</code> function and a one-sentence conclusion</td><td>5 min, self-study</td></tr>
+      <tr><td>4. Write ADR 1</td><td style="font-weight:400"><code>adr/0001-semantic-ownership.md</code></td><td style="font-weight:400">A five-field ADR on centralised or federated semantics for the retailer in 1.7</td><td>7 min</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Setup</h3>
+  <div class="prose">
+    <p>The facilitator gives you the folder <code>module-01-lab</code>. Each script has the code you write marked with a <code>TODO</code> comment and prints what is still missing when you run it. Worked answers are in the <code>solutions</code> folder.</p>
+  </div>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Open the folder</h4><p>In VS Code choose File, then Open Folder, and select <code>module-01-lab</code>.</p></div></li>
+    <li><span class="k">2</span><div><h4>Open a terminal</h4><p>Choose Terminal, then New Terminal. It opens in the lab folder. The VS Code Python extension is optional, because every step runs from the terminal.</p></div></li>
+    <li><span class="k">3</span><div><h4>Check Python</h4><p>Run <code>python --version</code> and confirm that it prints 3.13. On macOS or Linux use <code>python3</code> if <code>python</code> is not found. On Windows <code>py</code> also works.</p></div></li>
+    <li><span class="k">4</span><div><h4>Build the warehouse</h4><p>Run <code>python setup_warehouse.py</code>. The data is generated from a fixed seed, so every pair gets the row counts below. The report date for every query in the lab is 31 October 2026.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>Terminal: expected output of setup_warehouse.py</span></div><pre>crm_customers 266 rows
+erp_accounts 192 rows
+crosswalk 303 rows
+products 40 rows
+orders 381 rows
+order_items 654 rows
+returns 111 rows
+Created retail.db. Report date for the lab is 2026-10-31.</pre></div>
+  <div class="prose">
+    <p>The warehouse has seven tables. <code>crm_customers</code> has one row per CRM profile, and some people have two profiles. <code>erp_accounts</code> has one row per billing account. <code>crosswalk</code> maps CRM and ERP identifiers to a golden key for about 60 percent of customers, as in the case. <code>orders</code>, <code>order_items</code> and <code>returns</code> hold sales, and <code>products</code> holds price and cost. To look at the data, run <code>python -m sqlite3 retail.db</code> and type SQL at the prompt.</p>
+  </div>
+  <h3>Exercise 1: count active customers three ways</h3>
+  <div class="prose">
+    <p>Open <code>lab1_three_definitions.py</code>. Marketing's and customer service's queries are written. Write finance's query and a fourth query that applies marketing's definition per person, using the golden key where the crosswalk has one and the CRM identifier where it does not. Then run the script.</p>
+  </div>
+  <div class="code"><div class="hd"><span>lab1_three_definitions.py: the query that is written for you</span><button class="copy">Copy</button></div><pre>def marketing_sql():
+    """Marketing: a CRM profile seen in the last 90 days."""
+    return f"""
+        SELECT COUNT(*) FROM crm_customers
+        WHERE last_seen_date >= date('{REPORT_DATE}', '-90 day')
+    """</pre></div>
+  <div class="code"><div class="hd"><span>Terminal: expected output when both queries are written</span></div><pre>Marketing: seen in 90 days, per CRM profile 164
+Finance: paid order in 12 months, per ERP account 115
+Service: status flag ACTIVE, per account row 232
+Marketing's definition, counted per person 161</pre></div>
+  <div class="prose">
+    <p>All four queries are correct SQL over the same database. The first three numbers differ for more than one reason. The word means three things, which is the terminological problem from section 1.1. The definitions also use different periods, 90 days, 12 months and no period at all, which is the temporal problem. They count different units too, a profile, a billing account and an account row, which section 1.1 classes as an identity problem with a granularity side effect.</p>
+    <p>The fourth number differs from the first by three because people with two profiles are counted once where the crosswalk knows them, which is the identity problem. The crosswalk covers about 60 percent of customers, so 161 is still slightly too high: the generated data has 157 distinct people behind those profiles. Note in one line which component of the reference architecture should hold each definition, and which should hold the mapping from profile to person.</p>
+  </div>
+  <h3>Exercise 2: run a baseline and classify its failures</h3>
+  <div class="prose">
+    <p>Run <code>python lab2_baseline.py</code>. The file <code>baseline_questions.json</code> holds ten questions. For each one it has SQL of the kind a language model writes when it is given table and column names and nothing else, and the SQL that gives the governed answer. The model SQL was written for this lab to reproduce common errors, so no model is called. The script runs both queries against <code>retail.db</code> and compares the results.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab2_baseline.py (abridged: questions shortened, last line omitted)</span></div><pre>q01 PASS model: 19 expected: 19 How many orders were placed in October 2026?
+q02 FAIL model: 232 expected: 115 How many active customers do we have?
+q03 FAIL model: 38809.0 expected: 38411.0 What was net revenue for the EU region in the third quarter?
+q04 FAIL model: 160477.0 expected: 121873.0 What was paid order revenue in fiscal Q1 of this year?
+q05 FAIL model: 28 expected: 50 How many customer profiles are in Karnataka?
+q06 FAIL model: 116 expected: 112 How many different customers placed an order in 2026?
+q07 FAIL model: 40.0 expected: 32.0 What is the margin percentage on private-label products?
+q08 PASS model: 40 expected: 40 How many products do we sell?
+q09 PASS model: 25 expected: 25 How many orders were refunded in full?
+q10 PASS model: 15093.0 expected: 15093.0 What is the largest single order amount?
+
+passed 4 of 10</pre></div>
+  <div class="prose">
+    <p>The script writes <code>failures.csv</code> with one row per failed question. Open it in VS Code, read the model SQL for each row, and fill in the <code>kind</code> column with one of the six kinds from section 1.1. Keep the commas and save the file. The <code>owner</code> column, for the component that should own the fix, is optional in class. Then run <code>python check_classification.py</code>, which compares your kinds with the key and prints the reason for each. Every failed query ran without an error and returned a number, so none of these failures would be caught by checking that the SQL is valid.</p>
+    <p>Ten questions are enough to practise the classification and too few to measure a system. The programme's evaluation sets have 40 questions each, and exercise 3 shows how wide the uncertainty is even then.</p>
+  </div>
+  <h3>Exercise 3: report a score with its uncertainty</h3>
+  <div class="prose">
+    <p>Open <code>lab3_wilson.py</code> and write the body of <code>wilson(k, n)</code> from the formula in section 1.5. The script checks your function against known values and then prints three intervals: the scripted baseline from exercise 2, and two pairs who scored 9 of 40 and 13 of 40 on the validation set. Write one sentence saying whether the second pair's model can be called better on this evidence.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab3_wilson.py (abridged)</span></div><pre>wilson() passes its checks.
+
+Scripted baseline in lab 2 4 of 10: 40.0% interval 16.8% to 68.7%
+Pair A on the validation set 9 of 40: 22.5% interval 12.3% to 37.5%
+Pair B on the validation set 13 of 40: 32.5% interval 20.1% to 48.0%
+
+Pair A and pair B intervals overlap.</pre></div>
+  <details class="note">
+    <summary style="font-weight:700;cursor:pointer">Sample answer</summary>
+    <p>9 of 40 is 22.5 percent, with an interval of 12.3 to 37.5 percent. 13 of 40 is 32.5 percent, with an interval of 20.1 to 48.0 percent. The intervals overlap from 20.1 to 37.5 percent, so 40 questions do not show that the second model is better. The two runs used the same questions, so a paired test such as McNemar's would be the next step if the difference mattered. The baseline of 4 of 10 has an interval of 16.8 to 68.7 percent, which is too wide to support any comparison.</p>
+  </details>
+  <h3>Exercise 4: write ADR 1</h3>
+  <div class="prose">
+    <p>Decide whether the retailer in section 1.7 should own its semantics centrally or in a federated way, and record the decision in <code>adr/0001-semantic-ownership.md</code>. The file is a template with the five fields from section 1.6, and the facts of the case are in <code>case_brief.md</code>. Mark each line of the context as a fact or an assumption.</p>
+    <p>To keep to the time, start from the skeleton that the scaffold below produces and edit it. When you have replaced every placeholder, run <code>python check_adr.py</code>. It checks the form of the ADR, such as whether the decision names a rejected option and whether the consequences give a condition for revisiting it. It does not judge the reasoning, which another pair reviews.</p>
+    <p>The scaffold produces a skeleton on this page and shows how the context changes under different assumptions.</p>
+  </div>
+  <div class="sim" id="sim-adr">
+    <div class="sim-h"><span class="try">Try it</span><h4>ADR 1 scaffold for the retailer in section 1.7</h4></div>
+    <div class="sim-b">
+      <div class="g2" style="align-items:start">
+        <div>
+          <label class="field">Number of domains
+            <select id="adr-dom"><option value="few">Four, as in the case in 1.7</option><option value="many">What if: eight or more</option></select></label>
+          <label class="field">Figures published outside the company
+            <select id="adr-reg"><option value="inv">Quoted to investors each quarter, as in the case</option><option value="yes">What if: audited by a regulator</option><option value="no">What if: none beyond statutory accounts</option></select></label>
+          <label class="field">Data skills in the domains
+            <select id="adr-skill"><option value="mixed">Mixed, as in the case</option><option value="low">What if: analysts only, engineering central</option><option value="high">What if: every domain has engineers</option></select></label>
+          <label class="field">Your decision
+            <select id="adr-dec"><option value="central">Centralised</option><option value="fed">Federated</option><option value="core">Federated with a central core</option></select></label>
+          <div class="out" id="adr-check" aria-live="polite"></div>
+        </div>
+        <div class="code" style="margin:0;max-width:none"><div class="hd"><span>adr/0001-semantic-ownership.md (skeleton)</span><button class="copy">Copy</button></div><pre id="adr-out"></pre></div>
+      </div>
+      <p style="font-size:.93rem;color:var(--muted);margin-bottom:0">The default settings reproduce the facts of the case in section 1.7. The options marked "What if" change one fact so that you can see how the context shifts, and the skeleton labels each line as a fact from the case or an assumption. The reasoning in the consequences field has to be yours.</p>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Check before you swap with another pair</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:400">The context field contains facts from the case, such as the size of the central team, the three-week lead time and the investor reporting obligation, and marks any assumption.</td></tr>
+      <tr><td style="font-weight:400">The decision field states the choice in one sentence and names the option that was rejected.</td></tr>
+      <tr><td style="font-weight:400">The consequences field names at least one cost and one condition under which the decision should be revisited.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note lab">
+    <h5><span class="ic">L</span>What to hand in</h5>
+    <p>Each pair submits three files: <code>lab1_three_definitions.py</code>, <code>failures.csv</code> and <code>adr/0001-semantic-ownership.md</code>, with a note of any failure where the pair disagreed with the key and why. All data in the lab is fictional. Pairs then swap ADRs, and each reviews the other's against the three checks above.</p>
+  </div>
+  <h3>Practice on this page, without a laptop</h3>
+  <div class="prose"><p>The two drills below need no setup. Use them if a machine fails during the session, or as revision afterwards. The first is a longer version of exercise 2, with eight failed questions and the SQL the model wrote. The second asks which kind of authority from section 1.2 each of six statements depends on.</p></div>
+  <div class="sim" id="ex-base">
+    <div class="sim-h"><span class="try">Exercise 1</span><h4>Eight failed questions (illustrative)</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-base"></div></div>
+  </div>
+  <div class="sim" id="ex-auth">
+    <div class="sim-h"><span class="try">Exercise 2</span><h4>Six statements</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-auth"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="recap" aria-labelledby="recap-h">
+  <div class="sec-head"><span class="sec-num">1.9</span><h2 id="recap-h">Recap and checkpoint quiz</h2></div>
+  <p class="lede">The table summarises the main ideas of the module. The quiz that follows has nine scenario questions and is the formative check for Module 1, together with the review of your hands-on work.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Idea</th><th>Summary</th></tr></thead>
+    <tbody>
+      <tr><td>The meaning problem</td><td>Valid queries return different answers when the business meaning of a term has not been recorded where tools can read it.</td></tr>
+      <tr><td>Six kinds of inconsistency</td><td>Terminological, structural, contextual, temporal, granularity and identity. Each has a primary mechanism and an owning component.</td></tr>
+      <tr><td>Three kinds of authority</td><td>Business authority approves a definition, technical authority applies it consistently, and data quality assurance checks the source data.</td></tr>
+      <tr><td>Authoritative and probabilistic sources</td><td>Governed assets give repeatable, traceable answers. Similarity search returns ranked candidates and is not used as a source of definitions.</td></tr>
+      <tr><td>Architecture patterns</td><td>Centralised or federated ownership, combined with semantic layers, ontology-driven integration or virtual knowledge graphs.</td></tr>
+      <tr><td>Reference architecture</td><td>Nine components joined by six integration contracts. The assistant may state only what traces to a component with authority for it.</td></tr>
+      <tr><td>Evaluation</td><td>Three sets of 40 questions. The development set is for building, the validation set for tuning, and the sealed test set for the capstone. Scores are reported with a Wilson interval.</td></tr>
+      <tr><td>ADR</td><td>Title, status, context, decision and consequences, with rejected options and a revisit condition added by the programme.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Checkpoint quiz</h3>
+  <div class="prose"><p>Select an answer to see whether it is correct and why.</p></div>
+  <div class="quiz" id="quiz"></div>
+  <p class="pill" id="quiz-score" style="margin-top:16px">Score: 0 of 0 answered</p>
+  <div class="note lab" style="margin-top:2.2rem">
+    <h5><span class="ic">2</span>Module 2: glossary, metadata, lineage and master data</h5>
+    <p>Module 2 begins resolving the problems diagnosed here. Its lab is also in Python. You write checks that find five planted inconsistencies in a catalog export, score candidate customer matches between CRM and ERP and review the six uncertain pairs, read a <button class="kw" data-k="survivorship">survivorship</button> rule and see what it keeps, link six glossary terms to columns, and map two domains' "customer" to each other while keeping both meanings.</p>
+  </div>
+</section>
+
+<section class="sec" id="refs" aria-labelledby="refs-h">
+  <div class="sec-head"><span class="sec-num">Ref</span><h2 id="refs-h">References</h2></div>
+  <p class="lede">Sources for the claims in this module, checked in November 2026.</p>
+  <ol class="refs">
+    <li>Nygard, M. "Documenting Architecture Decisions". Cognitect blog, 15 November 2011. <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">cognitect.com/blog/2011/11/15/documenting-architecture-decisions</a>. Source of the five-field ADR template.</li>
+    <li>Lei, F. et al. "Spider 2.0: Evaluating Language Models on Real-World Enterprise Text-to-SQL Workflows". ICLR 2025. <a href="https://arxiv.org/abs/2411.07763">arxiv.org/abs/2411.07763</a>; project page <a href="https://spider2-sql.github.io/">spider2-sql.github.io</a>. Source of the 632-task count and the 10.1 and 86.6 percent figures.</li>
+    <li>Sequeda, J., Allemang, D. and Jacob, B. "A Benchmark to Understand the Role of Knowledge Graphs on Large Language Model's Accuracy for Question Answering on Enterprise SQL Databases". arXiv 2311.07509, November 2023. <a href="https://arxiv.org/abs/2311.07509">arxiv.org/abs/2311.07509</a>. Source of the 16 and 54 percent figures.</li>
+    <li>Allemang, D. and Sequeda, J. "Increasing the LLM Accuracy for Question Answering: Ontologies to the Rescue!". arXiv 2405.11706, May 2024. <a href="https://arxiv.org/abs/2405.11706">arxiv.org/abs/2405.11706</a>. Source of the 72 percent figure.</li>
+    <li>Dehghani, Z. "Data Mesh Principles and Logical Architecture". martinfowler.com, December 2020. <a href="https://martinfowler.com/articles/data-mesh-principles.html">martinfowler.com/articles/data-mesh-principles.html</a>. Source of the four principles.</li>
+    <li>Wilson, E. B. "Probable Inference, the Law of Succession, and Statistical Inference". Journal of the American Statistical Association 22(158), 1927, pages 209 to 212. Origin of the interval.</li>
+    <li>Brown, L. D., Cai, T. T. and DasGupta, A. "Interval Estimation for a Binomial Proportion". Statistical Science 16(2), 2001, pages 101 to 133. Comparison of binomial intervals.</li>
+    <li>Sheth, A. P. and Larson, J. A. "Federated Database Systems for Managing Distributed, Heterogeneous, and Autonomous Databases". ACM Computing Surveys 22(3), 1990, pages 183 to 236. Background on semantic heterogeneity.</li>
+    <li>W3C. "SKOS Simple Knowledge Organization System Reference", Recommendation, 2009. <a href="https://www.w3.org/TR/skos-reference/">w3.org/TR/skos-reference</a>.</li>
+    <li>W3C. "OWL 2 Web Ontology Language Document Overview", second edition, 2012. <a href="https://www.w3.org/TR/owl2-overview/">w3.org/TR/owl2-overview</a>.</li>
+    <li>W3C. "Shapes Constraint Language (SHACL)", Recommendation, 2017. <a href="https://www.w3.org/TR/shacl/">w3.org/TR/shacl</a>.</li>
+    <li>W3C. "R2RML: RDB to RDF Mapping Language", Recommendation, 2012. <a href="https://www.w3.org/TR/r2rml/">w3.org/TR/r2rml</a>.</li>
+    <li>Ontop, a virtual knowledge graph system. Project site and documentation, accessed November 2026. <a href="https://ontop-vkg.org/">ontop-vkg.org</a>.</li>
+    <li>StackRoute and RPS Consulting. "Enterprise Semantic Intelligence" course design, 26-hour architect edition, October 2026. Source of the reference architecture, authority table, integration contracts, evaluation method and lab scope.</li>
+  </ol>
+  <div class="note">
+    <h5><span class="ic">i</span>What is ours and what is sourced</h5>
+    <p>The six-kind taxonomy, the three-authority split and the reference architecture are this programme's own design, drawn from the course document. Every sample value on the page is a teaching scenario: the "active customer" and "net revenue" examples, the 12 customer rows, the claims and figures in the simulations, the five text-to-SQL examples, the case study in 1.7 and the hands-on exercises. Benchmark figures are quoted from the papers above and apply to the benchmarks they describe.</p>
+  </div>
+</section>
+
+<section class="sec" id="glossary" aria-labelledby="glossary-h">
+  <div class="sec-head"><span class="sec-num">A-Z</span><h2 id="glossary-h">Glossary</h2></div>
+  <p class="lede">Definitions of the underlined terms used on this page.</p>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<footer>
+  <p>Enterprise Semantic Intelligence, Module 1. Prepared by Shayantan Dey for StackRoute and RPS Consulting, NIIT's enterprise capability arm. November 2026.</p>
+  <p>Tool versions, product names and benchmark results change. Where this page differs from the lab repository or a vendor's current documentation, those sources win.</p>
+</footer>
+</div>
+</div>
+</div>
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function press(group,btn){$$("[aria-pressed]",group).forEach(b=>b.setAttribute("aria-pressed",b===btn?"true":"false"));}
+function chips(box,labels,onPick,first){labels.forEach((t,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=t;b.setAttribute("aria-pressed",i===first?"true":"false");b.addEventListener("click",()=>{press(box,b);onPick(i);});box.appendChild(b);});}
+
+
+/* ---------- drill engine: a list of items, each with options, a key and an explanation ---------- */
+function drill(id,opts,items){
+  const root=document.getElementById(id);if(!root)return;let right=0,done=0;
+  if(!opts)root.classList.add("own");
+  const score=document.createElement("p");score.className="score";
+  const upd=()=>{score.textContent=right+" correct of "+done+" answered, "+items.length+" in total";};
+  items.forEach((it,n)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(n+1)+". "+it[0]+"</p><div class='opts'></div><div class='why'></div>";
+    const box=d.querySelector(".opts");(it[3]||opts).forEach((o,oi)=>{const b=document.createElement("button");b.type="button";b.textContent=o;
+      b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");done++;
+        if(oi===it[1]){right++;b.classList.add("right");}else{b.classList.add("wrong");box.children[it[1]].classList.add("right");}
+        d.querySelector(".why").innerHTML="<b>"+(oi===it[1]?"Correct. ":"The keyed answer is \""+esc((it[3]||opts)[it[1]])+"\". ")+"</b>"+esc(it[2]);upd();});
+      box.appendChild(b);});
+    root.appendChild(d);});
+  root.appendChild(score);upd();
+}
+
+/* ---------- theme ---------- */
+const saved=store("esi-theme");
+if(saved==="dark"||saved==="light")document.documentElement.setAttribute("data-theme",saved);
+else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.setAttribute("data-theme","dark");
+$("#themeBtn").addEventListener("click",()=>{const next=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);store("esi-theme",next);});
+
+/* ---------- menu ---------- */
+const side=$("#side"),menuBtn=$("#menuBtn");
+menuBtn.addEventListener("click",()=>{const o=side.classList.toggle("open");menuBtn.setAttribute("aria-expanded",String(o));});
+$$("#toc a").forEach(a=>a.addEventListener("click",()=>{side.classList.remove("open");menuBtn.setAttribute("aria-expanded","false");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){side.classList.remove("open");hideTip();}});
+
+/* ---------- scrollspy and progress ---------- */
+const links=$$("#toc a");
+const targets=links.map(a=>document.getElementById(a.getAttribute("href").slice(1)));
+function onScroll(){
+  const h=document.documentElement,max=h.scrollHeight-h.clientHeight;
+  $("#bar").style.width=(max>0?h.scrollTop/max*100:0)+"%";
+  let cur=0;targets.forEach((t,i)=>{if(t&&t.getBoundingClientRect().top<=110)cur=i;});
+  links.forEach((a,i)=>{a.classList.toggle("active",i===cur);a.classList.toggle("done",i<cur&&!a.parentElement.classList.contains("sub"));});
+  const a=links[cur],sp=a.querySelectorAll("span");
+  $("#where").textContent=(sp[0].textContent?sp[0].textContent+" ":"")+sp[1].textContent;
+}
+window.addEventListener("scroll",onScroll,{passive:true});onScroll();
+
+/* ---------- glossary ---------- */
+const G={
+ "glossary":["Business glossary","The governed list of business terms. Each term has a definition, an owner, a steward, a certification status and a stable identifier that other assets reference."],
+ "grain":["Grain","What one row of a table stands for: one order, one order line, one customer per day. Two tables can share a key and still have different grain."],
+ "fanout":["Fan-out","Row multiplication caused by joining a table to another with more rows per key. Sums taken after the join count the same value several times."],
+ "crosswalk":["Crosswalk","A table that maps each system's identifier for an entity to one shared key, for example CRM id, ERP id and master data id to one golden key."],
+ "golden":["Golden key and golden record","The single trusted identifier, and the single trusted set of attributes, for one real-world entity after matching and survivorship rules have been applied."],
+ "ontology":["Ontology","A formal model of a domain: classes, hierarchies, properties with domains and ranges, and logical axioms. Written in OWL in this programme."],
+ "kg":["Knowledge graph","Entities and the relationships between them, stored as a graph and built from source systems under an ontology. It can be physical (data copied into a graph store) or virtual (mapped over a warehouse)."],
+ "semlayer":["Metrics semantic layer","A governed layer that defines measures, dimensions, grain, join paths and time logic once, and compiles every request into SQL the same way for every consumer."],
+ "embedding":["Embedding","A list of numbers that represents the meaning of a piece of text. Texts with similar meaning get nearby vectors, which is what makes similarity search possible."],
+ "provenance":["Provenance","A record of where a claim came from. The assistant labels each claim as a retrieved fact, a calculated metric, an inferred relationship or a model interpretation."],
+ "dataproduct":["Data product","A dataset that a domain team owns, documents and serves to others with stated quality and service levels."],
+ "datamesh":["Data mesh","An approach to analytical data defined by Zhamak Dehghani through four principles: domain ownership, data as a product, a self-serve platform and federated computational governance."],
+ "r2rml":["R2RML","A W3C standard language for mapping relational tables to RDF. Virtual knowledge graph systems such as Ontop use these mappings to rewrite graph queries into SQL."],
+ "owl":["OWL","The W3C Web Ontology Language. Its axioms let a reasoner infer facts that were not stated, for example that every plant supplied by a disrupted supplier is at risk."],
+ "shacl":["SHACL","The W3C Shapes Constraint Language. A shape states what valid data looks like, and a store can reject a write that breaks it."],
+ "lineage":["Lineage","The recorded path of data from source to consumer: which dataset, column and transformation produced a value."],
+ "entitlement":["Entitlement","What a given user or role is allowed to see: rows, columns, graph regions or documents."],
+ "t2s":["Text-to-SQL","Asking a language model to translate a natural-language question into a SQL query, using schema information supplied in the prompt."],
+ "rag":["Retrieval-augmented generation (RAG)","Retrieving passages similar to a question and placing them in the prompt, so the model answers from them."],
+ "heldout":["Held-out test set","Evaluation questions kept unseen while a system is built and tuned, so the final score reflects performance on new questions."],
+ "wilson":["Wilson confidence interval","A range for a true success rate estimated from k successes in n trials. It stays between 0 and 1 and behaves well for small n."],
+ "skos":["SKOS","Simple Knowledge Organization System, a W3C standard for describing terms and how they relate. Its mapping relations say that two terms match exactly, or that one is broader or narrower than the other."],
+ "sparql":["SPARQL","The W3C query language for graph data in RDF. It plays the role for a knowledge graph that SQL plays for a warehouse."],
+ "rdf":["RDF","Resource Description Framework, the W3C data model for graphs. Every fact is a triple: a subject, a property and a value."],
+ "survivorship":["Survivorship rule","The rule that decides which value wins when matched records disagree, for example \"take the address from the most recently updated system\"."],
+ "adr":["Architecture decision record (ADR)","A short document with five fields (title, status, context, decision, consequences) that records one architectural decision and why it was made."]
+};
+const tip=document.createElement("div");tip.className="tip";tip.id="kw-tip";tip.setAttribute("role","tooltip");document.body.appendChild(tip);
+let tipFor=null;
+function showTip(el){const d=G[el.dataset.k];if(!d)return;tip.innerHTML="<b>"+esc(d[0])+"</b>"+esc(d[1]);tip.classList.add("show");tipFor=el;el.setAttribute("aria-describedby","kw-tip");
+  const r=el.getBoundingClientRect(),tw=Math.min(340,window.innerWidth-24);tip.style.maxWidth=tw+"px";
+  let left=r.left+window.scrollX+r.width/2-tw/2;left=Math.max(12+window.scrollX,Math.min(left,window.scrollX+window.innerWidth-tw-12));tip.style.left=left+"px";
+  let top=r.bottom+window.scrollY+8;if(r.bottom+tip.offsetHeight+16>window.innerHeight)top=r.top+window.scrollY-tip.offsetHeight-8;tip.style.top=top+"px";}
+function hideTip(){tip.classList.remove("show");if(tipFor)tipFor.removeAttribute("aria-describedby");tipFor=null;}
+$$(".kw").forEach(el=>{el.type="button";el.addEventListener("mouseenter",()=>showTip(el));el.addEventListener("mouseleave",hideTip);el.addEventListener("focus",()=>showTip(el));el.addEventListener("blur",hideTip);el.addEventListener("click",e=>{e.preventDefault();if(tipFor===el)hideTip();else showTip(el);});});
+Object.keys(G).sort((a,b)=>G[a][0].localeCompare(G[b][0])).forEach(k=>{const d=document.createElement("div");d.innerHTML="<b>"+esc(G[k][0])+"</b><p>"+esc(G[k][1])+"</p>";$("#gloss").appendChild(d);});
+
+/* ---------- copy ---------- */
+document.addEventListener("click",e=>{const b=e.target.closest(".copy");if(!b)return;const txt=b.closest(".code").querySelector("pre").textContent;
+  const done=()=>{const o=b.textContent;b.textContent="Copied";setTimeout(()=>{b.textContent=o;},1400);};
+  try{navigator.clipboard.writeText(txt).then(done,done);}catch(err){done();}});
+
+/* ---------- sim: three definitions ---------- */
+(function(){
+  const R=[["C-01","P1",12,40,"ACTIVE"],["C-02","P2",200,420,"ACTIVE"],["C-03","P3",5,null,"ACTIVE"],["C-04","P4",400,500,"ACTIVE"],["C-05","P5",30,20,"ACTIVE"],["C-06","P5",60,90,"ACTIVE"],["C-07","P6",80,350,"CLOSED"],["C-08","P7",150,400,"ACTIVE"],["C-09","P8",20,700,"ACTIVE"],["C-10","P9",500,null,"CLOSED"],["C-11","P10",45,10,"ACTIVE"],["C-12","P10",300,500,"ACTIVE"]];
+  const D={mkt:[r=>r[2]<=90,"Counts anyone seen in the last 90 days, including C-03, who has never bought anything."],
+           fin:[r=>r[3]!==null&&r[3]<=365,"Counts anyone with a paid order in the last 12 months, including C-07, whose account is closed, and leaves out C-03 and C-09, who were both seen in the last three weeks."],
+           svc:[r=>r[4]==="ACTIVE","Counts every open account, including C-04, who was last seen 400 days ago."]};
+  const root=$("#sim-def");let def="mkt";
+  function draw(){
+    const gold=$("#def-golden").checked,f=D[def][0],box=$("#def-rows");
+    box.innerHTML='<div class="row hd"><span>Row</span><span>Golden key</span><span>Seen</span><span>Paid</span><span>Status</span></div>';
+    const seen=new Set();let n=0;
+    R.forEach(r=>{const hit=f(r);const dup=gold&&hit&&seen.has(r[1]);if(hit&&!dup){n++;seen.add(r[1]);}
+      const d=document.createElement("div");d.className="row"+(hit&&!dup?" in":"")+(dup?" dup":"");
+      d.innerHTML="<span>"+r[0]+"</span><span>"+r[1]+(dup?" (same person, not counted again)":"")+"</span><span>"+r[2]+" d</span><span>"+(r[3]===null?"never":r[3]+" d")+"</span><span>"+r[4]+"</span>";box.appendChild(d);});
+    if(!gold){n=R.filter(f).length;}
+    $("#def-n").textContent=gold?n+" people":n+" of 12 rows";
+    $("#def-out").innerHTML="<p>"+D[def][1]+"</p><p>"+(gold?"With the golden key, C-05 and C-06 are one person, and so are C-11 and C-12. "+R.filter(f).length+" rows become "+n+" people. The three definitions still disagree (6, 4 and 8 people), because identity was only one of the three differences.":"Without the golden key, a person with two profiles can be counted twice. Tick the box to count people.")+"</p>";
+  }
+  $$("[data-def]",root).forEach(b=>b.addEventListener("click",()=>{press(root,b);def=b.dataset.def;draw();}));
+  $("#def-golden").addEventListener("change",draw);draw();
+})();
+
+/* ---------- sim: classify ---------- */
+(function(){
+  const K=["Terminological","Structural","Contextual","Temporal","Granularity","Identity"];
+  const C=[
+   ["The BI dashboard reports \"churned customers\" and the CRM reports \"lapsed customers\". An analyst finds that both are computed with identical logic.",0,"Two words, one meaning. The glossary should hold one governed term and list the other as a synonym."],
+   ["Finance's quarterly revenue is 3 percent lower than the sales team's. Finance closes the quarter on the fiscal calendar; sales reports by calendar week.",3,"Both use the same definition of revenue over different periods. The metrics layer owns the time logic, including which calendar a metric uses."],
+   ["A query joins shipments (one row per shipment) to shipment_items (one row per item) and sums freight_cost. The total is about three times too high.",4,"The join crosses grains, so each shipment's cost is repeated once per item. The metrics semantic layer declares grain and join paths so this cannot happen silently."],
+   ["Acme Metals is supplier S-204 in procurement and vendor V-9917 in accounts payable. Spend per supplier is split across two rows.",5,"One real-world company, two identifiers. Master data resolves it with a crosswalk to one golden key."],
+   ["The ERP stores a product's category as one column on the product table. The e-commerce platform uses a separate link table, so a product can sit in several categories.",1,"One concept, two shapes. The logical data model defines the concept once and maps each physical schema to it."],
+   ["\"Margin\" on the store manager's report leaves out logistics cost. In the CFO's pack it includes it. Both groups insist on the word \"margin\".",2,"The same term, legitimately different by domain. Scope the term by domain in the glossary, relate the two with SKOS, and write the difference into each metric."],
+   ["The assistant is asked who supplies component X and names a supplier whose contract ended last year.",3,"The relationship was true once. Validity periods on graph relationships let the query ask \"as of today\"."],
+   ["Indian plants record shipped weight in kilograms and the US plant records it in pounds. A report sums the column across all plants.",2,"The meaning of the number depends on its unit, which depends on where it was recorded. The unit belongs in the metric definition, with conversion applied before aggregation."]
+  ];
+  let i=0,right=0,done=0,locked=false;const opts=$("#cl-opts");
+  K.forEach((k,j)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=k;b.addEventListener("click",()=>{if(locked)return;locked=true;done++;const ok=j===C[i][1];if(ok)right++;
+    $("#cl-fb").innerHTML='<p class="verdict '+(ok?"ok":"no")+'">'+(ok?"Correct: ":"Closer to ")+K[C[i][1]].toLowerCase()+".</p><p>"+esc(C[i][2])+"</p>";score();});opts.appendChild(b);});
+  function score(){$("#cl-score").textContent=right+" right of "+done+" answered";}
+  function show(){locked=false;$("#cl-count").textContent="Case "+(i+1)+" of "+C.length;$("#cl-case").textContent=C[i][0];$("#cl-fb").textContent="Pick the kind that best explains the failure.";}
+  $("#cl-next").addEventListener("click",()=>{i=(i+1)%C.length;show();});show();score();
+})();
+
+/* ---------- sim: authority ---------- */
+(function(){
+  const A=[
+   ["\"Net revenue for Europe last quarter was 48.2 million.\"",true,"Calculated metric","Metrics semantic layer","The layer has technical authority for the computation, and the definition it applies was certified through the glossary's governance. The claim says nothing about whether the source orders were loaded correctly."],
+   ["\"A paying customer is one with a paid, non-refunded order in the last 12 months.\"",true,"Retrieved fact, from the glossary only","Business glossary","Allowed when it cites the certified glossary term. The same sentence taken from a slide found by similarity search is not a definition, however confident the match."],
+   ["\"Supplier S-204 and vendor V-9917 are the same company.\"",true,"Retrieved fact","Master and reference data","The crosswalk is authoritative for identity within its stewardship scope and its approved matching rules. Outside that scope, the assistant should say the match is unconfirmed."],
+   ["\"The termination policy requires 90 days' written notice.\"",true,"Retrieved fact, with a verified citation","Semantic retrieval index, then the document itself","The index locates the passage and the policy document is the authority, so the assistant must cite the document and check that the cited text contains the claim."],
+   ["\"Plant A is indirectly exposed to the disruption at supplier S-204.\"",true,"Inferred relationship","Knowledge graph under the ontology","Nobody recorded this fact. It follows from recorded supply relationships and an ontology rule, so it is labelled as inferred and is only as reliable as those sources."],
+   ["\"The contract with S-204 is worth 12 crore.\" (asked by a user who may see spend metrics but not contracts)",false,"Refusal, logged","Policy and authorization layer","The user is entitled to the metric and not to the contract. The rule for composed answers is deny if any source denies, and the refusal is written to the audit record."],
+   ["\"Revenue will probably recover next quarter.\"",false,"Model interpretation","No component","Nothing in the architecture has authority for a forecast the model made up. If it is shown at all, it must be labelled as the model's interpretation and kept apart from the governed figures."]
+  ];
+  chips($("#au-claims"),A.map(a=>a[0]),i=>{const a=A[i];$("#au-out").innerHTML='<p class="verdict '+(a[1]?"ok":"no")+'">'+(a[1]?"May be stated":"May not be stated as fact")+"</p><p><b>Provenance label:</b> "+esc(a[2])+"</p><p><b>Authority behind it:</b> "+esc(a[3])+"</p><p>"+esc(a[4])+"</p>";},-1);
+})();
+
+/* ---------- sim: patterns ---------- */
+(function(){
+  const P=[
+   ["A bank whose regulator audits its capital and liquidity figures","Centralised semantics for the regulated metrics","Two definitions of a regulated figure are a compliance finding, so one accountable owner and one model are worth the queue.","The lean reverses for the bank's marketing and product analytics, where no regulator reads the numbers and a central queue only slows teams down."],
+   ["A conglomerate of 12 business units acquired over 15 years, each with its own data team","Federated semantics with shared golden keys","The units mean different things by \"order\" and \"customer\" for good commercial reasons, and each has the skills to own its definitions.","The lean reverses if the group is consolidating every unit onto one ERP, because the differences in meaning are then being removed at the source."],
+   ["A company that already publishes domain-owned data products on a self-serve platform","Semantic layers inside the data mesh","Ownership and the platform exist already, so each product can ship its semantic model with it.","Watch metrics that span products, such as margin across sales and logistics. If nobody owns those, add a small central group for cross-domain metrics."],
+   ["A supply-chain risk team asking which customers are exposed if one supplier fails, across five systems","Ontology-driven integration into a knowledge graph","The question is a chain of relationships across systems, and rules such as \"indirectly exposed\" are worth stating once, formally.","The lean reverses if most questions turn out to be totals and trends. Those belong in the metrics layer."],
+   ["Residency rules forbid copying plant data out of the regional warehouse, and answers must reflect today's shipments","A virtual knowledge graph","Mappings expose the tables as a graph without moving the data, and every answer is as fresh as the warehouse.","The lean reverses if the warehouse cannot carry the query load, or if the systems disagree on identifiers. Virtualisation does not repair either."]
+  ];
+  chips($("#pat-q"),P.map(p=>p[0]),i=>{const p=P[i];$("#pat-out").innerHTML="<p><b>Leans towards:</b> "+esc(p[1])+"</p><p><b>Why:</b> "+esc(p[2])+"</p><p><b>When it reverses:</b> "+esc(p[3])+"</p>";},-1);
+})();
+
+/* ---------- sim: reference architecture ---------- */
+(function(){
+  const svg=$("#ra-svg");
+  const D={
+   glossary:["Business glossary","Governed business terminology with owners, stewards, certification status and a stable identifier per term.","Business authority for the meaning of terms. The governance process confers it; the catalog only records it.","That any dashboard or query uses the term as defined. That happens only when other assets reference the term's identifier.","OpenMetadata. Module 2."],
+   model:["Enterprise data model","Business entities, attributes and structural relationships, at conceptual and logical level. It links glossary terms to physical schemas.","Technical authority for structure.","That the physical data conforms to it, or that the values are correct.","Logical model skeleton, linked to terms and columns in OpenMetadata. Module 2."],
+   mdm:["Master and reference data","Trusted entity identities, golden records, crosswalks between system identifiers and code lists.","Authoritative for identity within its stewardship scope and its approved matching rules.","Identity outside that scope. A match is as good as the rule that made it. A false merge and a missed match carry different costs, and stewards decide which error the rules should prefer.","Splink for matching, crosswalk and golden-record tables in PostgreSQL. Module 2."],
+   ontology:["Ontology","Formal domain concepts: class hierarchies, property domains and ranges, OWL axioms for inference and SHACL shapes for validation.","Technical authority for formal semantics.","Business agreement. A class definition in OWL carries no business authority unless it traces to a governed glossary term.","Protege for design, rdflib and pySHACL for validation in CI. Module 4."],
+   kg:["Knowledge graph","Connected entities, facts and relationships with validity periods, instantiated from source systems under the ontology.","Derived. It holds no authority of its own.","Anything beyond its inputs. It is only as reliable as the sources, the entity identities and the data quality checks it is built on.","GraphDB Free for the physical graph, Ontop for the virtual graph. Module 4."],
+   metrics:["Metrics semantic layer","Governed analytical measures, calculations, grain, join paths and time logic, consumed by BI, notebooks, APIs and the assistant.","Technical authority for interpretation and computation.","Source-data correctness. A certified formula applied to duplicated rows returns a wrong number, and that belongs to data quality assurance.","dbt Core with MetricFlow, called through a query service that runs under the user's database role. Module 3."],
+   index:["Semantic retrieval index","Similarity-based retrieval over documents and metadata, with entitlement and glossary tags on every chunk.","Probabilistic. It is never a source of definitions.","That the top result is relevant, current or correct. It ranks by similarity, and the document it points to carries the authority.","pgvector and tsvector hybrid search in PostgreSQL, with a reranking step. Module 5."],
+   policy:["Policy and authorization layer","Row, column, graph and document-level entitlements, each enforced at a named point, with audit logging.","Authoritative for access.","That the data a user is allowed to see is right. An instruction in a prompt is also not enforcement: the store has to refuse the query.","PostgreSQL row-level security and grants, GraphDB repository and named-graph rights, entitlement tags on chunks, an application check before each tool call. Module 7."],
+   assistant:["Semantic assistant","Language understanding, query routing, evidence composition and answer generation, with a provenance label on every claim.","Interpretation only. Every claim must trace to one of the other components.","Anything on its own. Without a governed source behind a claim, the assistant should abstain or label the claim as its interpretation.","LangGraph for routing and state, LlamaIndex for retrieval, typed tools for MetricFlow, SPARQL and retrieval. Module 6."]
+  };
+  const Q=[
+   ["Net revenue in Europe last quarter",["policy","metrics","glossary","assistant"],"The policy layer checks the user's role first. The assistant routes to the metrics layer, which computes the certified metric under that role. The glossary supplies the definition the metric implements."],
+   ["Which suppliers supply Plant A?",["policy","kg","ontology","mdm","assistant"],"A relationship question. After the access check, the assistant sends a SPARQL query to the knowledge graph, whose structure comes from the ontology and whose supplier and plant identities come from the golden keys."],
+   ["What is the supplier termination policy?",["policy","index","assistant"],"A document question. The retrieval query applies the entitlement filter before ranking, so chunks the user may not see never become candidates. The assistant cites the passage and verifies the citation."],
+   ["Which suppliers breach the termination policy and contribute over 10 percent of procurement spend?",["policy","index","kg","metrics","mdm","assistant"],"A composed question. Documents give the policy, the graph gives supplier relationships, the metrics layer gives spend, and the golden key joins them. If any one source denies access, the composed answer is refused."]
+  ];
+  function setText(t,a,b,c,d){$("#ra-title").textContent=t;$("#ra-resp").textContent=a;$("#ra-auth").textContent=b;$("#ra-not").textContent=c;$("#ra-tool").textContent=d;}
+  function light(ids){svg.classList.add("dim");$$(".pick",svg).forEach(g=>g.classList.toggle("sel",ids.includes(g.dataset.c)));}
+  $$(".pick",svg).forEach(g=>{const go=()=>{press($("#ra-q"),null);const d=D[g.dataset.c];light([g.dataset.c]);setText(d[0],d[1],d[2],d[3],d[4]);};
+    g.addEventListener("click",go);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
+  chips($("#ra-q"),Q.map(q=>q[0]),i=>{const q=Q[i];light(q[1]);setText("Question: "+q[0],q[2],"Components involved: "+q[1].map(k=>D[k][0]).join(", ")+".","","You build this route in Module 6.");},-1);
+})();
+
+/* ---------- sim: text-to-SQL failures ---------- */
+(function(){
+  const T=[
+   ["How many active customers did we have last quarter?","What the model produced","SELECT COUNT(*)\nFROM customers\nWHERE status = 'ACTIVE';","Runs, returns a number","The model saw a column named status and used it. That is the customer-service reading, and the question's \"last quarter\" was dropped because the flag has no date.","Terminological and temporal","Business glossary for the meaning, metrics layer for the period"],
+   ["What was net revenue for Europe last quarter?","What the model produced","SELECT SUM(o.amount) - SUM(r.refund)\nFROM orders o\nLEFT JOIN returns r\n  ON r.order_id = o.order_id\nWHERE o.region = 'EU'\n  AND o.order_date >= DATE '2026-07-01'\n  AND o.order_date <  DATE '2026-10-01';","Runs, overstates revenue","Orders have one row per order and returns have one row per returned line. Every order with two return lines has its amount summed twice.","Granularity","Metrics semantic layer, which declares grain and join paths"],
+   ["Who are our top five customers by total spend across CRM and ERP?","What the model produced","SELECT c.name, SUM(i.amount) AS spend\nFROM crm_customers c\nJOIN erp_invoices i\n  ON LOWER(i.customer_email) = LOWER(c.email)\nGROUP BY c.name\nORDER BY spend DESC\nLIMIT 5;","Runs, splits and merges customers","The two systems share no key, so the model invented one from email. Customers with a changed or shared email are split or merged, and two different people called A. Kumar are grouped as one.","Identity","Master and reference data, through the crosswalk and golden key"],
+   ["Who supplies component X today?","What the model produced","SELECT s.name\nFROM supplier_components sc\nJOIN suppliers s\n  ON s.supplier_id = sc.supplier_id\nWHERE sc.component_id = 'X';","Runs, lists past suppliers too","The table has valid_from and valid_to columns. Nothing told the model that a supply relationship has a validity period, so ended contracts are returned as current.","Temporal","Knowledge graph, with validity periods on relationships"],
+   ["What is our definition of an active customer?","What retrieval returned","-- top passage, similarity 0.83\n-- source: marketing strategy deck, 2019\n\n\"We consider a customer active if they\n have engaged with any channel in the\n last 180 days.\"","Fluent, confident, out of date","This example is a retrieval failure, so there is no SQL to inspect. The passage closest in meaning to the question is a slide from seven years ago, and similarity search has no information about which document is current or certified.","Terminological","Business glossary. The retrieval index is never a source of definitions."]
+  ];
+  chips($("#t2s-q"),T.map(t=>t[0]),show,0);
+  function show(i){const t=T[i];$("#t2s-lbl").textContent=t[1];$("#t2s-sql").textContent=t[2];
+    $("#t2s-out").innerHTML='<p class="verdict no">'+esc(t[3])+"</p><p>"+esc(t[4])+"</p><p><b>Kind:</b> "+esc(t[5])+"</p><p><b>Owner of the fix:</b> "+esc(t[6])+"</p>";}
+  show(0);
+})();
+
+/* ---------- sim: Wilson interval ---------- */
+(function(){
+  const n=40,z=1.96;
+  function wil(k){const p=k/n,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return [Math.max(0,c-h),Math.min(1,c+h),p];}
+  const pc=x=>(x*100).toFixed(1)+"%";
+  function draw(){
+    const a=+$("#w-a").value,b=+$("#w-b").value,A=wil(a),B=wil(b);
+    $("#w-a-n").textContent=a;$("#w-b-n").textContent=b;
+    [["a",A,"Baseline"],["b",B,"Capstone"]].forEach(([id,W,name])=>{$("#w-"+id+"-t").textContent=name+": "+pc(W[2])+", Wilson 95% interval "+pc(W[0])+" to "+pc(W[1]);
+      const bar=$("#w-"+id+"-i");bar.style.left=(W[0]*100)+"%";bar.style.width=((W[1]-W[0])*100)+"%";$("#w-"+id+"-p").style.left="calc("+(W[2]*100)+"% - 1px)";});
+    const lo=a<=b?A:B,hi=a<=b?B:A,overlap=lo[1]>=hi[0];
+    let msg;
+    if(a===b)msg="The two scores are identical, so there is nothing to claim.";
+    else if(overlap)msg="The intervals overlap between "+pc(hi[0])+" and "+pc(lo[1])+". On 40 questions this difference could plausibly be chance, so this check does not show an improvement. Because the same questions are scored twice, run McNemar's test on the questions that changed outcome before you conclude either way.";
+    else msg="The intervals do not overlap: the gap between them runs from "+pc(lo[1])+" to "+pc(hi[0])+". That supports a claim of improvement on this kind of question.";
+    $("#w-out").innerHTML="<p>"+msg+"</p><p>Each interval is roughly "+Math.round((A[1]-A[0]+B[1]-B[0])*50)+" percentage points wide. That width is the reason 40 questions cannot establish production performance, and the capstone presentation has to say so.</p>";
+  }
+  $("#w-a").addEventListener("input",draw);$("#w-b").addEventListener("input",draw);draw();
+})();
+
+/* ---------- sim: ADR scaffold ---------- */
+(function(){
+  const v=id=>$("#adr-"+id).value;
+  function draw(){
+    const dom=v("dom"),reg=v("reg"),skill=v("skill"),dec=v("dec");const ctx=[],cen=[],fed=[];
+    if(dom==="few"){ctx.push("Fact (case 1.7): four domains use customer data: marketing, finance, supply chain and customer service.");cen.push("only four domains");}
+    else{ctx.push("Assumption: eight or more domains have their own reporting.");fed.push("eight or more domains");}
+    if(reg==="inv"){ctx.push("Fact (case 1.7): the company is listed and quotes active customers and net revenue in its quarterly investor presentation.");cen.push("figures published to investors");}
+    else if(reg==="yes"){ctx.push("Assumption: a regulator audits some of our metrics.");cen.push("regulated metrics");}
+    else{ctx.push("Assumption: no figure is published outside the statutory accounts.");fed.push("no externally published metrics");}
+    if(skill==="mixed"){ctx.push("Fact (case 1.7): supply chain has two data engineers; marketing and finance have analysts; customer service has no data staff.");cen.push("customer service has no data staff");fed.push("supply chain has its own engineers");}
+    else if(skill==="low"){ctx.push("Assumption: domains have analysts only and all engineering is central.");cen.push("no engineering skills in the domains");}
+    else{ctx.push("Assumption: every domain has its own data engineers.");fed.push("every domain has its own engineers");}
+    ctx.push("Fact (case 1.7): the central team of nine takes about three weeks to deliver a change to a shared model, and marketing asks for definition changes about twice a month.");fed.push("a three-week lead time against two requests a month from marketing");
+    ctx.push("Fact (case 1.7): master data covers about 60 percent of customers.");
+    const dtext={central:"We will have one central team own the glossary and one enterprise semantic model.\nWe considered federated ownership and rejected it because <your reason>.",
+                 fed:"We will have each domain own its terms and semantic models. A shared standards group owns\ngolden keys, cross-domain terms and mapping rules.\nWe considered central ownership and rejected it because <your reason>.",
+                 core:"We will centralise a named core (golden keys, the terms on external reports, cross-domain\nmetrics) and have each domain own everything else.\nWe considered the two pure options and rejected them because <your reason>."}[dec];
+    const cons={central:["Easier: one definition per term; one place to audit.","Harder: every change waits for the central team. <How long is acceptable?>","Revisit if: <for example, the request queue exceeds N weeks>."],
+                fed:["Easier: domains change their own definitions without waiting.","Harder: cross-domain questions depend on mappings. <Who maintains them?>","Revisit if: <for example, two domains publish conflicting figures to the same audience>."],
+                core:["Easier: published and shared figures have one owner; domains keep their speed elsewhere.","Harder: the boundary of the core will be disputed. <Who decides what is in it?>","Revisit if: <for example, the core grows past N terms or domains route around it>."]}[dec];
+    $("#adr-out").textContent="# ADR 1: Ownership of semantics for the retailer\n\n## Status\nProposed\n\n## Context\n"+ctx.map(x=>"- "+x).join("\n")+"\n\n## Decision\n"+dtext+"\n\n## Consequences\n"+cons.map(x=>"- "+x).join("\n")+"\n";
+    const other=dec==="central"?fed:dec==="fed"?cen:cen.concat(fed);
+    $("#adr-check").innerHTML="<p><b>Context that supports a central owner:</b> "+(cen.length?esc(cen.join("; ")):"none selected")+".</p><p><b>Context that supports federated ownership:</b> "+esc(fed.join("; "))+".</p><p>"+(dec==="core"?"For a central core, the consequences field should say which of these points decide what goes into the core.":other.length?"Your consequences field should address these points, which weigh against the option you chose: "+esc(other.join("; "))+".":"Nothing in the context you set weighs against this option. The consequences field still has to name a cost.")+"</p>";
+  }
+  ["dom","reg","skill","dec"].forEach(id=>$("#adr-"+id).addEventListener("change",draw));draw();
+})();
+
+/* ---------- hands-on drills ---------- */
+drill("dr-base",["Terminological","Structural","Contextual","Temporal","Granularity","Identity"],[
+ ["<b>What was the average order value last month?</b><span class='rec'>SELECT AVG(oi.line_amount)\nFROM order_items oi JOIN orders o USING (order_id)\nWHERE o.order_date >= DATE '2026-10-01' AND o.order_date < DATE '2026-11-01';</span>The result is far below the figure on the finance dashboard.",4,"The query averages order lines, and the question asks about orders. One row of order_items is a line, so the grain is wrong. The metrics semantic layer owns the fix by declaring the grain of each measure."],
+ ["<b>How many customers churned in the second quarter?</b><span class='rec'>SELECT COUNT(*) FROM customers\nWHERE status = 'CLOSED' AND closed_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30';</span>Marketing's churn report shows four times as many. Customer service calls the event in this query an account closure.",0,"The model took \"churned\" to mean a closed account. Marketing means no purchase for 180 days. The word has two meanings and no governed definition, which the business glossary should supply."],
+ ["<b>What was revenue in fiscal Q1?</b><span class='rec'>SELECT SUM(amount) FROM orders\nWHERE order_date >= DATE '2026-01-01' AND order_date < DATE '2026-04-01';</span>The company's fiscal year starts on 1 April.",3,"The query used the calendar quarter. Fiscal Q1 runs from April to June. The metrics layer owns the calendar and the time logic of each metric."],
+ ["<b>What is our total spend per supplier across procurement and accounts payable?</b><span class='rec'>SELECT p.supplier_name, SUM(p.po_amount) + SUM(a.paid_amount)\nFROM procurement_orders p JOIN ap_payments a ON a.vendor_name = p.supplier_name\nGROUP BY p.supplier_name;</span>Several large suppliers are missing from the result.",5,"The two systems have no shared key, so the model joined on the name, and names such as \"Acme Metals\" and \"Acme Metals Pvt Ltd\" do not match. Master data owns the fix with a crosswalk to one golden key. The join also multiplies rows, which is a second problem of grain."],
+ ["<b>How many customers do we have in Karnataka?</b><span class='rec'>SELECT COUNT(*) FROM crm_customers\nWHERE address_text LIKE '%Karnataka%';</span>The count is about half of what the ERP shows.",1,"The CRM keeps the address as one free-text field, and the ERP has a separate state column. The same concept has two shapes, and the model picked the weaker one. The enterprise data model defines the address once and maps both systems to it."],
+ ["<b>What is our margin on private-label products?</b><span class='rec'>SELECT SUM((price - unit_cost) * quantity) / SUM(price * quantity)\nFROM order_items JOIN products USING (product_id)\nWHERE is_private_label;</span>Store operations agree with the result and finance does not. Both teams need to keep the word margin on their reports.",2,"Store operations leave logistics cost out of margin and finance includes it, and both call the result \"margin\". The meaning depends on who is asking. The glossary scopes the term by domain and each metric states what it includes."],
+ ["<b>What was the price of SKU 1182 on 1 March?</b><span class='rec'>SELECT current_price FROM products WHERE sku = '1182';</span>The price was changed in June.",3,"The query returned today's price for a question about a past date. Nothing told the model that prices have a history. An effective-dated price history in the data model, read through the time logic of the metrics layer, answers as-of questions."],
+ ["<b>How many customers bought both online and in a store last year?</b><span class='rec'>SELECT COUNT(DISTINCT w.customer_email)\nFROM web_orders w JOIN pos_sales s ON s.loyalty_email = w.customer_email\nWHERE w.order_date >= DATE '2025-01-01' AND w.order_date < DATE '2026-01-01'\n  AND s.sale_date >= DATE '2025-01-01' AND s.sale_date < DATE '2026-01-01';</span>Most store sales carry no email address.",5,"Online and store customers are identified differently, and email is present on only a fraction of store sales. The count covers the customers who happen to share an email in both systems. Master data owns the link between the two identities."]
+]);
+drill("dr-auth",["Business authority","Technical authority","Data quality assurance","None of these"],[
+ ["From next quarter, \"engaged customer\" will use a 60-day window in place of 90 days.",0,"Changing what a term means is a business decision. It needs the approval of the term's owner, the head of marketing analytics in the case."],
+ ["The paying-customer count is the same in Metabase, in a notebook and through the API.",1,"One component computing the metric one way for every consumer is technical authority. It says nothing about whether the definition is the right one."],
+ ["Yesterday's order file was loaded twice, so today's revenue figure is overstated.",2,"The definition and the computation are both correct and the input is wrong. Detecting that is the job of data quality assurance."],
+ ["Customers will probably return after the festive season.",3,"This is the model's own interpretation. No component has authority for it, so the assistant must label it as an interpretation or leave it out."],
+ ["A supplier record with no country is rejected when it is loaded into the graph.",1,"A shape enforced by the store on every write is technical authority: it applies a structural rule in one fixed way. Finding out why the source record has no country, and correcting it there, is data quality assurance."],
+ ["The finance controller certifies the net revenue definition used in the investor presentation.",0,"An accountable owner approving a definition through governance is business authority."]
+]);
+
+/* ---------- quiz ---------- */
+(function(){
+  const Q=[
+   ["Marketing and finance report different \"active customer\" counts. Both queries are valid SQL on the same warehouse. What has to happen first?",["Rewrite both queries so they match","Install a data catalog","Have an accountable owner decide the definitions and record them as governed terms","Ask an LLM which definition is more common"],2,"The disagreement is about meaning, so it needs business authority. A catalog records the decision and a query implements it, and neither can make it."],
+   ["A query joins invoices, which have one row per invoice, to payment instalments, which have one row per instalment, and the total invoiced amount goes up. Which kind of inconsistency is this?",["Identity","Granularity","Terminological","Contextual"],1,"The two tables have different grain. Joining them repeats each invoice amount once per instalment, which is a fan-out."],
+   ["The semantic layer computes net revenue in rupees exactly as certified. This month's exchange-rate file arrived a day late, so European orders were converted at last month's rate. Which control failed?",["Business authority","Technical authority","Data quality assurance","Authorization"],2,"The definition was approved and applied correctly. The input was wrong. A semantic layer governs interpretation and computation and holds no authority over source-data correctness."],
+   ["The assistant retrieves a paragraph defining \"churn\" from a 2021 slide deck and presents it as the company definition. What is the architectural error?",["The embedding model is too small","The retrieval index was treated as a source of definitions","The paragraph should have been summarised","The assistant should have used a larger context window"],1,"Retrieval is probabilistic and ranks by similarity. Definitions come from the governed glossary, whatever the similarity score."],
+   ["A group has 14 business units with their own data engineers and real differences in what \"order\" means. The central data team has four people. Which way does ownership of semantics lean, and at what cost?",["Centralised, with the team of four approving every definition; the cost is a longer queue","Federated with shared standards; the cost is maintaining cross-domain mappings","A virtual knowledge graph over all 14 units; the cost is query latency","Leave each unit alone with no shared standards; the cost is nothing until a group report is needed"],1,"A central team of four would hold up 14 units that already have their own engineers. Federated ownership suits this group, and it brings the cost of maintaining mappings for cross-domain questions."],
+   ["Why does the held-out test set stay encrypted until the capstone?",["To save API cost","Because it contains confidential data","So the final score reflects questions nobody tuned the system for","Because it is larger than the other sets"],2,"A score on questions the system was tuned against mostly shows how well it fits those questions. Keeping the test set sealed makes the before and after comparison credible."],
+   ["Baseline: 8 of 40. Capstone: 12 of 40. A slide says \"accuracy improved by 50 percent; the system is production ready\". What is wrong?",["Nothing; 12 is 50 percent more than 8","The Wilson intervals (about 10 to 35 percent and 18 to 45 percent) overlap heavily, and 40 questions cannot establish production performance","The baseline should have been run twice","Accuracy should be reported as a fraction"],1,"The intervals overlap, so this comparison does not show a clear improvement. Separately, a 40-question set is too small to support a claim about production performance."],
+   ["An ADR's consequences field reads: \"This gives us consistency, speed and trust.\" What will a reviewer ask for?",["A longer title","The author's job title","At least one cost, and a condition under which the decision should be revisited","A diagram"],2,"Each pattern in 1.3 has a cost. A consequences field that lists only benefits leaves out what the decision gives up."],
+   ["A team proposes a virtual knowledge graph to solve the problem that CRM and ERP use different customer identifiers. What is the flaw?",["Virtual graphs cannot query PostgreSQL","Virtualisation exposes the tables as they are; it does not reconcile identifiers, which is master data's job","Virtual graphs are always slower","SPARQL cannot express joins"],1,"A virtual graph exposes the tables as they are, so data quality problems, inconsistent identifiers and incompatible source semantics remain. Identity is resolved by the crosswalk and golden key."]
+  ];
+  const root=$("#quiz");let answered=0,right=0;
+  function score(){$("#quiz-score").textContent="Score: "+right+" of "+answered+" answered"+(answered===Q.length?(right>=7?". You are ready for Module 2.":". Revisit the sections you missed before Module 2."):"");}
+  Q.forEach((q,qi)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(qi+1)+". "+esc(q[0])+"</p><div class='opts'></div><div class='why'></div>";
+    const opts=d.querySelector(".opts");
+    const order=q[1].map((_,k)=>k);for(let k=order.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[order[k],order[j]]=[order[j],order[k]];}
+    order.forEach(oi=>{const o=q[1][oi];const b=document.createElement("button");b.type="button";b.textContent=o;if(oi===q[2])b.dataset.key="1";b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");answered++;
+      if(oi===q[2]){right++;b.classList.add("right");}else{b.classList.add("wrong");opts.querySelector("[data-key]").classList.add("right");}
+      d.querySelector(".why").innerHTML="<b>"+(oi===q[2]?"Correct. ":"Not quite. ")+"</b>"+esc(q[3]);score();});opts.appendChild(b);});
+    root.appendChild(d);});
+  score();
+})();
+
+})();
+</script>
+</body>
+</html>
