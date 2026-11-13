@@ -1,0 +1,8 @@
+{
+ "GT-0107": {"name": "Paying customer", "definition": "A customer with a paid, non-refunded order in the last 12 months.", "column": ""},
+ "GT-0180": {"name": "Golden customer key", "definition": "The identifier that master data assigns to one real-world customer.", "column": ""},
+ "GT-0120": {"name": "Net revenue", "definition": "Gross sales less returns, discounts and tax.", "column": ""},
+ "GT-0131": {"name": "Order date", "definition": "The date on which the customer placed the order.", "column": ""},
+ "GT-0150": {"name": "Open account", "definition": "An account whose status flag is ACTIVE.", "column": ""},
+ "GT-0171": {"name": "Customer contact email", "definition": "The email address the company uses to contact the customer.", "column": ""}
+}

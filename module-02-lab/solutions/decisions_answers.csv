@@ -1,0 +1,11 @@
+id,object,draft,flags,decision,final_text,reason
+d01,orders.order_ts,"Timestamp when the order was placed, in UTC.",,edit,Timestamp when the order was placed. Time zone not confirmed.,no evidence for UTC
+d02,customers.status,"Indicates whether the customer is active, meaning they have purchased in the last 12 months.",asserts a business definition ('meaning'); numbers not in the evidence: 12,reject,,"asserts the 12-month rule, which belongs to another term"
+d03,order_items.qty,Number of units of the product on this order line.,,approve,,"matches type, profile and grain"
+d04,customers.email,"Customer email address, for example priya.sharma@example.com.",quotes what looks like a real value,edit,Customer email address.,removed the example value
+d05,returns.refund,Refund amount for the returned order line.,,approve,,matches lineage and grain
+d06,suppliers.rating,"Supplier quality rating from 1 to 5, where 5 is best.",numbers not in the evidence: 5,reject,,"profile shows letters, so the scale is invented"
+d07,dim_customer.golden_key,Primary key of the customer table.,,edit,Master data key that identifies one customer across CRM and ERP.,lineage shows the crosswalk key
+d08,fct_sales.net_revenue,"Net revenue as defined by Finance: gross sales less returns, discounts and tax.",asserts a business definition ('as defined by'),reject,,code subtracts returns only
+d09,glossary term: Churned customer,A customer whose account status is CLOSED.,,reject,,two meanings in use and no owner
+d10,glossary term: Order line,One product and its quantity within an order. An order has one or more lines.,,approve,,owner confirmed the wording

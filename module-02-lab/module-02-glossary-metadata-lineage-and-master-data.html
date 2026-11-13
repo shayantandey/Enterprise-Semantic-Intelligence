@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 2: Glossary, metadata, lineage and master data</title>
+<meta name="description" content="Module 2 of Enterprise Semantic Intelligence (StackRoute): six kinds of metadata, lineage at four levels, catalog tooling with OpenMetadata, semantic mappings and identifier governance, master data and entity identity, SKOS mappings between domains, LLM-assisted descriptions with steward approval, a telecom case study and hands-on exercises.">
+<style>
+/* ---------- design tokens ---------- */
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --card2:#F9FAFB;
+  --ink:#1B2333; --ink2:#3C465A; --muted:#5E687D; --rule:#D5DAE3; --rule2:#E7EAF0;
+  --code-bg:#161C2A; --code-ink:#E3E8F4; --code-mute:#8D97AF;
+  --biz:#6A3FC0; --biz-ink:#4A2A8E; --biz-t:#ECE4FB;
+  --tech:#1F5FC2; --tech-ink:#17468F; --tech-t:#DFEAFB;
+  --drv:#0A7C72; --drv-ink:#07594F; --drv-t:#D5F1ED;
+  --prob:#A86E00; --prob-ink:#6B4700; --prob-t:#FFEFC7;
+  --pol:#BF3049; --pol-ink:#8B1D32; --pol-t:#FAE1E6;
+  --usr:#4B556B; --usr-t:#E7EAF0;
+  --focus:#1F5FC2;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#111726; --card:#19213A; --card2:#1E2742;
+  --ink:#E8ECF6; --ink2:#C4CBDE; --muted:#9FA8C0; --rule:#2E3859; --rule2:#27304F;
+  --code-bg:#0C1120;
+  --biz:#A88CFF; --biz-ink:#CBBAFF; --biz-t:#2A2150;
+  --tech:#6F9BFF; --tech-ink:#A9C2FF; --tech-t:#17284F;
+  --drv:#2FC3AF; --drv-ink:#80E0D3; --drv-t:#0F3530;
+  --prob:#EFB23A; --prob-ink:#F5CC76; --prob-t:#3A2E12;
+  --pol:#FF6F87; --pol-ink:#FFA4B4; --pol-t:#3F1B27;
+  --usr:#B2B9D4; --usr-t:#262E52;
+  --focus:#8FB0FF;
+  color-scheme:dark;
+}
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.09rem;line-height:1.66;overflow-x:hidden}
+a{color:var(--tech-ink);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+code,pre,kbd{font-family:var(--mono)}
+p code,li code,td code,figcaption code,.note code{font-size:.88em;background:var(--rule2);padding:.08em .36em;border-radius:5px;overflow-wrap:anywhere}
+h1,h2,h3,h4{line-height:1.14;margin:0;color:var(--ink)}
+h2{font-size:clamp(1.8rem,3.2vw,2.5rem);font-weight:800;letter-spacing:-.02em}
+h3{font-size:clamp(1.35rem,2.2vw,1.7rem);font-weight:800;margin-top:3rem}
+h4{font-size:1.16rem;font-weight:700;margin-top:1.8rem}
+p{margin:1rem 0} ul,ol{padding-left:1.4rem} li{margin:.4rem 0}
+/* ---------- layout ---------- */
+.shell{display:grid;grid-template-columns:286px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow:auto;background:var(--card);border-right:1px solid var(--rule);padding:26px 20px 36px}
+.main{min-width:0}
+.wrap{max-width:70rem;margin:0 auto;padding:0 38px}
+.prose{max-width:46rem}
+.sec{padding:66px 0 36px;border-top:1px solid var(--rule)}
+.sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.sec-num{font-weight:800;font-size:clamp(1.8rem,3.2vw,2.5rem);color:var(--muted)}
+.lede{font-size:1.22rem;color:var(--ink2);max-width:45rem}
+@media (max-width:1080px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:min(320px,86vw);z-index:60;transform:translateX(-102%);transition:transform .25s}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(8,12,28,.45)}
+  .wrap{padding:0 20px}
+}
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:58px}
+.where{flex:1;min-width:0;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--tech)}
+.ib{border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:10px;height:38px;padding:0 12px;font:600 .93rem var(--body);cursor:pointer}
+.ib:hover{border-color:var(--ink2)}
+#menuBtn{display:none}
+@media (max-width:1080px){#menuBtn{display:inline-block}}
+/* ---------- sidebar ---------- */
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.brand svg{width:42px;height:42px;flex:none}
+.brand b{display:block;font-size:1.02rem;line-height:1.2}
+.brand span{font-size:.85rem;color:var(--muted)}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:0}
+.toc a{display:grid;grid-template-columns:2.7rem 1fr;gap:4px;padding:7px 10px;border-radius:10px;color:var(--ink2);text-decoration:none;font-size:.95rem;line-height:1.3}
+.toc a .n{font-weight:700;color:var(--muted)}
+.toc a:hover{background:var(--card2);color:var(--ink)}
+.toc a.active{background:var(--tech-t);color:var(--ink)}
+.toc a.active .n{color:var(--tech-ink)}
+.toc a.done .n{color:var(--drv)}
+.toc .sub a{font-size:.88rem;color:var(--muted);padding:4px 10px}
+.legend{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px;font-size:.87rem;color:var(--muted);display:grid;gap:6px}
+.legend span{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:4px;border:2px solid;flex:none}
+/* ---------- hero ---------- */
+.hero{padding:58px 0 30px}
+.hero .line{font-weight:700;color:var(--muted);margin-bottom:16px}
+.hero h1{font-size:clamp(2.5rem,6vw,4.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.02}
+.hero .sub{font-size:clamp(1.12rem,1.7vw,1.34rem);color:var(--ink2);max-width:46rem;margin-top:20px}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.pill{display:inline-flex;flex-wrap:wrap;gap:4px 8px;align-items:center;border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:6px 14px;font-size:.93rem;color:var(--ink2)}
+.pill code{background:none;padding:0}
+/* ---------- figures ---------- */
+.fig{margin:2rem 0 2.3rem;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:20px 20px 12px}
+.fig .scroll{overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;min-width:640px}
+.fig figcaption{font-size:.98rem;color:var(--muted);border-top:1px solid var(--rule2);margin-top:12px;padding:12px 4px 4px}
+.fig figcaption b{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .t{font-size:18px;font-weight:700}
+svg .tl{font-size:22px;font-weight:800}
+svg .ts{font-size:15px;fill:var(--muted)}
+svg .tm{font-size:15.5px;fill:var(--ink2)}
+svg .lab{font-size:14.5px;font-weight:700;fill:var(--ink2)}
+svg .mono{font-family:var(--mono);font-size:14px}
+svg .bx{fill:var(--card);stroke:var(--rule);stroke-width:2}
+svg .bx2{fill:var(--card2);stroke:var(--rule);stroke-width:2}
+svg .biz{fill:var(--biz-t);stroke:var(--biz);stroke-width:2.5}
+svg .tech{fill:var(--tech-t);stroke:var(--tech);stroke-width:2.5}
+svg .drv{fill:var(--drv-t);stroke:var(--drv);stroke-width:2.5}
+svg .prob{fill:var(--prob-t);stroke:var(--prob);stroke-width:2.5}
+svg .pol{fill:var(--pol-t);stroke:var(--pol);stroke-width:2.5}
+svg .usr{fill:var(--usr-t);stroke:var(--usr);stroke-width:2.5}
+svg .asst{fill:var(--ink);stroke:var(--ink);stroke-width:2}
+svg text.on{fill:var(--bg)}
+svg .ln{stroke:var(--ink2);stroke-width:2.5;fill:none}
+svg .ln-pol{stroke:var(--pol);stroke-width:3;fill:none}
+svg .ln-tech{stroke:var(--tech);stroke-width:3;fill:none}
+svg .ln-drv{stroke:var(--drv);stroke-width:3;fill:none}
+svg .ln-prob{stroke:var(--prob);stroke-width:3;fill:none}
+svg .dash{stroke-dasharray:7 7}
+svg .zone{fill:none;stroke:var(--rule);stroke-width:2;stroke-dasharray:8 6}
+svg .ah{fill:var(--ink2)} svg .ah-pol{fill:var(--pol)} svg .ah-tech{fill:var(--tech)} svg .ah-drv{fill:var(--drv)} svg .ah-prob{fill:var(--prob)}
+svg .ink-pol{fill:var(--pol-ink)} svg .ink-tech{fill:var(--tech-ink)} svg .ink-drv{fill:var(--drv-ink)} svg .ink-prob{fill:var(--prob-ink)} svg .ink-biz{fill:var(--biz-ink)}
+svg .pick{cursor:pointer;outline:none}
+svg .pick:focus-visible rect{stroke:var(--focus);stroke-width:5}
+svg.dim .pick{opacity:.4;transition:opacity .2s}
+svg.dim .pick.sel{opacity:1}
+svg .pick.sel rect{stroke-width:4.5}
+/* ---------- callouts ---------- */
+.note{border:1px solid var(--rule);background:var(--card);border-radius:14px;padding:16px 20px;margin:1.5rem 0;max-width:46rem}
+.note h5{margin:0 0 6px;font:700 1rem var(--body);display:flex;align-items:center;gap:10px}
+.note p{margin:.5rem 0}.note p:last-child{margin-bottom:0}
+.note .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:.9rem;font-weight:800;background:var(--usr);color:var(--card)}
+.note.like{background:var(--prob-t);border-color:color-mix(in srgb,var(--prob) 40%,transparent)}
+.note.like .ic{background:var(--prob);color:#fff}
+.note.word{background:var(--tech-t);border-color:color-mix(in srgb,var(--tech) 35%,transparent)}
+.note.word .ic{background:var(--tech);color:#fff}
+.note.warn{background:var(--pol-t);border-color:color-mix(in srgb,var(--pol) 35%,transparent)}
+.note.warn .ic{background:var(--pol);color:#fff}
+.note.lab{background:var(--drv-t);border-color:color-mix(in srgb,var(--drv) 35%,transparent)}
+.note.lab .ic{background:var(--drv);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.5rem 0}
+.two .note{margin:0}
+.two>*,.g2>*{min-width:0}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+/* ---------- steps ---------- */
+.steps{list-style:none;padding:0;margin:1.5rem 0;display:grid;gap:12px;max-width:52rem}
+.steps>li{display:grid;grid-template-columns:50px 1fr;gap:14px;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin:0}
+.steps .k{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:1.1rem;background:var(--usr-t)}
+.steps h4{margin:2px 0 4px;font-size:1.1rem}
+.steps p{margin:.3rem 0}
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto;margin:1.5rem 0;border:1px solid var(--rule);border-radius:14px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.98rem;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:11px 15px;border-bottom:1px solid var(--rule2)}
+thead th{background:var(--card2);font-weight:700}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{font-weight:700}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.82rem;font-weight:700}
+.tag.biz{background:var(--biz-t);color:var(--biz-ink)} .tag.tech{background:var(--tech-t);color:var(--tech-ink)} .tag.drv{background:var(--drv-t);color:var(--drv-ink)} .tag.prob{background:var(--prob-t);color:var(--prob-ink)} .tag.pol{background:var(--pol-t);color:var(--pol-ink)} .tag.usr{background:var(--usr-t);color:var(--ink2)}
+/* ---------- code ---------- */
+.code{margin:1.3rem 0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;overflow:hidden;max-width:56rem}
+.code .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);font:600 .86rem var(--mono);color:var(--code-mute)}
+.code pre{margin:0;padding:14px 16px;overflow-x:auto;font-size:.92rem;line-height:1.58}
+.copy{background:transparent;border:1px solid rgba(255,255,255,.22);color:#DCE2F5;border-radius:8px;padding:3px 10px;font:600 .8rem var(--body);cursor:pointer}
+.c-k{color:#FFB86B}.c-s{color:#9BE29B}.c-c{color:#8D97AF;font-style:italic}.c-n{color:#FFD580}.c-bad{color:#FF8FA3}.c-ok{color:#7FE0A0}
+/* ---------- glossary terms ---------- */
+.kw{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:help;border-bottom:2px dotted var(--tech)}
+.kw:hover,.kw:focus-visible{background:var(--tech-t);border-radius:3px}
+.tip{position:absolute;z-index:80;max-width:340px;background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:12px;font-size:.93rem;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .15s}
+.tip.show{opacity:1}
+.tip b{display:block;margin-bottom:3px;font-size:1.02rem}
+/* ---------- simulations ---------- */
+.sim{margin:2rem 0 2.4rem;border:2px solid var(--rule);border-radius:18px;background:var(--card);overflow:hidden}
+.sim-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 20px;background:var(--card2);border-bottom:1px solid var(--rule)}
+.sim-h h4{margin:0;font-size:1.1rem}
+.sim-h .try{font-size:.83rem;font-weight:700;color:var(--drv-ink);background:var(--drv-t);border-radius:999px;padding:3px 10px}
+.sim-b{padding:18px 20px}
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:13px}
+.chip{border:1.5px solid var(--rule);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:600 .93rem var(--body);cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--ink2)}
+.chip[aria-pressed="true"]{background:var(--tech-t);border-color:var(--tech)}
+.btn{border:1.5px solid var(--ink2);background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 16px;font:700 .95rem var(--body);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.out{background:var(--card2);border:1px solid var(--rule);border-radius:12px;padding:13px 15px;font-size:.98rem}
+.out p{margin:.4rem 0}.out p:first-child{margin-top:0}.out p:last-child{margin-bottom:0}
+.lbl{font-size:.88rem;font-weight:700;color:var(--muted);margin:0 0 6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.g2{grid-template-columns:1fr}}
+.field{display:grid;gap:6px;font-weight:700;font-size:.96rem;margin-bottom:10px}
+.field .v{font-family:var(--mono);color:var(--tech-ink)}
+input[type=range]{width:100%;accent-color:var(--tech)}
+select,textarea,input[type=text]{font:inherit;font-weight:400;border:1.5px solid var(--rule);border-radius:10px;padding:8px 10px;background:var(--card);color:var(--ink);width:100%}
+.big{font-size:2.3rem;font-weight:800;line-height:1.1}
+.rows{display:grid;gap:5px;font-size:.9rem}
+.row{display:grid;grid-template-columns:3.4rem 1fr 5.2rem 5.2rem 5rem;gap:8px;align-items:center;padding:5px 10px;border:1.5px solid var(--rule);border-radius:9px;background:var(--card)}
+.row.hd{border:0;background:none;font-weight:700;color:var(--muted)}
+.row.in{border-color:var(--tech);background:var(--tech-t)}
+.row.dup{border-style:dashed}
+.ci{position:relative;height:34px;background:var(--rule2);border-radius:8px;margin:6px 0 2px}
+.ci i{position:absolute;top:6px;bottom:6px;border-radius:6px}
+.ci b{position:absolute;top:0;bottom:0;width:3px;background:var(--ink)}
+.axis{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.verdict{font-weight:700}
+.verdict.ok{color:var(--drv-ink)} .verdict.no{color:var(--pol-ink)}
+/* ---------- quiz, glossary, refs ---------- */
+.quiz{display:grid;gap:16px;max-width:52rem}
+.q{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:15px 17px}
+.q p{margin:.2rem 0 .8rem;font-weight:700}
+.q .opts{display:grid;gap:8px}
+.q button{text-align:left;border:1.5px solid var(--rule);background:var(--card2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:.98rem;cursor:pointer}
+.q button.right{border-color:var(--drv);background:var(--drv-t)}
+.q button.wrong{border-color:var(--pol);background:var(--pol-t)}
+.q .why{display:none;margin-top:10px;color:var(--ink2);font-size:.98rem}
+.q.done .why{display:block}
+.gloss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px;margin:1.5rem 0}
+.gloss div{border-bottom:1px solid var(--rule2);padding:8px 0}
+.gloss p{margin:.2rem 0 0;font-size:.97rem;color:var(--ink2)}
+@media (max-width:760px){.gloss{grid-template-columns:1fr}}
+.refs{max-width:52rem;font-size:.97rem}
+.refs li{margin:.7rem 0}
+footer{padding:44px 0 72px;color:var(--muted);font-size:.93rem;border-top:1px solid var(--rule)}
+@media print{.side,.top,.ctrls{display:none!important}.shell{display:block}.fig,.sim,.note{break-inside:avoid}body{background:#fff}}
+
+#handson .tbl td code{white-space:nowrap}
+.drill{display:grid;gap:12px}
+.drill .q p{font-weight:400;margin:.1rem 0 .7rem}
+.drill .q .opts{display:flex;flex-wrap:wrap;gap:8px}
+.drill.own .q .opts{display:grid}
+.drill .score{font-weight:700;color:var(--muted);font-size:.93rem}
+.rec{display:block;white-space:pre-wrap;font-family:var(--mono);font-size:.84rem;background:var(--card2);border:1px solid var(--rule2);border-radius:8px;padding:8px 10px;margin:8px 0;overflow-x:auto}
+details.note summary{list-style-position:inside}
+.row.dup{background:var(--biz-t);border-color:var(--biz)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-pol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-pol" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-tech" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-tech" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-drv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-drv" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-prob" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-prob" d="M0,0 L10,5 L0,10 z"/></marker>
+</defs></svg>
+<div class="shell">
+<aside class="side" id="side" aria-label="Module contents">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="var(--ink)"/><circle cx="15" cy="16" r="5" fill="var(--biz)"/><circle cx="33" cy="16" r="5" fill="var(--tech)"/><circle cx="24" cy="33" r="5" fill="var(--drv)"/><path d="M15 16 L33 16 L24 33 Z" fill="none" stroke="var(--bg)" stroke-width="2.5"/></svg>
+    <div><b>Enterprise Semantic Intelligence</b><span>StackRoute, an NIIT venture</span></div>
+  </div>
+  <nav><ol class="toc" id="toc">
+    <li><a href="#intro"><span class="n">2.0</span><span>From diagnosis to governed assets</span></a></li>
+    <li><a href="#metadata"><span class="n">2.1</span><span>Six kinds of metadata</span></a></li>
+    <li><a href="#lineage"><span class="n">2.2</span><span>Lineage at four levels</span></a></li>
+    <li><a href="#catalog"><span class="n">2.3</span><span>Catalog tooling</span></a></li>
+    <li><a href="#mapping"><span class="n">2.4</span><span>Semantic mappings and identifiers</span></a></li>
+    <li><a href="#mdm"><span class="n">2.5</span><span>Master data and entity identity</span></a></li>
+    <li><a href="#skos"><span class="n">2.6</span><span>Interoperability between domains</span></a></li>
+    <li><a href="#llm"><span class="n">2.7</span><span>LLM-assisted descriptions</span></a></li>
+    <li><a href="#case"><span class="n">2.8</span><span>Case study: telecom customer 360</span></a></li>
+    <li><a href="#handson"><span class="n">2.9</span><span>Hands-on</span></a></li>
+    <li><a href="#recap"><span class="n">2.10</span><span>Recap and checkpoint quiz</span></a></li>
+    <li><a href="#refs"><span class="n">Ref</span><span>References</span></a></li>
+    <li><a href="#glossary"><span class="n">A-Z</span><span>Glossary</span></a></li>
+  </ol></nav>
+  <div class="legend">
+    <div>Colour code used in the architecture diagrams</div>
+    <span><i class="sw" style="background:var(--biz-t);border-color:var(--biz)"></i>Business authority</span>
+    <span><i class="sw" style="background:var(--tech-t);border-color:var(--tech)"></i>Technical authority</span>
+    <span><i class="sw" style="background:var(--drv-t);border-color:var(--drv)"></i>Derived from other assets</span>
+    <span><i class="sw" style="background:var(--prob-t);border-color:var(--prob)"></i>Probabilistic</span>
+    <span><i class="sw" style="background:var(--pol-t);border-color:var(--pol)"></i>Policy, access and risk</span>
+    <span><i class="sw" style="background:var(--ink);border-color:var(--ink)"></i>The assistant</span>
+  </div>
+</aside>
+<div class="main">
+<header class="top"><div class="wrap">
+  <button class="ib" id="menuBtn" aria-controls="side" aria-expanded="false">Contents</button>
+  <div class="where" id="where">Module 2: Glossary, metadata, lineage and master data</div>
+  <button class="ib" id="themeBtn" aria-label="Switch between light and dark theme">Theme</button>
+</div><div class="bar" id="bar"></div></header>
+
+<div class="wrap">
+<section class="hero" aria-labelledby="title">
+  <div class="line">Enterprise Semantic Intelligence, Module 2 of 8, 2.5 hours</div>
+  <h1 id="title">Glossary, metadata, lineage and master data</h1>
+  <p class="sub">Module 1 classified the ways business meaning goes wrong. This module builds the first three assets that correct it: a governed glossary held in a catalog, mappings from glossary terms to the data model and to physical columns, and master data that gives each customer one identity across CRM, ERP and the master data hub.</p>
+  <div class="pills">
+    <span class="pill">Case study: telecom customer 360 with three identifiers</span>
+    <span class="pill">Lab tools: Python 3.13 and VS Code</span>
+    <span class="pill">Hands-on: five exercises in section 2.9</span>
+  </div>
+  <figure class="fig" style="margin-top:30px">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="What Module 2 adds to the reference architecture: the business glossary, the enterprise data model and master data, all recorded in the catalog, with lineage connecting them to physical columns.">
+      <rect x="20" y="20" width="1060" height="64" rx="14" class="bx2"/>
+      <text x="550" y="48" text-anchor="middle" class="t">Catalog (OpenMetadata)</text>
+      <text x="550" y="70" text-anchor="middle" class="ts">records the three assets below, the lineage between them, and who owns each</text>
+      <rect x="20" y="108" width="340" height="122" rx="16" class="biz"/>
+      <text x="42" y="144" class="t">Business glossary</text>
+      <text x="42" y="172" class="tm">Governed terms, each with an</text>
+      <text x="42" y="194" class="tm">owner and a stable identifier</text>
+      <text x="42" y="218" class="lab ink-biz">resolves terminological problems</text>
+      <rect x="380" y="108" width="340" height="122" rx="16" class="tech"/>
+      <text x="402" y="144" class="t">Enterprise data model</text>
+      <text x="402" y="172" class="tm">Entities and attributes, mapped</text>
+      <text x="402" y="194" class="tm">to columns in each system</text>
+      <text x="402" y="218" class="lab ink-tech">resolves structural problems</text>
+      <rect x="740" y="108" width="340" height="122" rx="16" class="tech"/>
+      <text x="762" y="144" class="t">Master data</text>
+      <text x="762" y="172" class="tm">Golden records and a crosswalk</text>
+      <text x="762" y="194" class="tm">between system identifiers</text>
+      <text x="762" y="218" class="lab ink-tech">resolves identity problems</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.1.</b> The three components of the reference architecture that this module builds, and the kind of inconsistency from Module 1 that each one resolves.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="intro" aria-labelledby="intro-h">
+  <div class="sec-head"><span class="sec-num">2.0</span><h2 id="intro-h">From diagnosis to governed assets</h2></div>
+  <p class="lede">In Module 1 the retailer's "active customer" dispute turned out to involve a terminological problem, a temporal problem and an identity problem. Two of those three are addressed in this module.</p>
+  <div class="prose">
+    <p>The terminological problem needs a place where the agreed meaning of each term is recorded, together with the person accountable for it. That place is the <button class="kw" data-k="glossary">business glossary</button>, and in the programme's reference stack the glossary lives in the OpenMetadata catalog. The identity problem needs a way to tell that a CRM profile, an ERP billing account and a master data record describe the same person. That is the job of <button class="kw" data-k="mdm">master data management</button>. The temporal problem is left for the metrics layer in Module 3.</p>
+    <p>Module 1 also assigned the contextual kind, where a term means different things in different domains, to SKOS mappings. Those are covered in section 2.6.</p>
+    <p>A glossary and a set of golden records are useful only if other assets refer to them. Most of this module is therefore about connections: how a term is linked to a model attribute and a column, how <button class="kw" data-k="lineage">lineage</button> shows where a column's values came from, and how one domain's term is related to another's.</p>
+  </div>
+  <h3>Learning outcomes</h3>
+  <div class="prose">
+    <p>After this module you should be able to:</p>
+    <ol>
+      <li><a href="#metadata">distinguish</a> six kinds of metadata and explain how they refer to one another;</li>
+      <li><a href="#lineage">read</a> lineage at four levels and identify what catalog ingestion is likely to have missed;</li>
+      <li><a href="#catalog">describe</a> how OpenMetadata is put together and how five other catalogs differ from it;</li>
+      <li><a href="#mapping">map</a> a glossary term to a logical model attribute and to physical columns, using stable identifiers;</li>
+      <li><a href="#mdm">review</a> proposed entity matches, read a survivorship rule, propose a change to it, and explain what a crosswalk holds;</li>
+      <li><a href="#skos">relate</a> two domains' terms with SKOS mapping properties while keeping both definitions;</li>
+      <li><a href="#llm">operate</a> a steward approval workflow for descriptions drafted by an LLM.</li>
+    </ol>
+  </div>
+  <h3>How the 150 minutes run</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Minutes</th><th>Segment</th><th>Section</th><th>In the session</th></tr></thead>
+    <tbody>
+      <tr><td>0 to 8</td><td>From diagnosis to assets</td><td>2.0</td><td>Recap of the Module 1 classification</td></tr>
+      <tr><td>8 to 22</td><td>Six kinds of metadata</td><td>2.1</td><td>The metadata questions exercise, as a room poll</td></tr>
+      <tr><td>22 to 40</td><td>Lineage</td><td>2.2</td><td>Impact analysis at dataset and column level</td></tr>
+      <tr><td>40 to 58</td><td>Catalog tooling</td><td>2.3</td><td>Facilitator demonstration in OpenMetadata; the comparison table</td></tr>
+      <tr><td>58 to 70</td><td>Semantic mappings</td><td>2.4</td><td>Term, attribute and column for "paying customer"</td></tr>
+      <tr><td>70 to 92</td><td>Master data</td><td>2.5</td><td>The match threshold and survivorship exercises</td></tr>
+      <tr><td>92 to 104</td><td>SKOS mappings</td><td>2.6</td><td>Three of the five mapping cases</td></tr>
+      <tr><td>104 to 112</td><td>LLM-assisted descriptions</td><td>2.7</td><td>The approval workflow</td></tr>
+      <tr><td>112 to 122</td><td>Case study</td><td>2.8</td><td>Group discussion of the telecom case</td></tr>
+      <tr><td>122 to 146</td><td>Hands-on, in pairs</td><td>2.9</td><td>Python lab: exercises 2, 3 and 5</td></tr>
+      <tr><td>146 to 150</td><td>Review</td><td>2.10</td><td>Start the checkpoint quiz</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose"><p>Exercises 1 and 4 in section 2.9 and the cases not used in the session are intended for self-study.</p></div>
+</section>
+
+<section class="sec" id="metadata" aria-labelledby="metadata-h">
+  <div class="sec-head"><span class="sec-num">2.1</span><h2 id="metadata-h">Six kinds of metadata</h2></div>
+  <p class="lede">Metadata is information about data. The programme groups it into six kinds according to the question each kind answers, because different people produce each kind and different tools hold it.</p>
+  <div class="prose">
+    <p>The grouping below is this programme's working classification. Other classifications exist. A common one has three kinds, business, technical and operational, and places the remaining three inside them. The six kinds here are chosen so that each one has a clear producer.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Kind</th><th>Question it answers</th><th>Examples</th><th>Usually produced by</th></tr></thead>
+    <tbody>
+      <tr><td>Business</td><td>What does this mean?</td><td>Glossary terms, definitions, domains</td><td>Data stewards and business owners</td></tr>
+      <tr><td>Technical</td><td>What is it physically?</td><td>Schemas, data types, keys, partitions</td><td>Connectors that read the source system</td></tr>
+      <tr><td>Operational</td><td>What has happened to it?</td><td>Load times, freshness, row counts, query usage, lineage from job runs</td><td>Pipelines, schedulers and query logs</td></tr>
+      <tr><td>Governance</td><td>Who is accountable, and which rules apply?</td><td>Owner, steward, certification status, retention rule</td><td>The governance process</td></tr>
+      <tr><td>Quality</td><td>How good is it?</td><td>Test results, profiles, open incidents</td><td>Test frameworks and profilers</td></tr>
+      <tr><td>Security</td><td>Who may see it?</td><td>Classification tags such as PII, access policies, masking rules</td><td>Security and privacy teams, classifiers</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The value of a catalog comes from the references between these kinds. Figure 2.2 shows them for one column from the retailer's warehouse. The glossary term attached to the column is business metadata, and it points to an owner, which is governance metadata. The classification tag is security metadata, and an access policy is written against the tag instead of against each column. A quality test is attached to the column and its latest result is recorded with a run time, which is operational metadata.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 430" role="img" aria-label="Six kinds of metadata attached to one column, dim_customer.status. Technical: varchar of length 10. Business: linked to the glossary term Open account. Governance: owned by the head of customer service and certified. Quality: accepted values test passing. Operational: refreshed daily at 02:10. Security: classified internal, not personal data.">
+      <rect x="400" y="165" width="300" height="100" rx="16" class="asst"/>
+      <text x="550" y="208" text-anchor="middle" class="t on">dim_customer.status</text>
+      <text x="550" y="236" text-anchor="middle" class="ts on">one column in the warehouse</text>
+      <rect x="30" y="20" width="310" height="110" rx="14" class="biz"/><text x="50" y="52" class="t">Business</text><text x="50" y="80" class="tm">Glossary term GT-0142</text><text x="50" y="104" class="ts">"Open account"</text>
+      <rect x="395" y="20" width="310" height="110" rx="14" class="tech"/><text x="415" y="52" class="t">Technical</text><text x="415" y="80" class="tm">varchar(10), not null</text><text x="415" y="104" class="ts">read by the PostgreSQL connector</text>
+      <rect x="760" y="20" width="310" height="110" rx="14" class="drv"/><text x="780" y="52" class="t">Operational</text><text x="780" y="80" class="tm">Refreshed daily at 02:10</text><text x="780" y="104" class="ts">1,240 queries in 30 days</text>
+      <rect x="30" y="300" width="310" height="110" rx="14" class="biz"/><text x="50" y="332" class="t">Governance</text><text x="50" y="360" class="tm">Owner: head of customer service</text><text x="50" y="384" class="ts">Status: certified</text>
+      <rect x="395" y="300" width="310" height="110" rx="14" class="tech"/><text x="415" y="332" class="t">Quality</text><text x="415" y="360" class="tm">accepted_values test: passing</text><text x="415" y="384" class="ts">last run today, 02:14</text>
+      <rect x="760" y="300" width="310" height="110" rx="14" class="pol"/><text x="780" y="332" class="t">Security</text><text x="780" y="360" class="tm">Classification: internal</text><text x="780" y="384" class="ts">not personal data</text>
+      <path d="M440 165 L250 132" class="ln"/><path d="M550 165 V132" class="ln"/><path d="M660 165 L850 132" class="ln"/>
+      <path d="M440 265 L250 298" class="ln"/><path d="M550 265 V298" class="ln"/><path d="M660 265 L850 298" class="ln"/>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.2.</b> Six kinds of metadata recorded against one column. The values shown are illustrative.</figcaption>
+  </figure>
+  <div class="sim" id="sim-meta">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which kind of metadata answers the question?</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-meta"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="lineage" aria-labelledby="lineage-h">
+  <div class="sec-head"><span class="sec-num">2.2</span><h2 id="lineage-h">Lineage at four levels</h2></div>
+  <p class="lede">Lineage records where data came from and where it goes. It can be captured at four levels of detail, and each level supports a different kind of question.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Level</th><th>What it records</th><th>Question it supports</th></tr></thead>
+    <tbody>
+      <tr><td>Dataset</td><td>Table A is an input to table B</td><td>Which reports could be affected if this table is late?</td></tr>
+      <tr><td>Column</td><td>Which source columns feed each target column</td><td>Which reports use this particular column?</td></tr>
+      <tr><td>Transformation</td><td>The logic applied on the way: a copy, an expression, a filter, an aggregation or a join</td><td>Why does this value differ from its source?</td></tr>
+      <tr><td>Business process</td><td>The business event and system of record that created the data, such as the order-to-cash step that writes an invoice</td><td>What real-world event does this row represent?</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The first three levels can be collected automatically to a large extent. <button class="kw" data-k="openlineage">OpenLineage</button> is an open standard for doing so. It describes each pipeline execution in terms of runs, jobs and datasets, and attaches further detail as facets. One of its facets carries column-level lineage and can record the type of transformation between an input column and an output column. Business-process lineage is different: it is written by people who know the process, and a catalog can store it but cannot discover it.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 400" role="img" aria-label="A lineage chain for customer email. Two source columns, crm.contacts.email and erp.customers.email_addr, feed a staging model, which feeds dim_customer.email in the warehouse, which feeds an active customers metric, a dashboard tile and finally an AI assistant's answer. Brackets show dataset-level, column-level and transformation-level lineage, and the last step is labelled AI response provenance.">
+      <text x="30" y="30" class="lab">Business process: customer registration (CRM) and account opening (ERP)</text>
+      <rect x="30" y="50" width="200" height="60" rx="12" class="usr"/><text x="130" y="76" text-anchor="middle" class="mono">crm.contacts</text><text x="130" y="96" text-anchor="middle" class="mono">.email</text>
+      <rect x="30" y="140" width="200" height="60" rx="12" class="usr"/><text x="130" y="166" text-anchor="middle" class="mono">erp.customers</text><text x="130" y="186" text-anchor="middle" class="mono">.email_addr</text>
+      <path d="M230 80 L286 118" class="ln" marker-end="url(#ah)"/><path d="M230 170 L286 132" class="ln" marker-end="url(#ah)"/>
+      <rect x="290" y="95" width="190" height="60" rx="12" class="bx" style="stroke:var(--ink2)"/><text x="385" y="121" text-anchor="middle" class="mono">stg_customers</text><text x="385" y="141" text-anchor="middle" class="mono">.email</text>
+      <path d="M480 125 H526" class="ln" marker-end="url(#ah)"/>
+      <rect x="530" y="95" width="190" height="60" rx="12" class="tech"/><text x="625" y="121" text-anchor="middle" class="mono">dim_customer</text><text x="625" y="141" text-anchor="middle" class="mono">.email</text>
+      <path d="M720 125 H766" class="ln" marker-end="url(#ah)"/>
+      <rect x="770" y="95" width="140" height="60" rx="12" class="tech"/><text x="840" y="121" text-anchor="middle" class="tm">metric:</text><text x="840" y="141" text-anchor="middle" class="tm">reachable</text>
+      <path d="M910 125 H946" class="ln" marker-end="url(#ah)"/>
+      <rect x="950" y="95" width="130" height="60" rx="12" class="usr"/><text x="1015" y="131" text-anchor="middle" class="tm">dashboard</text>
+      <path d="M1015 155 V226" class="ln-prob" marker-end="url(#ah-prob)"/>
+      <rect x="880" y="230" width="200" height="70" rx="12" class="asst"/><text x="980" y="260" text-anchor="middle" class="t on">AI answer</text><text x="980" y="284" text-anchor="middle" class="ts on">with evidence ids</text>
+      <text x="385" y="186" text-anchor="middle" class="ts">LOWER(TRIM(...)),</text><text x="385" y="206" text-anchor="middle" class="ts">CRM preferred</text>
+      <text x="385" y="232" text-anchor="middle" class="lab ink-tech">transformation level</text>
+      <path d="M30 330 H720" class="ln-tech"/><text x="375" y="356" text-anchor="middle" class="lab ink-tech">column level: email to email, through each model</text>
+      <path d="M30 372 H1080" class="ln"/><text x="555" y="394" text-anchor="middle" class="lab">dataset level: every table and dashboard on the path</text>
+      <text x="860" y="330" text-anchor="middle" class="lab ink-prob">AI response</text><text x="860" y="350" text-anchor="middle" class="lab ink-prob">provenance</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.3.</b> Lineage for a customer email address at four levels, with the provenance of an AI answer shown as a further step after the dashboard. Table and column names are illustrative.</figcaption>
+  </figure>
+  <h3>What catalog ingestion captures and what it misses</h3>
+  <div class="prose">
+    <p>A catalog builds its lineage from the artefacts it can read: the dbt manifest, the warehouse's query log, pipeline definitions and the BI tool's metadata. Where a transformation happens outside those artefacts, the lineage has a gap. The table lists the common cases. The exact coverage depends on the connector and its version, so treat the right-hand column as a list of things to check for in your own estate.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Usually captured</th><th>Often missed</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:400">Table and column lineage through dbt models</td><td style="font-weight:400">Logic in stored procedures, dynamic SQL and application code</td></tr>
+      <tr><td style="font-weight:400">Table lineage from parsed query logs</td><td style="font-weight:400">Column lineage through <code>SELECT *</code> and through code in Python or Spark that emits no lineage events</td></tr>
+      <tr><td style="font-weight:400">Dashboard-to-table links from BI connectors</td><td style="font-weight:400">Calculations defined inside the BI tool, and spreadsheets exported from it</td></tr>
+      <tr><td style="font-weight:400">Pipeline-to-table links from orchestrators</td><td style="font-weight:400">Files exchanged by email or file transfer, and data written back to operational systems</td></tr>
+      <tr><td style="font-weight:400">Run times and row counts</td><td style="font-weight:400">The business process behind the source data</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The third row matters for the Module 1 case. The finance team's net revenue figure was finished in a month-end workbook, and no connector reads that workbook. The catalog's lineage for net revenue would therefore end at the dashboard and show nothing of the tax deduction or the month-end currency conversion.</p>
+  </div>
+  <h3>AI response provenance as a lineage type</h3>
+  <div class="prose">
+    <p>Conventional lineage ends at a dashboard. When an assistant produces an answer, the path continues: the answer contains claims, each claim rests on evidence such as a metric result or a document passage, and each piece of evidence has its own lineage. The programme treats this last step as a lineage type and records it in the same spirit. For every claim the assistant stores the identifiers of the evidence it used, the version of any definition applied and the time of the query. Module 6 builds the labels and Module 7 writes them to an audit table.</p>
+    <p>The W3C <button class="kw" data-k="prov">PROV</button> model is a useful reference for this. It describes provenance with three things, entities, activities and agents, and with relations such as "was derived from" and "was generated by". An AI answer is an entity derived from evidence entities, generated by an activity (the assistant's run) that was associated with an agent (the user and the model).</p>
+  </div>
+  <div class="sim" id="sim-impact">
+    <div class="sim-h"><span class="try">Try it</span><h4>Impact analysis at dataset level and at column level</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">A source column is about to change. Select it to see which downstream assets each level of lineage reports as affected. The small graph behind this exercise is illustrative.</p>
+      <div class="ctrls" id="imp-q" role="group" aria-label="Pick a source column"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Dataset-level lineage reports</p><div id="imp-ds"></div></div>
+        <div class="out"><p class="lbl">Column-level lineage reports</p><div id="imp-col"></div></div>
+      </div>
+      <div class="out" id="imp-note" style="margin-top:12px" aria-live="polite">Select a column.</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="catalog" aria-labelledby="catalog-h">
+  <div class="sec-head"><span class="sec-num">2.3</span><h2 id="catalog-h">Catalog tooling</h2></div>
+  <p class="lede">The facilitator demonstrates OpenMetadata as the catalog. The hands-on in 2.9 works on a JSON export in its place, so you do not need to run it. This section describes how it is put together, what it does in this programme, and how five widely used alternatives differ.</p>
+  <h3>OpenMetadata</h3>
+  <div class="prose">
+    <p>OpenMetadata is an open-source catalog released under the Apache 2.0 licence. Its 2.0 series was released in the second half of 2026, and the facilitator states the exact version used in the demonstration. The project defines every kind of asset and every relationship between assets as a published schema, which is why other tools can read and write its metadata through the API.</p>
+    <p>Four parts are relevant to the demonstration. Connectors in the ingestion framework read metadata from PostgreSQL, dbt and Metabase on a schedule. The server stores entities and their relationships in a relational database and exposes them through a REST API. A search index supports discovery. The web interface is where stewards work. The facilitator's demonstration follows one glossary term through five of its features: the glossary with its approval workflow, classification tags, column-level lineage from dbt, ownership and certification, and the version history that every entity keeps.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 330" role="img" aria-label="OpenMetadata in the demonstration. Connectors for PostgreSQL, dbt and Metabase feed the ingestion framework. The framework writes to the OpenMetadata server through its API. The server stores entities and relationships in a metadata database and keeps a search index. Stewards use the web interface, and other tools use the API.">
+      <text x="30" y="30" class="lab">Sources in the demonstration</text>
+      <rect x="30" y="44" width="180" height="56" rx="12" class="usr"/><text x="120" y="78" text-anchor="middle" class="tm">PostgreSQL</text>
+      <rect x="30" y="116" width="180" height="56" rx="12" class="usr"/><text x="120" y="150" text-anchor="middle" class="tm">dbt manifest</text>
+      <rect x="30" y="188" width="180" height="56" rx="12" class="usr"/><text x="120" y="222" text-anchor="middle" class="tm">Metabase</text>
+      <path d="M210 72 L286 130" class="ln" marker-end="url(#ah)"/><path d="M210 144 H286" class="ln" marker-end="url(#ah)"/><path d="M210 216 L286 158" class="ln" marker-end="url(#ah)"/>
+      <rect x="290" y="96" width="200" height="96" rx="14" class="drv"/><text x="390" y="136" text-anchor="middle" class="t">Ingestion</text><text x="390" y="162" text-anchor="middle" class="ts">connectors, scheduled</text>
+      <path d="M490 144 H546" class="ln" marker-end="url(#ah)"/><text x="518" y="132" text-anchor="middle" class="ts">API</text>
+      <rect x="550" y="60" width="250" height="168" rx="16" class="tech"/><text x="675" y="100" text-anchor="middle" class="tl">Server</text><text x="675" y="130" text-anchor="middle" class="tm">entities, relationships,</text><text x="675" y="152" text-anchor="middle" class="tm">glossary, lineage, tags,</text><text x="675" y="174" text-anchor="middle" class="tm">owners, versions</text><text x="675" y="204" text-anchor="middle" class="ts">schema-first REST API</text>
+      <path d="M800 100 H856" class="ln" marker-end="url(#ah)"/><path d="M800 190 H856" class="ln" marker-end="url(#ah)"/>
+      <rect x="860" y="68" width="210" height="64" rx="12" class="bx2"/><text x="965" y="106" text-anchor="middle" class="tm">Metadata database</text>
+      <rect x="860" y="158" width="210" height="64" rx="12" class="bx2"/><text x="965" y="196" text-anchor="middle" class="tm">Search index</text>
+      <path d="M620 228 V266" class="ln" marker-start="url(#ah)" marker-end="url(#ah)"/><path d="M730 228 V266" class="ln" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      <rect x="520" y="270" width="150" height="46" rx="12" class="biz"/><text x="595" y="299" text-anchor="middle" class="tm">Stewards (UI)</text>
+      <rect x="690" y="270" width="170" height="46" rx="12" class="usr"/><text x="775" y="299" text-anchor="middle" class="tm">Other tools (API)</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.4.</b> OpenMetadata as used in the demonstration. Deployment details vary between versions, so the project's own compose file is the reference for the services that actually run.</figcaption>
+  </figure>
+  <h3>One term from draft to use in OpenMetadata</h3>
+  <div class="prose"><p>The steps below follow the term "Paying customer" through the catalog. They describe what the facilitator demonstrates and what each screen holds. Menu names differ slightly between versions.</p></div>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Create the term as a draft</h4><p>A glossary term has a name, a display name, a description, synonyms, related terms, an owner and a list of reviewers. A new term in a glossary that has reviewers starts in the Draft status.</p></div></li>
+    <li><span class="k">2</span><div><h4>Send it for review</h4><p>The reviewers receive a task. Each can approve or reject, and the term's status moves to Approved or Rejected. The task and the decision are recorded against the term, which is the evidence that an accountable person approved the definition. Confirm where this record is shown on the version used in the demonstration.</p></div></li>
+    <li><span class="k">3</span><div><h4>Attach the term to a column</h4><p>On the table's schema tab, the column <code>dim_customer.is_paying</code> is given the glossary term. A classification tag such as PII is attached in the same place and is a separate thing: the term states meaning and the tag states sensitivity.</p></div></li>
+    <li><span class="k">4</span><div><h4>Ingest dbt to obtain lineage</h4><p>The dbt ingestion workflow reads the project's <code>manifest.json</code>, which is required, and <code>catalog.json</code> and <code>run_results.json</code> where they are supplied. Test results come from the run results. OpenMetadata builds lineage from the model dependencies and by parsing each model's compiled SQL, so column-level lineage appears where that parsing succeeds. The lineage tab of <code>dim_customer</code> then shows the path from the staging models.</p></div></li>
+    <li><span class="k">5</span><div><h4>Set ownership and certification</h4><p>The table is given an owner and a tier. These are governance metadata and are what a consumer checks before relying on the table. How a certification status is shown depends on the version.</p></div></li>
+    <li><span class="k">6</span><div><h4>Edit the definition and read the version history</h4><p>Changing the term's description creates a new version. The version history shows what changed, who changed it and when, which is the evidence that section 2.4 relies on when a definition is revised.</p></div></li>
+  </ol>
+  <div class="note">
+    <h5><span class="ic">i</span>Which identifier to reference</h5>
+    <p>OpenMetadata gives every term an internal identifier that survives a rename, and a fully qualified name built from the glossary name and the term name, which changes when the term is renamed. References from other tools should therefore avoid the fully qualified name. This page writes term codes in the form GT-0107. How the lab stores that code, for example as the term's name with the readable label as its display name, is a convention of each installation, so confirm it against the installation you use.</p>
+  </div>
+  <div class="note warn">
+    <h5><span class="ic">!</span>A catalog records policies and does not enforce them elsewhere</h5>
+    <p>OpenMetadata controls who can see and edit metadata inside the catalog. A classification tag or an access policy recorded there does not stop anyone querying the warehouse. In this programme, access to data is enforced by each store, as set out in the authorization matrix in Module 7.</p>
+  </div>
+  <h3>How five other catalogs differ</h3>
+  <div class="prose">
+    <p>The facilitator demonstrates these tools for comparison, and they are not assessed. The table gives a general characterisation of each product. It has not been checked feature by feature against current vendor documentation, and all of these products change quickly, so consult the vendor's documentation before making a selection.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Tool</th><th>Licence and origin</th><th>Where it differs from OpenMetadata</th><th>Typical fit</th></tr></thead>
+    <tbody>
+      <tr><td>DataHub</td><td>Open source (Apache 2.0), started at LinkedIn; a commercial cloud version exists</td><td>Built around a stream of metadata change events, which suits near-real-time integration with other systems; more moving parts to operate</td><td>Engineering-led teams that want to extend the metadata model and react to changes as events</td></tr>
+      <tr><td>Collibra</td><td>Commercial</td><td>Starts from the governance operating model: roles, stewardship workflows, policies and the glossary come first, and technical metadata is attached to them</td><td>Large regulated organisations with a formal governance office</td></tr>
+      <tr><td>Alation</td><td>Commercial</td><td>Grew from search and from analysing query logs to show how data is really used; strong on guiding analysts to trusted assets</td><td>Organisations with many SQL users who need help finding the right table</td></tr>
+      <tr><td>Atlan</td><td>Commercial, offered as a cloud service</td><td>Emphasises automation driven by metadata and collaboration inside the tools teams already use</td><td>Teams on a cloud data stack that want a managed product</td></tr>
+      <tr><td>Microsoft Purview</td><td>Commercial, part of Microsoft's cloud</td><td>Scans and classifies data across Microsoft's services and shares sensitivity labels with them</td><td>Estates that are mostly on Azure, Fabric and Microsoft 365</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Two questions separate these products more than their feature lists do. The first is who the primary user is: an engineer integrating systems, a steward running a workflow or an analyst searching for data. The second is how much operating effort the organisation is willing to take on in exchange for control. An open-source catalog has no licence fee and needs engineers to run and upgrade it. A commercial product moves that effort to the vendor and adds a subscription and a dependency.</p>
+  </div>
+</section>
+
+<section class="sec" id="mapping" aria-labelledby="mapping-h">
+  <div class="sec-head"><span class="sec-num">2.4</span><h2 id="mapping-h">Semantic mappings and identifier governance</h2></div>
+  <p class="lede">A glossary term has an effect on data only when it is connected to the columns that carry it. The connection runs through the logical data model, and it depends on identifiers that stay the same when names change.</p>
+  <div class="prose">
+    <p>There are three layers. A glossary term states a business meaning. A logical model attribute states where that meaning sits in the structure of the business, for example as an attribute of the Customer entity. A physical column is where a particular system stores it. One term can map to several columns, because each system has its own copy, and the mapping records how each column relates to the term: some hold the value directly and others hold something from which it is derived.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 380" role="img" aria-label="Three layers of semantic mapping. The glossary term Paying customer, identifier GT-0107, maps to the logical attribute Customer.isPaying, which maps to two physical columns: erp.billing_account.last_paid_date, from which it is derived, and dim_customer.is_paying, which holds it directly.">
+      <text x="30" y="34" class="lab">Glossary</text>
+      <rect x="30" y="46" width="330" height="96" rx="16" class="biz"/><text x="52" y="80" class="t">Paying customer</text><text x="52" y="106" class="tm">GT-0107, owner: finance controller</text><text x="52" y="128" class="ts">status: approved, version 2</text>
+      <text x="400" y="34" class="lab">Logical model</text>
+      <rect x="400" y="46" width="300" height="96" rx="16" class="tech"/><text x="422" y="80" class="t">Customer.isPaying</text><text x="422" y="106" class="tm">attribute of entity Customer</text><text x="422" y="128" class="ts">boolean, one value per customer</text>
+      <path d="M360 94 H396" class="ln" marker-end="url(#ah)"/>
+      <text x="740" y="34" class="lab">Physical columns</text>
+      <rect x="740" y="46" width="340" height="96" rx="16" class="usr"/><text x="762" y="78" class="mono">dim_customer.is_paying</text><text x="762" y="106" class="tm">holds the value directly</text><text x="762" y="128" class="ts">warehouse, built by dbt</text>
+      <rect x="740" y="170" width="340" height="96" rx="16" class="usr"/><text x="762" y="202" class="mono">erp.billing_account.last_paid_date</text><text x="762" y="230" class="tm">value is derived from this column</text><text x="762" y="252" class="ts">source system</text>
+      <path d="M700 94 H736" class="ln" marker-end="url(#ah)"/><path d="M700 110 L736 206" class="ln dash" marker-end="url(#ah)"/>
+      <rect x="30" y="296" width="1050" height="64" rx="14" class="bx2"/>
+      <text x="52" y="324" class="lab">Every reference uses the identifier GT-0107</text>
+      <text x="52" y="346" class="ts">in the dbt column meta, the metric definition, the ontology annotation and the tags on document chunks</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.5.</b> A glossary term mapped to a logical attribute and to two physical columns. The solid arrow marks a column that holds the value and the dashed arrow a column from which it is derived. Names are illustrative.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>In the demonstration the term is attached to the column in two places. OpenMetadata stores the link between the term and the column, and the dbt project carries the term's identifier in the column's <code>meta</code> configuration so that the link is versioned with the code. The key names are a convention of this course.</p>
+  </div>
+  <div class="code"><div class="hd"><span>models/marts/dim_customer.yml (illustrative)</span><button class="copy">Copy</button></div><pre>models:
+  - name: dim_customer
+    columns:
+      - name: is_paying
+        description: True when the customer has a paid order in the last 12 months.
+        config:
+          meta:
+            glossary_term: GT-0107        <span class="c-c"># Paying customer</span>
+            logical_attribute: Customer.isPaying</pre></div>
+  <div class="prose"><p>Recent dbt versions place <code>meta</code> under <code>config</code>, as shown. Older versions accept it directly under the column, so follow the form that matches your dbt version.</p></div>
+  <h3>Identifier governance</h3>
+  <div class="prose">
+    <p>The first integration contract in the reference architecture says that every glossary term has a stable identifier which the data model, the ontology, the metrics and the document chunks all reference. That contract holds only if the identifiers are managed with some discipline. The programme uses five rules.</p>
+    <ol>
+      <li>An identifier is an opaque code such as GT-0107 and carries no meaning. A term can then be renamed without changing its identifier.</li>
+      <li>One registry issues identifiers. In this course the catalog is that registry.</li>
+      <li>An identifier is never reused, including after its term has been retired.</li>
+      <li>A change to a definition creates a new version of the same term. A change that splits one meaning into two creates new terms, and the old term is deprecated with pointers to its successors.</li>
+      <li>Other assets refer to a term by identifier and never by name.</li>
+    </ol>
+  </div>
+  <div class="sim" id="sim-ids">
+    <div class="sim-h"><span class="try">Try it</span><h4>What happens to references when a term changes?</h4></div>
+    <div class="sim-b">
+      <div class="g2">
+        <label class="field">Change made in the glossary
+          <select id="ids-ev"><option value="rename">Rename "Client" (GT-0210) to "Customer account"</option><option value="split">Split "Active customer" (GT-0101) into three terms</option><option value="retire">Retire "Active customer" (GT-0101)</option></select></label>
+        <label class="field">How the metric and the dbt column refer to the term
+          <select id="ids-ref"><option value="name">By name</option><option value="id">By identifier</option></select></label>
+      </div>
+      <div class="out" id="ids-out" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="mdm" aria-labelledby="mdm-h">
+  <div class="sec-head"><span class="sec-num">2.5</span><h2 id="mdm-h">Master data and entity identity</h2></div>
+  <p class="lede">Master data management decides which records in different systems describe the same real-world entity, builds one trusted record for it, and keeps a table that links that record back to every source identifier.</p>
+  <h3>Matching rules</h3>
+  <div class="prose">
+    <p>Deterministic matching links two records when chosen fields are equal, for example the same verified tax number. It is easy to explain and it fails whenever the field is missing or mistyped. Probabilistic matching compares several fields and weighs the evidence. The standard model was published by Fellegi and Sunter in 1969. For each field it asks how much more likely the observed result is when two records are a true match than when they are not. That ratio, taken as a base-2 logarithm, is the field's match weight.</p>
+    <p>A field that agrees contributes a positive weight, a field that disagrees contributes a negative one, and a field that is missing on either record contributes nothing. The weights are added to a starting value that reflects how rare matches are. A total weight w converts to a probability of 2<sup>w</sup> / (1 + 2<sup>w</sup>).</p>
+    <p><button class="kw" data-k="splink">Splink</button>, an open-source library developed at the UK Ministry of Justice, implements this model. Exercise 2 in section 2.9 implements the same scoring in about ten lines of Python so that you can see each weight being added. Splink estimates the weights from the data, so no hand-labelled training set is needed, and it uses <button class="kw" data-k="blocking">blocking</button> rules to limit which pairs of records are compared at all, since comparing every pair is not feasible for large tables.</p>
+    <p>A true match that no blocking rule covers is never scored and never reaches a steward, so blocking rules are a source of missed matches and should be tested for recall. The model also treats fields as independent, and weights estimated without labelled data can be poor when the data is skewed, so the estimates should be checked against a small sample that people have labelled.</p>
+    <p>A worked example with illustrative weights shows the arithmetic. Suppose one pair of records in ten thousand is a true match, which gives a starting value of about -13.3. An exact match on email adds 9.8, on surname 6.6 and on city 3.2. A pair that agrees on all three scores 6.3, which corresponds to a match probability of about 0.99. A pair that agrees on surname and city, where one record has no email, scores -3.5, a probability of about 0.08. Had the two emails been present and different, a negative weight for the disagreement would have lowered the score further.</p>
+    <p>Two thresholds then divide the pairs into three groups. Pairs above the upper threshold are linked automatically. Pairs below the lower threshold are treated as different entities. Pairs in between go to a steward for review. Moving the thresholds trades one kind of error against the other. A false merge joins two different customers, which can expose one person's data to another and is hard to undo once downstream systems have used the merged record. A missed match leaves one customer split in two, which inflates counts and fragments their history. Stewards decide which error the organisation can better tolerate for each entity type.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 300" role="img" aria-label="The matching pipeline in seven steps: source records from CRM, ERP and the master data hub; blocking to select candidate pairs; field comparison; scoring to a match probability; thresholds that split pairs into automatic link, steward review and no link; clustering of linked records; and survivorship, which produces a golden record and crosswalk rows.">
+      <rect x="20" y="60" width="130" height="110" rx="12" class="usr"/><text x="85" y="98" text-anchor="middle" class="t">Sources</text><text x="85" y="124" text-anchor="middle" class="ts">CRM, ERP,</text><text x="85" y="144" text-anchor="middle" class="ts">MDM hub</text>
+      <path d="M150 115 H170" class="ln" marker-end="url(#ah)"/>
+      <rect x="174" y="60" width="130" height="110" rx="12" class="tech"/><text x="239" y="98" text-anchor="middle" class="t">Block</text><text x="239" y="124" text-anchor="middle" class="ts">choose pairs</text><text x="239" y="144" text-anchor="middle" class="ts">to compare</text>
+      <path d="M304 115 H324" class="ln" marker-end="url(#ah)"/>
+      <rect x="328" y="60" width="130" height="110" rx="12" class="tech"/><text x="393" y="98" text-anchor="middle" class="t">Compare</text><text x="393" y="124" text-anchor="middle" class="ts">field by field</text>
+      <path d="M458 115 H478" class="ln" marker-end="url(#ah)"/>
+      <rect x="482" y="60" width="130" height="110" rx="12" class="prob"/><text x="547" y="98" text-anchor="middle" class="t">Score</text><text x="547" y="124" text-anchor="middle" class="ts">match</text><text x="547" y="144" text-anchor="middle" class="ts">probability</text>
+      <path d="M612 115 H632" class="ln" marker-end="url(#ah)"/>
+      <rect x="636" y="30" width="150" height="170" rx="12" class="bx2"/><text x="711" y="58" text-anchor="middle" class="t">Thresholds</text>
+      <rect x="648" y="70" width="126" height="34" rx="8" class="drv"/><text x="711" y="92" text-anchor="middle" class="ts">link</text>
+      <rect x="648" y="112" width="126" height="34" rx="8" class="biz"/><text x="711" y="134" text-anchor="middle" class="ts">steward review</text>
+      <rect x="648" y="154" width="126" height="34" rx="8" class="pol"/><text x="711" y="176" text-anchor="middle" class="ts">no link</text>
+      <path d="M786 115 H806" class="ln" marker-end="url(#ah)"/>
+      <rect x="810" y="60" width="120" height="110" rx="12" class="tech"/><text x="870" y="98" text-anchor="middle" class="t">Cluster</text><text x="870" y="124" text-anchor="middle" class="ts">group linked</text><text x="870" y="144" text-anchor="middle" class="ts">records</text>
+      <path d="M930 115 H950" class="ln" marker-end="url(#ah)"/>
+      <rect x="954" y="60" width="130" height="110" rx="12" class="tech"/><text x="1019" y="98" text-anchor="middle" class="t">Survive</text><text x="1019" y="124" text-anchor="middle" class="ts">pick values</text>
+      <path d="M1019 170 V216" class="ln" marker-end="url(#ah)"/>
+      <rect x="760" y="220" width="324" height="60" rx="12" class="asst"/><text x="922" y="246" text-anchor="middle" class="t on">Golden record and crosswalk</text><text x="922" y="268" text-anchor="middle" class="ts on">one golden key per entity</text>
+      <text x="547" y="230" text-anchor="middle" class="lab ink-prob">Scores are probabilities. A steward's</text><text x="547" y="250" text-anchor="middle" class="lab ink-prob">decision turns a pair into an approved match.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.6.</b> The matching pipeline from source records to a golden record. In exercise 2 a Python script performs the block, compare and score steps, and you perform the review.</figcaption>
+  </figure>
+  <div class="sim" id="sim-thr">
+    <div class="sim-h"><span class="try">Try it</span><h4>Move the thresholds on twelve candidate pairs</h4></div>
+    <div class="sim-b">
+      <div class="g2">
+        <label class="field"><span>Link automatically at or above <span class="v" id="thr-hi-n"></span></span><input type="range" id="thr-hi" min="50" max="99" value="95"></label>
+        <label class="field"><span>Send to review at or above <span class="v" id="thr-lo-n"></span></span><input type="range" id="thr-lo" min="1" max="94" value="20"></label>
+      </div>
+      <div class="rows" id="thr-rows"></div>
+      <div class="out" id="thr-out" style="margin-top:12px" aria-live="polite"></div>
+      <p style="font-size:.93rem;color:var(--muted);margin-bottom:0">The pairs, their probabilities and the "truth" column are illustrative. In practice the truth is unknown, which is why the review band exists.</p>
+    </div>
+  </div>
+  <h3>Survivorship and the golden record</h3>
+  <div class="prose">
+    <p>Once records are linked, their values often disagree. A <button class="kw" data-k="survivorship">survivorship rule</button> states, attribute by attribute, which value goes into the <button class="kw" data-k="golden">golden record</button>. Common rules are to prefer a named source, to take the most recently updated value, to take the most complete value, or to take the value that most sources agree on. Different attributes usually need different rules. A legal name is best taken from the system where identity documents were verified, while a phone number is best taken from wherever the customer last updated it. The golden record should also keep a note of which source supplied each value, so that a steward can explain it later.</p>
+  </div>
+  <div class="sim" id="sim-surv">
+    <div class="sim-h"><span class="try">Try it</span><h4>Choose survivorship rules for one customer</h4></div>
+    <div class="sim-b">
+      <div class="tbl" style="margin-top:0"><table>
+        <thead><tr><th>Attribute</th><th>CRM (updated 12 Oct 2026)</th><th>ERP (updated 3 Mar 2025)</th><th>MDM hub (updated 20 Jan 2026)</th><th>Rule</th></tr></thead>
+        <tbody id="surv-body"></tbody>
+      </table></div>
+      <div class="out" id="surv-out" aria-live="polite"></div>
+    </div>
+  </div>
+  <h3>The crosswalk, and what stays on the source identifier</h3>
+  <div class="prose">
+    <p>The <button class="kw" data-k="crosswalk">crosswalk</button> is the table that makes the golden record usable. It has one row for each source record, giving the golden key, the source system, the identifier in that system, the period for which the link is valid and the rule or steward decision that created it.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>golden_key</th><th>source_system</th><th>source_id</th><th>valid_from</th><th>valid_to</th><th>linked_by</th></tr></thead>
+    <tbody>
+      <tr><td>G-000481</td><td style="font-weight:400">CRM</td><td style="font-weight:400">C-1042</td><td style="font-weight:400">2024-06-01</td><td style="font-weight:400">open</td><td style="font-weight:400">rule R2 (email and surname)</td></tr>
+      <tr><td>G-000481</td><td style="font-weight:400">ERP</td><td style="font-weight:400">880031</td><td style="font-weight:400">2024-06-01</td><td style="font-weight:400">open</td><td style="font-weight:400">steward review, 14 Jan 2026</td></tr>
+      <tr><td>G-000481</td><td style="font-weight:400">MDM</td><td style="font-weight:400">M-77</td><td style="font-weight:400">2026-01-20</td><td style="font-weight:400">open</td><td style="font-weight:400">rule R1 (verified ID)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>In exercise 2, the golden records and the crosswalk are written to CSV files, and the source files are left unchanged. The golden key is added alongside the source identifiers and does not replace them. Questions that cross systems, such as total spend per customer across CRM and ERP, join on the golden key. Work inside one system keeps using that system's identifier: local joins, reconciliation against the source, and lineage back to the original record. The knowledge graph in Module 4 and the metrics layer in Module 3 follow the same rule.</p>
+  </div>
+  <h3>Lifecycle governance</h3>
+  <div class="prose">
+    <p>Golden records change over time, and each kind of change needs an owner and an audit entry. A merge joins two golden records after a steward confirms they are one entity. An unmerge reverses a merge that proved to be wrong, which is possible only if the crosswalk kept the source rows intact. A split separates one record into two when it is found to cover two entities. </p>
+    <p>A golden key that has been retired is not issued again, for the same reason that glossary identifiers are not reused. Master data is authoritative for identity only within the scope its stewards cover and under the matching rules they have approved, so a match outside that scope should be reported as unconfirmed.</p>
+  </div>
+</section>
+
+<section class="sec" id="skos" aria-labelledby="skos-h">
+  <div class="sec-head"><span class="sec-num">2.6</span><h2 id="skos-h">Semantic interoperability between domains</h2></div>
+  <p class="lede">Two domains can use the same word for different populations. This is the contextual kind of inconsistency from Module 1. Forcing both domains onto one definition removes information that one of them needs, whereas a mapping keeps both definitions and states how they relate.</p>
+  <div class="prose">
+    <p><button class="kw" data-k="skos">SKOS</button>, the Simple Knowledge Organization System, is a W3C standard for describing sets of concepts. Each domain's glossary can be treated as a SKOS concept scheme. SKOS provides five properties for mapping a concept in one scheme to a concept in another.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Property</th><th>Meaning of "A property B"</th><th>Formal behaviour</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td>skos:exactMatch</td><td>A and B can be used interchangeably across a wide range of applications</td><td>Symmetric and transitive</td><td>The definitions and the populations are the same</td></tr>
+      <tr><td>skos:closeMatch</td><td>A and B are similar enough to be interchanged in some applications</td><td>Symmetric, deliberately not transitive</td><td>They can stand in for each other in search but not in a calculation</td></tr>
+      <tr><td>skos:broadMatch</td><td>B is a broader concept than A</td><td>Inverse of narrowMatch</td><td>Everything that is an A is also a B</td></tr>
+      <tr><td>skos:narrowMatch</td><td>B is a narrower concept than A</td><td>Inverse of broadMatch</td><td>Everything that is a B is also an A</td></tr>
+      <tr><td>skos:relatedMatch</td><td>A and B are associated without either containing the other</td><td>Symmetric</td><td>The populations overlap in part</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The difference between exactMatch and closeMatch has a practical consequence. Because exactMatch is transitive, a chain of exact matches across three glossaries implies an exact match between the first and the third, whether or not anyone checked it. The SKOS specification made closeMatch non-transitive to stop errors compounding in this way. Use exactMatch only when you would be content for a tool to substitute one term for the other in a count.</p>
+    <p>Consider the retailer's marketing and finance teams. Marketing's "customer" is anyone with a profile who has engaged with a channel. Finance's "customer" is a party with a billing account that has paid. Many people fall under both definitions, some under one only, so neither is broader than the other. A workable mapping relates the two terms with relatedMatch and maps each one upward to a shared enterprise concept, here called Party, with broadMatch. A cross-domain question can then be asked at the level of Party, and each domain's own figures remain valid for its own purposes.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 320" role="img" aria-label="Two domain concept schemes mapped without merging. Marketing's Customer and finance's Customer are linked by a related match. Each has a broad match to an enterprise concept called Party.">
+      <rect x="400" y="20" width="300" height="84" rx="16" class="tech"/><text x="550" y="54" text-anchor="middle" class="t">ent:Party</text><text x="550" y="80" text-anchor="middle" class="ts">a person or organisation we deal with</text>
+      <rect x="40" y="190" width="400" height="110" rx="16" class="biz"/><text x="62" y="224" class="t">mkt:Customer</text><text x="62" y="252" class="tm">has a profile and has engaged</text><text x="62" y="276" class="ts">owner: head of marketing analytics</text>
+      <rect x="660" y="190" width="400" height="110" rx="16" class="biz"/><text x="682" y="224" class="t">fin:Customer</text><text x="682" y="252" class="tm">has a billing account that has paid</text><text x="682" y="276" class="ts">owner: finance controller</text>
+      <path d="M240 190 L470 108" class="ln" marker-end="url(#ah)"/><text x="300" y="140" text-anchor="end" class="lab">skos:broadMatch</text>
+      <path d="M860 190 L630 108" class="ln" marker-end="url(#ah)"/><text x="800" y="140" class="lab">skos:broadMatch</text>
+      <path d="M440 245 H656" class="ln dash" marker-start="url(#ah)" marker-end="url(#ah)"/><text x="550" y="232" text-anchor="middle" class="lab">skos:relatedMatch</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.7.</b> Marketing's and finance's "customer" kept as separate concepts, related to each other and each mapped to a broader enterprise concept.</figcaption>
+  </figure>
+  <div class="code"><div class="hd"><span>The same mapping in Turtle (illustrative namespaces)</span><button class="copy">Copy</button></div><pre>mkt:Customer  a skos:Concept ;
+    skos:prefLabel    "Customer"@en ;
+    skos:definition   "A person with a profile who has engaged with any channel."@en ;
+    skos:relatedMatch fin:Customer ;
+    skos:broadMatch   ent:Party .
+
+fin:Customer  a skos:Concept ;
+    skos:prefLabel    "Customer"@en ;
+    skos:definition   "A party with a billing account that has paid."@en ;
+    skos:broadMatch   ent:Party .</pre></div>
+  <div class="prose">
+    <p>A mapping needs the approval of both term owners. It is recorded with its rationale and reviewed whenever either definition changes. The glossary identifiers from section 2.4 make that review possible, because a change to either term can be traced to the mappings that mention it.</p>
+  </div>
+  <div class="sim" id="sim-skos">
+    <div class="sim-h"><span class="try">Try it</span><h4>Choose the mapping property for five pairs of terms</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-skos"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="llm" aria-labelledby="llm-h">
+  <div class="sec-head"><span class="sec-num">2.7</span><h2 id="llm-h">LLM-assisted descriptions with steward approval</h2></div>
+  <p class="lede">A warehouse of any size has many columns with no description. A language model can draft descriptions and glossary terms quickly, and in this programme a draft becomes metadata only after a steward has approved it.</p>
+  <div class="prose">
+    <p>The reason for the approval step follows from Module 1. A description that says what a column means is a statement of business meaning, and business authority comes from an accountable owner. A model can propose wording, and only the owner can approve it. A draft published without review gives a guess the appearance of a governed definition.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 260" role="img" aria-label="The approval workflow for LLM-drafted descriptions in five steps: assemble context from name, type, profile statistics, lineage and glossary; the LLM drafts a description; automatic checks; steward review with approve, edit or reject; publish with a record that the text was AI-drafted and who approved it. Rejected drafts feed back into the prompt.">
+      <rect x="20" y="50" width="190" height="120" rx="14" class="tech"/><text x="115" y="84" text-anchor="middle" class="t">1 Context</text><text x="115" y="110" text-anchor="middle" class="ts">name, type, profile</text><text x="115" y="130" text-anchor="middle" class="ts">statistics, lineage,</text><text x="115" y="150" text-anchor="middle" class="ts">glossary</text>
+      <path d="M210 110 H232" class="ln" marker-end="url(#ah)"/>
+      <rect x="236" y="50" width="190" height="120" rx="14" class="prob"/><text x="331" y="84" text-anchor="middle" class="t">2 Draft</text><text x="331" y="110" text-anchor="middle" class="ts">LLM writes a</text><text x="331" y="130" text-anchor="middle" class="ts">description and</text><text x="331" y="150" text-anchor="middle" class="ts">suggests a term</text>
+      <path d="M426 110 H448" class="ln" marker-end="url(#ah)"/>
+      <rect x="452" y="50" width="190" height="120" rx="14" class="tech"/><text x="547" y="84" text-anchor="middle" class="t">3 Checks</text><text x="547" y="110" text-anchor="middle" class="ts">agrees with type and</text><text x="547" y="130" text-anchor="middle" class="ts">lineage; contains no</text><text x="547" y="150" text-anchor="middle" class="ts">personal data</text>
+      <path d="M642 110 H664" class="ln" marker-end="url(#ah)"/>
+      <rect x="668" y="50" width="190" height="120" rx="14" class="biz"/><text x="763" y="84" text-anchor="middle" class="t">4 Steward</text><text x="763" y="110" text-anchor="middle" class="ts">approve, edit</text><text x="763" y="130" text-anchor="middle" class="ts">or reject</text>
+      <path d="M858 110 H880" class="ln" marker-end="url(#ah)"/>
+      <rect x="884" y="50" width="196" height="120" rx="14" class="drv"/><text x="982" y="84" text-anchor="middle" class="t">5 Publish</text><text x="982" y="110" text-anchor="middle" class="ts">marked "AI-drafted",</text><text x="982" y="130" text-anchor="middle" class="ts">with approver and</text><text x="982" y="150" text-anchor="middle" class="ts">date</text>
+      <path d="M763 170 V214 H331 V174" class="ln dash" marker-end="url(#ah)"/><text x="547" y="238" text-anchor="middle" class="lab">rejected drafts and edits are used to improve the prompt</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.8.</b> The approval workflow. The violet step is the only one that carries business authority.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Four risks are worth planning for.</p>
+    <ul>
+      <li>Given a column called <code>status</code>, a model will often describe it with whichever meaning of "active" is most common in its training data, and the result reads well and is wrong. Supplying lineage and profile statistics in the prompt reduces this, and the steward's review is there for what remains.</li>
+      <li>Sending raw rows to an external model may disclose personal data, and a draft may quote a real value back. The context should contain profile statistics in place of rows, and an automatic check should reject drafts that contain values resembling personal data.</li>
+      <li>A steward shown two hundred drafts in one sitting is likely to approve some without reading them. Small batches, and a periodic audit of a sample of approved items by a second person, reduce that risk.</li>
+      <li>If an assistant later reads AI-drafted descriptions as though they were governed definitions, an early guess becomes a source for later answers. Marking every such description with its origin and its approver lets downstream tools tell the two apart.</li>
+    </ul>
+    <p>The steward has three possible decisions. Approve the draft when the evidence supports it as written. Edit it when the evidence on the screen is enough to correct it. Reject it when the evidence is not enough to correct it, or when it asserts a business meaning that only the owner can decide. If a draft asserts a business meaning, reject it even when you could rewrite it yourself.</p>
+    <p>Glossary terms can be drafted in the same way, and the bar is higher because a term definition is used by every asset that references the term. A model might propose the following for a term nobody has defined.</p>
+  </div>
+  <div class="code"><div class="hd"><span>A drafted glossary term awaiting review (illustrative)</span></div><pre>term:            Reachable customer
+definition:      A customer with at least one contact channel (email or phone)
+                 that has been verified in the last 24 months.
+synonyms:        Contactable customer
+proposed owner:  Head of marketing analytics
+evidence used:   12 columns named *_verified_at; metric "reachable customers"
+status:          Draft (AI-drafted, not yet reviewed)</pre></div>
+  <div class="prose">
+    <p>The definition is plausible, and the 24-month window is the model's invention. The proposed owner has to confirm or change it before the term can be approved, and the owner has to accept ownership. OpenMetadata supports this with its approval workflow for glossary terms. The facilitator demonstrates that workflow. Exercise 5 uses one CSV review queue for both term drafts and column descriptions.</p>
+  </div>
+</section>
+
+<section class="sec" id="case" aria-labelledby="case-h">
+  <div class="sec-head"><span class="sec-num">2.8</span><h2 id="case-h">Case study: a telecom customer 360 with three identifiers</h2></div>
+  <p class="lede">This case concerns a mobile operator that tried to build a single view of each customer and found that its three systems did not agree on what a customer was. The operator and the events are fictional and were written for this course. Shared plans and the reassignment of numbers, on which the case depends, are real features of mobile networks.</p>
+  <h3>Situation</h3>
+  <div class="prose">
+    <p>The operator has about 9 million mobile connections. Its marketing team wanted a "customer 360" table to feed a churn model and to show care agents a full history when a customer calls. Three systems hold customer data, and each has its own identifier.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>System</th><th>Identifier</th><th>What one identifier stands for</th></tr></thead>
+    <tbody>
+      <tr><td>Billing</td><td>Billing account number</td><td>The party that pays the bill. One account can cover several connections, as in a family or company plan.</td></tr>
+      <tr><td>CRM</td><td>Contact ID</td><td>A person who has contacted the operator or been contacted by it. One person can have several contact records.</td></tr>
+      <tr><td>Network</td><td>Mobile number (MSISDN)</td><td>One active connection. A number is reassigned to a new subscriber some time after the previous one gives it up.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>What went wrong</h3>
+  <div class="prose">
+    <p>The first version of the table used the mobile number as the customer key, because every system stored it. Three problems followed. On family plans, the usage of four people was attributed to the one person who paid. Where a number had been reassigned, the new subscriber inherited the previous holder's complaint history, and a care agent read out details of a dispute that belonged to someone else. People with two connections were counted as two customers, which made the churn rate look higher than it was when one of the two was closed.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 300" role="img" aria-label="A timeline for one mobile number. From 2023 to mid 2025 the number belongs to party A. After a quarantine period it is reassigned to party B from early 2026. A join on the number alone attaches party A's history to party B. The crosswalk row for each party carries validity dates so that events are joined as of the date they happened.">
+      <text x="30" y="34" class="lab">Mobile number 98xxxxxx41 over time</text>
+      <line x1="60" y1="92" x2="1060" y2="92" class="ln" marker-end="url(#ah)"/>
+      <text x="60" y="122" class="ts">2023</text><text x="560" y="122" text-anchor="middle" class="ts">mid 2025</text><text x="770" y="122" text-anchor="middle" class="ts">early 2026</text><text x="1050" y="122" text-anchor="end" class="ts">today</text>
+      <rect x="60" y="60" width="500" height="26" rx="6" class="tech"/><text x="310" y="79" text-anchor="middle" class="lab">held by party A</text>
+      <rect x="560" y="60" width="210" height="26" rx="6" class="bx2" style="stroke-dasharray:6 5"/><text x="665" y="79" text-anchor="middle" class="ts">quarantine</text>
+      <rect x="770" y="60" width="280" height="26" rx="6" class="drv"/><text x="910" y="79" text-anchor="middle" class="lab">held by party B</text>
+      <rect x="60" y="160" width="480" height="110" rx="14" class="pol"/><text x="82" y="194" class="t">Join on the number alone</text><text x="82" y="222" class="tm">Party A's complaints and usage are</text><text x="82" y="244" class="tm">attached to party B</text>
+      <rect x="580" y="160" width="480" height="110" rx="14" class="drv"/><text x="602" y="194" class="t">Join through the crosswalk, as of a date</text><text x="602" y="222" class="tm">Each event goes to the party who held</text><text x="602" y="244" class="tm">the number when it happened</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 2.9.</b> A reassigned mobile number. The number is a valid identifier for a connection at a point in time and an unsafe identifier for a person over time. The timeline is illustrative, and the length of the quarantine is set by the regulator in each country.</figcaption>
+  </figure>
+  <h3>Analysis with this module's concepts</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Finding</th><th>Concept</th><th>What the operator changed</th></tr></thead>
+    <tbody>
+      <tr><td>"Customer" meant payer in billing, person in CRM and connection in the network</td><td>Glossary and SKOS mapping (2.4, 2.6)</td><td>Three governed terms: Payer, Contact and Subscription. Payer and Contact are both parties, so each has a broadMatch to the enterprise concept Party and a relatedMatch to the other. A Subscription is a service and not a party, so its link to a party is a relationship in the data model with validity dates.</td></tr>
+      <tr><td>The mobile number was used as a person key</td><td>Identity and the crosswalk (2.5)</td><td>A golden key per party, with crosswalk rows from each system that carry validity dates</td></tr>
+      <tr><td>Reassigned numbers merged two people</td><td>False merge; temporal identity</td><td>Network events are joined to a party as of the event date, never on the number alone</td></tr>
+      <tr><td>Names disagreed between CRM and billing</td><td>Survivorship (2.5)</td><td>Legal name from the system that holds verified identity documents; contact preferences from the most recent CRM update</td></tr>
+      <tr><td>Nobody could say which columns fed the 360 table</td><td>Column-level lineage (2.2)</td><td>The table was rebuilt in dbt so that the catalog could ingest its lineage</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Two things stayed on their source identifiers. Usage records remained keyed on mobile number and time, because that is how the network produces them and how they are reconciled. Invoices remained keyed on billing account. The golden key was added to the 360 table and to the crosswalk, and the source systems were not changed.</p>
+    <p>The operator accepted one limit. Prepaid connections that were sold with little identity information could not be matched to a party with confidence. They were kept as parties of their own with a flag showing that the match was unconfirmed, and the churn model treats them as a separate segment.</p>
+  </div>
+  <h3>Questions for discussion</h3>
+  <div class="prose">
+    <ol>
+      <li>The marketing team asked for "one row per customer". Which of the three terms should that row represent, and who has the authority to decide?</li>
+      <li>For this operator, is a false merge or a missed match the more costly error? Would your answer differ for the churn model and for the care agent's screen?</li>
+      <li>A family plan has one payer and four users. Write the survivorship rule for the contact phone number of the party who pays.</li>
+      <li>Which parts of this problem would a catalog have revealed before the project started, and which would it have missed?</li>
+    </ol>
+  </div>
+</section>
+
+<section class="sec" id="handson" aria-labelledby="handson-h">
+  <div class="sec-head"><span class="sec-num">2.9</span><h2 id="handson-h">Hands-on</h2></div>
+  <p class="lede">Five exercises in Python, done in pairs. You need Python 3.13 and VS Code and nothing else. Every script uses only the Python standard library, and all the data is in CSV and JSON files in the lab folder. There is no catalog server, no database server, no package to install and no API key.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Exercise</th><th>File</th><th>What you write</th><th>What you produce</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td>1. Find the planted inconsistencies</td><td style="font-weight:400"><code>lab1_catalog_checks.py</code></td><td style="font-weight:400">Three checks over a catalog export</td><td style="font-weight:400">Five flagged catalog entries, with the reason for each</td><td>8 min, self-study</td></tr>
+      <tr><td>2. Match records and build golden records</td><td style="font-weight:400"><code>lab2_matching.py</code></td><td style="font-weight:400">The match weight</td><td style="font-weight:400">Six accept or reject decisions, golden records and a crosswalk</td><td>12 min</td></tr>
+      <tr><td>3. Link terms to columns</td><td style="font-weight:400"><code>lab3_link_terms.py</code></td><td style="font-weight:400">Six links in a JSON file</td><td style="font-weight:400">Six glossary terms linked to the right column, and the dashboards each term reaches</td><td>5 min</td></tr>
+      <tr><td>4. Map two domains' "customer"</td><td style="font-weight:400"><code>lab4_skos.py</code></td><td style="font-weight:400">The closure of exactMatch</td><td style="font-weight:400">A SKOS mapping with a written rationale</td><td>8 min, self-study</td></tr>
+      <tr><td>5. Review drafted descriptions</td><td style="font-weight:400"><code>lab5_review_drafts.py</code></td><td style="font-weight:400">One automatic check</td><td style="font-weight:400">Ten approve, edit or reject decisions and a published file with provenance</td><td>7 min</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Setup</h3>
+  <div class="prose">
+    <p>The facilitator gives you the folder <code>module-02-lab</code>. In VS Code choose File, then Open Folder, and select it. Open a terminal with Terminal, then New Terminal, and run <code>python --version</code> to confirm that it prints 3.13. On macOS or Linux use <code>python3</code> if <code>python</code> is not found, and on Windows <code>py</code> also works. Nothing has to be built for this module.</p>
+    <p>Each script that needs code marks it with a <code>TODO</code> comment and prints what is still missing when you run it. Exercises 2 and 5 run in two stages: the first run writes a CSV file, you type your decisions in its last columns in VS Code, keep the commas, save, and run the script again. Worked answers are in the <code>solutions</code> folder.</p>
+  </div>
+  <h3>Exercise 1: find the five planted inconsistencies</h3>
+  <div class="prose">
+    <p><code>catalog.json</code> is a small fictional file, written by hand in the shape of a catalog export, with seven glossary terms, eleven columns, column lineage, four tables and three dashboards. Five inconsistencies are planted in it. Each check in <code>lab1_catalog_checks.py</code> compares two records that should agree, such as a description and the lineage. The checks for duplicate terms and for stale certified dashboards are written. Write the other three: a classified column whose upstream column is unclassified, a description that claims a golden key on a column that does not come from master data, and a column linked to a term whose source columns do not appear in the column's lineage.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab1_catalog_checks.py (last line abridged)</span></div><pre>check_duplicate_terms: 1 finding(s)
+   GT-0100 Customer and GT-0210 Client have the same definition and no relation
+check_stale_certified: 1 finding(s)
+   dashboard 'Returns overview' is certified and reads stale table fct_returns
+check_classification_gaps: 1 finding(s)
+   dim_customer.email is PII.Sensitive and upstream stg_customers.email has no classification
+check_golden_claims: 1 finding(s)
+   dim_supplier.supplier_id is described as a golden key and comes from erp.vendors.vendor_no
+check_term_links: 2 finding(s)
+   dim_customer.cust_status is linked to GT-0141 Engaged customer and comes from crm.accounts.status_flag
+   dim_supplier.supplier_id is linked to GT-0160 Golden supplier key and comes from erp.vendors.vendor_no
+
+6 findings.</pre></div>
+  <div class="prose">
+    <p>The supplier key is reported by two checks, so six findings correspond to five faults. For each fault, write one line saying which owner you would ask and what you would ask them. A check finds a disagreement between two records. It cannot tell which of the two is wrong.</p>
+  </div>
+  <h3>Exercise 2: match records and build golden records</h3>
+  <div class="prose">
+    <p><code>crm_records.csv</code> has 34 fictional customer records and <code>erp_records.csv</code> has 27. The script blocks on the first three letters of the surname or an equal email, scores each candidate pair with the model from section 2.5, and sorts the pairs into three groups at thresholds of 0.95 and 0.05. Write <code>match_weight()</code>: start from the prior and, for each field, add the agreement weight, the disagreement weight, or nothing when the value is missing on either record. The weights are illustrative and are given in the file.</p>
+  </div>
+  <div class="code"><div class="hd"><span>lab2_matching.py: the given weights and the function you write</span><button class="copy">Copy</button></div><pre>PRIOR = math.log2(1 / 9999)       <span class="c-c"># one pair in ten thousand is a true match: about -13.29</span>
+<span class="c-c"># (added when the field agrees, added when it disagrees)</span>
+WEIGHTS = {"email": (9.8, -3.5), "surname": (6.6, -4.9), "dob": (7.9, -5.6),
+           "first_name": (4.1, -2.8), "city": (3.2, -1.2)}
+
+def match_weight(a, b):
+    <span class="c-c"># TODO: loop over WEIGHTS.items(); call agrees(field, a, b);</span>
+    <span class="c-c"># add the first weight for True, the second for False, nothing for None</span>
+    raise NotImplementedError("see the TODO comment")</pre></div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of the first run (abridged)</span></div><pre>records: 34 CRM, 27 ERP. All pairs: 918. Pairs after blocking: 35
+auto-accepted at 0.95 or above: 20
+sent to steward review: 6
+rejected below 0.05: 9
+labelled sample: 25 true matches. Auto-accepted 20, in review 3, missed 2. Auto-accepted pairs that are not true matches: 0
+  missed: C-1008 and E-88008, scored below the reject threshold
+  missed: C-1016 and E-88016, never compared: no blocking rule covers this pair
+
+Wrote review_queue.csv.</pre></div>
+  <div class="prose">
+    <p>Two true matches are lost, for two different reasons. Find both pairs in the CSV files and say what would have to change to recover each one. Then open <code>review_queue.csv</code> and type accept or reject for each of the six pairs. The phone number is in the records and is not in the model, so you can use it as evidence that the model did not have.</p>
+    <p>Run the script again. It calls <code>survive()</code>, which is written for you and builds one golden record from the source records of one person. Read it. The rule is in its docstring: name and date of birth from the ERP unless the ERP holds only an initial, phone and city from the most recently updated record, and email from the CRM.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of the second run, with the decisions in the key (abridged)</span></div><pre>Stage 2: 61 source records became 38 golden records, 22 of them with more than one source record.
+Wrote golden_records.csv and crosswalk.csv.</pre></div>
+  <details class="note">
+    <summary style="font-weight:700;cursor:pointer">Key for the review queue</summary>
+    <p>Accept the three pairs where the ERP record has no date of birth or email and the phone numbers are equal: C-1007, C-1015 and C-1023. Reject C-1041, where the same sparse evidence comes with different phone numbers and a common name. Reject C-1043, where the first names differ and the date of birth and home phone are shared, which points to twins. Reject C-1040, where the dates of birth are 29 years apart and the email is a family address, which points to a parent and child.</p>
+    <p>C-1008 was scored and fell below 0.05 because the day and month of the date of birth are swapped in the ERP and the email is missing. A comparison that recognises swapped day and month would recover it. C-1016 was never scored, because the surname is mistyped in its first letter and the email is missing, so neither blocking rule covers it. A further blocking rule on date of birth and city would recover it.</p>
+  </details>
+  <div class="prose">
+    <p>Open <code>crosswalk.csv</code>. Every source record keeps its own identifier and gains a golden key, and the <code>linked_by</code> column records whether the model or a steward made the link. Your count of golden records will differ from 38 if your decisions differ from the key. For the lab review, find G-000005 in <code>golden_records.csv</code> and compare its surname with the two source records. The rule took the surname from the ERP, where it is mistyped. Say how you would change the rule, and what the change would cost.</p>
+  </div>
+  <h3>Exercise 3: link glossary terms to columns</h3>
+  <div class="prose">
+    <p>Run <code>python lab3_link_terms.py --columns</code> to list the 32 columns in <code>lineage.json</code> with their descriptions. Open <code>term_links.json</code> and fill in one column for each of the six terms. Choose the first column, following the lineage from the source, that holds the governed value and that analysts query. Source-system columns, which start with <code>crm.</code>, <code>erp.</code> or <code>mdm.</code>, are not candidates, and neither are report or dashboard columns, which inherit the term through lineage.</p>
+    <p>The finance month-end table is a governed table that analysts query, so its columns are candidates. Then run the script. It uses <code>downstream()</code>, which is written for you and follows the lineage edges forward from a column. For each term it prints the dashboard tiles that the column reaches, and the tiles that a tool with table-level lineage only would report.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output for the first term</span></div><pre>GT-0107 Paying customer -> dim_customer.is_paying: matches the key
+     column-level lineage reaches 1 dashboard tile(s): dash.investor_pack.active_customers
+     table-level lineage would report 3: dash.investor_pack.active_customers, dash.marketing_weekly.engaged, dash.service_ops.open_accounts</pre></div>
+  <div class="prose">
+    <p>If finance changes the definition of "Paying customer", column lineage shows that one tile has to be reviewed. Table lineage reports three, and two of those owners would be asked to review a change that does not affect them. Note which two terms reach no dashboard at all, and whether that means they are unused.</p>
+  </div>
+  <h3>Exercise 4: map the care team's and finance's "customer"</h3>
+  <div class="prose">
+    <p>Part A of <code>lab4_skos.py</code> starts from a mapping in which the care team's "customer" and finance's "customer" were both recorded as an exactMatch of the enterprise concept. Write <code>exact_closure()</code>, which returns every pair of concepts that exactMatch connects directly or through a chain, and run the script to see the statement that follows from the two that were recorded. The member counts in the file are illustrative.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of part A</span></div><pre>Part A: the first attempt
+  inferred: crm:Customer skos:exactMatch fin:Customer
+  The mapping now says these two mean the same, but crm:Customer has 5,200,000 members and fin:Customer has 3,900,000.</pre></div>
+  <div class="prose">
+    <p>Part B uses the telecom case in 2.8. Finance calls a Payer a "customer" and the care team calls a Contact a "customer". Some people are both, some are payers who have never contacted the operator, and some are contacts who do not pay. Fill in the three properties in <code>MY_MAPPING</code> that relate Payer, Contact and Party. The script prints what your mapping implies and checks it for the common mistakes. A mapping that passes these checks can still be wrong, so compare it with the sample. Add two sentences of rationale that both term owners could sign, and say why Subscription is left out of the mapping.</p>
+  </div>
+  <details class="note">
+    <summary style="font-weight:700;cursor:pointer">Sample answer</summary>
+    <p>Every payer is a party and every contact is a party, so <code>fin:Payer skos:broadMatch ent:Party</code> and <code>crm:Contact skos:broadMatch ent:Party</code>. The two populations overlap and neither contains the other, so <code>fin:Payer skos:relatedMatch crm:Contact</code>. Rationale: a count of payers and a count of contacts answer different questions and both remain valid, and questions that span the two are asked at the level of Party through the crosswalk.</p>
+    <p>Subscription is left out because it is a service and not a kind of party. Its connection to the party who pays for it or uses it is a relationship between two entities, which belongs in the data model and, from Module 4, in the ontology.</p>
+  </details>
+  <h3>Exercise 5: review drafted column descriptions</h3>
+  <div class="prose">
+    <p><code>drafts.json</code> holds eight column descriptions and two glossary terms in the style a language model produces, each with the evidence a steward can see. The drafts were written for this lab, so no model is called. The script applies three automatic checks. Two are written: one flags wording that asserts a business definition, and one flags a draft that quotes what looks like a real value, such as an email address. Write the third, which flags a number in the draft that is absent from the evidence. Once all three run, the script writes <code>decisions.csv</code>.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Flags from the three checks when all are written (summary of the terminal output)</span></div><pre>d01 orders.order_ts: none
+d02 customers.status: asserts a business definition ('meaning'); numbers not in the evidence: 12
+d03 order_items.qty: none
+d04 customers.email: quotes what looks like a real value
+d05 returns.refund: none
+d06 suppliers.rating: numbers not in the evidence: 5
+d07 dim_customer.golden_key: none
+d08 fct_sales.net_revenue: asserts a business definition ('as defined by')
+d09 glossary term: Churned customer: none
+d10 glossary term: Order line: none</pre></div>
+  <div class="prose">
+    <p>Now apply the rule from section 2.7 to every row of <code>decisions.csv</code>: approve when the evidence supports the draft, edit when the evidence shown is enough to correct it, and reject when it is not, or when the draft asserts a business meaning that only an owner can decide. For an edit, type the corrected text in <code>final_text</code>, inside double quotes if it contains a comma. The <code>reason</code> column is optional in class.</p>
+    <p>Set <code>STEWARD</code> at the top of the script to your name and run it again. It writes <code>published.json</code> with the approved and edited descriptions, each recording that a model drafted it and who approved it, and it compares your decisions with the key.</p>
+    <p>The key has seven drafts that should not be approved as written, and the checks flag four of them. The other three, d01, d07 and d09, pass every check and are wrong for reasons that need the evidence to be read.</p>
+  </div>
+  <div class="note lab">
+    <h5><span class="ic">L</span>What to hand in</h5>
+    <p>Each pair submits <code>lab2_matching.py</code>, <code>review_queue.csv</code>, <code>term_links.json</code>, <code>lab5_review_drafts.py</code> and <code>decisions.csv</code>, with a note of any decision in exercises 2 or 5 where the pair disagreed with the key and why. The disagreements are the starting point for the lab review. Exercises 1 and 4 are handed in after the session.</p>
+  </div>
+  <h3>Practice on this page, without a laptop</h3>
+  <div class="prose"><p>The four drills below cover exercises 1, 2, 3 and 5 at small size and need no setup. Use them if a machine fails during the session, or as revision afterwards. The records and the schema in them are illustrative and differ from the lab files.</p></div>
+  <div class="sim" id="ex-incons">
+    <div class="sim-h"><span class="try">Exercise 1</span><h4>Ten catalog entries (illustrative)</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-incons"></div></div>
+  </div>
+  <div class="sim" id="ex-match">
+    <div class="sim-h"><span class="try">Exercise 2</span><h4>Ten proposed matches (illustrative records)</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-match"></div></div>
+  </div>
+  <div class="sim" id="ex-link">
+    <div class="sim-h"><span class="try">Exercise 3</span><h4>Six terms (illustrative schema)</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-link"></div></div>
+  </div>
+  <div class="sim" id="ex-desc">
+    <div class="sim-h"><span class="try">Exercise 5</span><h4>Eight column descriptions and two glossary terms (illustrative)</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-desc"></div></div>
+  </div>
+</section>
+<section class="sec" id="recap" aria-labelledby="recap-h">
+  <div class="sec-head"><span class="sec-num">2.10</span><h2 id="recap-h">Recap and checkpoint quiz</h2></div>
+  <p class="lede">The table summarises the module. The quiz has nine scenario questions and, together with the review of the hands-on exercises, is the formative check for Module 2.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Idea</th><th>Summary</th></tr></thead>
+    <tbody>
+      <tr><td>Six kinds of metadata</td><td>Business, technical, operational, governance, quality and security. A catalog is useful to the extent that it links them.</td></tr>
+      <tr><td>Lineage</td><td>Captured at dataset, column, transformation and business-process level. Ingestion misses logic held outside the artefacts it reads. The provenance of an AI answer extends lineage past the dashboard.</td></tr>
+      <tr><td>Catalog tooling</td><td>OpenMetadata is open source and schema-first. Other catalogs differ mainly in their primary user and in how much operating effort they move to a vendor. A catalog records access policies and does not enforce them in other stores.</td></tr>
+      <tr><td>Semantic mappings</td><td>A term maps to a logical attribute and to physical columns. References use opaque identifiers that are never reused.</td></tr>
+      <tr><td>Master data</td><td>Matching proposes links, stewards approve the uncertain ones, survivorship builds the golden record, and the crosswalk keeps every source identifier.</td></tr>
+      <tr><td>SKOS mappings</td><td>exactMatch, closeMatch, broadMatch, narrowMatch and relatedMatch relate two domains' terms while both definitions are kept.</td></tr>
+      <tr><td>LLM-assisted descriptions</td><td>Descriptions and terms drafted by a model are published only after a steward approves them, and the published text records that it was AI-drafted and who approved it.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Checkpoint quiz</h3>
+  <div class="prose"><p>Select an answer to see whether it is correct and why.</p></div>
+  <div class="quiz" id="quiz"></div>
+  <p class="pill" id="quiz-score" style="margin-top:16px">Score: 0 of 0 answered</p>
+  <div class="note lab" style="margin-top:2.2rem">
+    <h5><span class="ic">3</span>Module 3: the metrics semantic layer</h5>
+    <p>Module 3 takes the glossary terms and golden keys from this module and defines metrics on them. You define ten metrics in MetricFlow, reproduce the order-to-returns join that inflates net revenue and correct it in the semantic model, and publish a second version of net revenue with an effective date.</p>
+  </div>
+</section>
+
+<section class="sec" id="refs" aria-labelledby="refs-h">
+  <div class="sec-head"><span class="sec-num">Ref</span><h2 id="refs-h">References</h2></div>
+  <p class="lede">Sources for the claims in this module, checked in November 2026.</p>
+  <ol class="refs">
+    <li>W3C. "SKOS Simple Knowledge Organization System Reference", Recommendation, 18 August 2009. <a href="https://www.w3.org/TR/skos-reference/">w3.org/TR/skos-reference</a>. Section 10 defines the mapping properties and their formal behaviour.</li>
+    <li>Fellegi, I. P. and Sunter, A. B. "A Theory for Record Linkage". Journal of the American Statistical Association 64(328), 1969, pages 1183 to 1210. The model behind probabilistic matching.</li>
+    <li>Splink, a library for probabilistic record linkage, developed at the UK Ministry of Justice. Documentation accessed November 2026. <a href="https://moj-analytical-services.github.io/splink/">moj-analytical-services.github.io/splink</a>.</li>
+    <li>OpenMetadata documentation and release notes, accessed November 2026. <a href="https://docs.open-metadata.org/">docs.open-metadata.org</a>; source at <a href="https://github.com/open-metadata/OpenMetadata">github.com/open-metadata/OpenMetadata</a>.</li>
+    <li>OpenLineage specification, including the column-level lineage facet, accessed November 2026. <a href="https://openlineage.io/docs/spec/facets/dataset-facets/column_lineage_facet/">openlineage.io/docs/spec/facets/dataset-facets/column_lineage_facet</a>.</li>
+    <li>W3C. "PROV-O: The PROV Ontology", Recommendation, 30 April 2013. <a href="https://www.w3.org/TR/prov-o/">w3.org/TR/prov-o</a>.</li>
+    <li>DataHub documentation, accessed November 2026. <a href="https://docs.datahub.com/">docs.datahub.com</a>.</li>
+    <li>dbt documentation on the <code>meta</code> resource property, accessed November 2026. <a href="https://docs.getdbt.com/reference/resource-configs/meta">docs.getdbt.com/reference/resource-configs/meta</a>.</li>
+    <li>StackRoute and RPS Consulting. "Enterprise Semantic Intelligence" course design, 26-hour architect edition, 2026. Source of the reference architecture, integration contracts and tool choices.</li>
+  </ol>
+  <div class="note">
+    <h5><span class="ic">i</span>What is ours and what is sourced</h5>
+    <p>The six kinds of metadata, the four levels of lineage and the five identifier rules are this programme's own framing. The telecom case, every record, score, catalog entry and column name in the exercises, and the match weights in 2.5 are teaching scenarios. The comparison of commercial catalogs describes their general positioning and is not a feature audit.</p>
+  </div>
+</section>
+
+<section class="sec" id="glossary" aria-labelledby="glossary-h">
+  <div class="sec-head"><span class="sec-num">A-Z</span><h2 id="glossary-h">Glossary</h2></div>
+  <p class="lede">Definitions of the underlined terms used on this page.</p>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<footer>
+  <p>Enterprise Semantic Intelligence, Module 2. Prepared by Shayantan Dey for StackRoute and RPS Consulting, NIIT's enterprise capability arm. November 2026.</p>
+  <p>Tool versions, product names and vendor features change. Where this page differs from a vendor's current documentation, that documentation takes precedence.</p>
+</footer>
+</div>
+</div>
+</div>
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function press(group,btn){$$("[aria-pressed]",group).forEach(b=>b.setAttribute("aria-pressed",b===btn?"true":"false"));}
+function chips(box,labels,onPick,first){labels.forEach((t,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=t;b.setAttribute("aria-pressed",i===first?"true":"false");b.addEventListener("click",()=>{press(box,b);onPick(i);});box.appendChild(b);});}
+
+
+/* ---------- drill engine: a list of items, each with options, a key and an explanation ---------- */
+function drill(id,opts,items){
+  const root=document.getElementById(id);if(!root)return;let right=0,done=0;
+  if(!opts)root.classList.add("own");
+  const score=document.createElement("p");score.className="score";
+  const upd=()=>{score.textContent=right+" correct of "+done+" answered, "+items.length+" in total";};
+  items.forEach((it,n)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(n+1)+". "+it[0]+"</p><div class='opts'></div><div class='why'></div>";
+    const box=d.querySelector(".opts");(it[3]||opts).forEach((o,oi)=>{const b=document.createElement("button");b.type="button";b.textContent=o;
+      b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");done++;
+        if(oi===it[1]){right++;b.classList.add("right");}else{b.classList.add("wrong");box.children[it[1]].classList.add("right");}
+        d.querySelector(".why").innerHTML="<b>"+(oi===it[1]?"Correct. ":"The keyed answer is \""+esc((it[3]||opts)[it[1]])+"\". ")+"</b>"+esc(it[2]);upd();});
+      box.appendChild(b);});
+    root.appendChild(d);});
+  root.appendChild(score);upd();
+}
+
+/* ---------- theme ---------- */
+const saved=store("esi-theme");
+if(saved==="dark"||saved==="light")document.documentElement.setAttribute("data-theme",saved);
+else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.setAttribute("data-theme","dark");
+$("#themeBtn").addEventListener("click",()=>{const next=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);store("esi-theme",next);});
+
+/* ---------- menu ---------- */
+const side=$("#side"),menuBtn=$("#menuBtn");
+menuBtn.addEventListener("click",()=>{const o=side.classList.toggle("open");menuBtn.setAttribute("aria-expanded",String(o));});
+$$("#toc a").forEach(a=>a.addEventListener("click",()=>{side.classList.remove("open");menuBtn.setAttribute("aria-expanded","false");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){side.classList.remove("open");hideTip();}});
+
+/* ---------- scrollspy and progress ---------- */
+const links=$$("#toc a");
+const targets=links.map(a=>document.getElementById(a.getAttribute("href").slice(1)));
+function onScroll(){
+  const h=document.documentElement,max=h.scrollHeight-h.clientHeight;
+  $("#bar").style.width=(max>0?h.scrollTop/max*100:0)+"%";
+  let cur=0;targets.forEach((t,i)=>{if(t&&t.getBoundingClientRect().top<=110)cur=i;});
+  links.forEach((a,i)=>{a.classList.toggle("active",i===cur);a.classList.toggle("done",i<cur&&!a.parentElement.classList.contains("sub"));});
+  const a=links[cur],sp=a.querySelectorAll("span");
+  $("#where").textContent=(sp[0].textContent?sp[0].textContent+" ":"")+sp[1].textContent;
+}
+window.addEventListener("scroll",onScroll,{passive:true});onScroll();
+
+/* ---------- glossary ---------- */
+const G={
+ "glossary":["Business glossary","The governed list of business terms. Each term has a definition, an owner, a steward, a status and a stable identifier that other assets reference."],
+ "mdm":["Master data management (MDM)","The practice of identifying which records in different systems describe the same real-world entity and maintaining one trusted record for it."],
+ "lineage":["Lineage","The recorded path of data from source to consumer: which dataset, column and transformation produced a value."],
+ "openlineage":["OpenLineage","An open standard for collecting lineage from running pipelines. It describes runs, jobs and datasets, and attaches detail such as column-level lineage as facets."],
+ "prov":["PROV","The W3C family of provenance specifications. It models provenance with entities, activities and agents and the relations between them."],
+ "splink":["Splink","An open-source Python library for probabilistic record linkage, developed at the UK Ministry of Justice. It implements the Fellegi-Sunter model."],
+ "blocking":["Blocking","Restricting record comparison to pairs that share some value, such as the same surname or postcode, so that matching does not have to compare every record with every other."],
+ "survivorship":["Survivorship rule","The rule that decides which value goes into the golden record when matched records disagree."],
+ "golden":["Golden record and golden key","The single trusted set of attributes, and the single identifier, for one real-world entity after matching and survivorship."],
+ "crosswalk":["Crosswalk","A table with one row per source record that links the source system's identifier to the golden key, with validity dates and the rule that created the link."],
+ "skos":["SKOS","Simple Knowledge Organization System, a W3C standard for describing concepts and the relations between them, including five properties for mapping between concept schemes."]
+};
+const tip=document.createElement("div");tip.className="tip";tip.id="kw-tip";tip.setAttribute("role","tooltip");document.body.appendChild(tip);
+let tipFor=null;
+function showTip(el){const d=G[el.dataset.k];if(!d)return;tip.innerHTML="<b>"+esc(d[0])+"</b>"+esc(d[1]);tip.classList.add("show");tipFor=el;el.setAttribute("aria-describedby","kw-tip");
+  const r=el.getBoundingClientRect(),tw=Math.min(340,window.innerWidth-24);tip.style.maxWidth=tw+"px";
+  let left=r.left+window.scrollX+r.width/2-tw/2;left=Math.max(12+window.scrollX,Math.min(left,window.scrollX+window.innerWidth-tw-12));tip.style.left=left+"px";
+  let top=r.bottom+window.scrollY+8;if(r.bottom+tip.offsetHeight+16>window.innerHeight)top=r.top+window.scrollY-tip.offsetHeight-8;tip.style.top=top+"px";}
+function hideTip(){tip.classList.remove("show");if(tipFor)tipFor.removeAttribute("aria-describedby");tipFor=null;}
+$$(".kw").forEach(el=>{el.type="button";el.addEventListener("mouseenter",()=>showTip(el));el.addEventListener("mouseleave",hideTip);el.addEventListener("focus",()=>showTip(el));el.addEventListener("blur",hideTip);el.addEventListener("click",e=>{e.preventDefault();if(tipFor===el)hideTip();else showTip(el);});});
+Object.keys(G).sort((a,b)=>G[a][0].localeCompare(G[b][0])).forEach(k=>{const d=document.createElement("div");d.innerHTML="<b>"+esc(G[k][0])+"</b><p>"+esc(G[k][1])+"</p>";$("#gloss").appendChild(d);});
+
+/* ---------- copy ---------- */
+document.addEventListener("click",e=>{const b=e.target.closest(".copy");if(!b)return;const txt=b.closest(".code").querySelector("pre").textContent;
+  const done=()=>{const o=b.textContent;b.textContent="Copied";setTimeout(()=>{b.textContent=o;},1400);};
+  try{navigator.clipboard.writeText(txt).then(done,done);}catch(err){done();}});
+
+/* ---------- drills in content sections ---------- */
+drill("dr-meta",["Business","Technical","Operational","Governance","Quality","Security"],[
+ ["Who do I ask before changing what this column means?",3,"Ownership and stewardship are governance metadata. The answer is the term's or the asset's recorded owner."],
+ ["Was this table loaded this morning?",2,"Load times and freshness are operational metadata, produced by the pipeline run."],
+ ["Is this column a number or a string, and can it be empty?",1,"Data type and nullability are technical metadata, read from the source system's schema."],
+ ["Does \"active\" in this column mean a paid order or an open account?",0,"Meaning is business metadata. The answer should come from the glossary term linked to the column."],
+ ["May the marketing agency's analysts see this column?",5,"Classification and access policy are security metadata. The catalog records the answer and the warehouse enforces it."],
+ ["Did yesterday's duplicate check pass?",4,"Test results are quality metadata, produced by the test framework."]
+]);
+drill("dr-skos",["exactMatch","closeMatch","broadMatch","narrowMatch","relatedMatch"],[
+ ["<b>A</b> is sales' \"Client\". <b>B</b> is marketing's \"Customer\". Both teams confirm the same definition and the same population. A ___ B",0,"The definitions and populations are the same, so one term can replace the other in a count. That is the condition for exactMatch."],
+ ["<b>A</b> is finance's \"Paying customer\". <b>B</b> is the enterprise concept \"Party\". A ___ B",2,"Every paying customer is a party, and many parties are not paying customers. B is broader than A, which is written A broadMatch B."],
+ ["<b>A</b> is the enterprise concept \"Product\". <b>B</b> is supply chain's \"Finished good\", which excludes bought-in items. A ___ B",3,"Every finished good is a product. B is narrower than A, which is written A narrowMatch B."],
+ ["<b>A</b> is marketing's \"Engaged customer\". <b>B</b> is finance's \"Paying customer\". Some people are both, some are one only. A ___ B",4,"The populations overlap and neither contains the other. relatedMatch records the association without implying that either can replace the other."],
+ ["<b>A</b> is sales' \"Net revenue (booked)\". <b>B</b> is finance's \"Net revenue (recognised)\". A search for one should also find the other, but the figures differ. A ___ B",1,"The terms are similar enough to stand in for each other in search and not in a calculation. closeMatch says that, and because it is not transitive it will not spread to other terms."]
+]);
+
+/* ---------- sim: impact analysis ---------- */
+(function(){
+  const ALL=["stg_customers","dim_customer","metric: reachable customers","dashboard: Customer overview","dashboard: Credit risk","churn_features (ML)"];
+  const C=[
+   ["crm.contacts.email",["stg_customers.email","dim_customer.email","metric: reachable customers","dashboard: Customer overview"]],
+   ["crm.contacts.status",["stg_customers.status","dim_customer.status","dashboard: Customer overview","churn_features (ML)"]],
+   ["erp.customers.email_addr",["stg_customers.email","dim_customer.email","metric: reachable customers","dashboard: Customer overview"]],
+   ["erp.customers.credit_limit",["stg_customers.credit_limit","dim_customer.credit_band","dashboard: Credit risk"]]
+  ];
+  const li=a=>"<ul style='margin:.2rem 0 0'>"+a.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+  chips($("#imp-q"),C.map(c=>c[0]),i=>{$("#imp-ds").innerHTML=li(ALL);$("#imp-col").innerHTML=li(C[i][1]);
+    $("#imp-note").textContent="Dataset-level lineage knows only that the source table feeds stg_customers, so it lists all "+ALL.length+" downstream assets. Column-level lineage follows "+C[i][0]+" and lists "+C[i][1].length+". The difference is the number of owners you would otherwise contact without need.";},-1);
+})();
+
+/* ---------- sim: identifiers ---------- */
+(function(){
+  const T={
+   "rename-name":["no","The metric and the dbt column still point to \"Client\", which no longer exists in the glossary. Each reference has to be found by text search and edited by hand, and any that are overlooked lose their link without an error."],
+   "rename-id":["ok","Nothing breaks. The references point to GT-0210, and the identifier did not change. Tools that display the term show its new name the next time they read the glossary."],
+   "split-name":["no","The old name now stands for three meanings, or for none. A reference by name cannot say which of the three its author intended, and there is no reliable way to list every place that used it."],
+   "split-id":["ok","GT-0101 is deprecated with pointers to its three successors. The catalog can list every asset that references GT-0101, which gives a complete impact list. A person still has to decide which successor each asset should use: the identifier makes the list complete and leaves the decision to the owner."],
+   "retire-name":["no","The references remain as text. If the name is later given to a new term with a different meaning, the old references attach to the new meaning without anyone deciding that they should."],
+   "retire-id":["ok","A check in the CI pipeline can find every reference to a retired identifier and fail the build. Because the identifier is never issued again, no reference can become attached to a different meaning by accident."]
+  };
+  function draw(){const t=T[$("#ids-ev").value+"-"+$("#ids-ref").value];$("#ids-out").innerHTML='<p class="verdict '+t[0]+'">'+(t[0]==="ok"?"The change can be managed":"The change causes silent damage")+"</p><p>"+esc(t[1])+"</p>";}
+  $("#ids-ev").addEventListener("change",draw);$("#ids-ref").addEventListener("change",draw);draw();
+})();
+
+/* ---------- sim: thresholds ---------- */
+(function(){
+  const P=[
+   ["Same email, surname and city",99,1],["Same email and date of birth; surname differs",96,1],["Same name, date of birth and address",97,1],
+   ["Same name and address; dates of birth 29 years apart",91,0],["Name spelled differently; same date of birth and city",88,1],["Same phone and surname; first name differs",78,0],
+   ["Shared office email; different names",71,0],["Same name and city; one record has no date of birth",62,1],["Initial only; same address and phone",55,1],
+   ["Same name and date of birth; city differs",41,1],["Common name; same city only",18,0],["Same surname and postcode only",7,0]
+  ];
+  function draw(){
+    let hi=+$("#thr-hi").value,lo=+$("#thr-lo").value;if(lo>=hi){lo=hi-1;$("#thr-lo").value=lo;}
+    $("#thr-hi-n").textContent=(hi/100).toFixed(2);$("#thr-lo-n").textContent=(lo/100).toFixed(2);
+    const box=$("#thr-rows");box.innerHTML='<div class="row hd"><span>Pair</span><span>Evidence</span><span>Probability</span><span>Truth</span><span>Outcome</span></div>';
+    let auto=0,fm=0,rev=0,rej=0,mm=0;
+    P.forEach((p,i)=>{const o=p[1]>=hi?"link":p[1]>=lo?"review":"no link";
+      if(o==="link"){auto++;if(!p[2])fm++;}else if(o==="review")rev++;else{rej++;if(p[2])mm++;}
+      const d=document.createElement("div");d.className="row"+(o==="link"?" in":o==="review"?" dup":"");
+      d.innerHTML="<span>"+(i+1)+"</span><span>"+esc(p[0])+"</span><span>"+(p[1]/100).toFixed(2)+"</span><span>"+(p[2]?"same":"different")+"</span><span>"+o+"</span>";box.appendChild(d);});
+    $("#thr-out").innerHTML="<p><b>"+auto+"</b> linked automatically, of which <b>"+fm+"</b> "+(fm===1?"is a false merge":"are false merges")+". <b>"+rev+"</b> sent to a steward. <b>"+rej+"</b> not linked, of which <b>"+mm+"</b> "+(mm===1?"is a missed match":"are missed matches")+".</p><p>"+
+      (fm?"Pair 4 has a high score because name and address agree, yet the two records are a father and a son. Lowering the automatic threshold to save review effort lets pairs like this through.":mm?"Raising the review threshold has dropped a real match without anyone looking at it.":"With these settings every uncertain pair is seen by a steward, at the cost of "+rev+" reviews.")+"</p>";
+  }
+  $("#thr-hi").addEventListener("input",draw);$("#thr-lo").addEventListener("input",draw);draw();
+})();
+
+/* ---------- sim: survivorship ---------- */
+(function(){
+  /* order of sources: CRM (most recent), ERP (oldest), MDM (middle, verified) */
+  const A=[
+   ["Legal name",["Priya S","Priya Sharma","Priya R. Sharma"],"prio"],
+   ["Phone",["98450 00117","98450 00042","98450 00042"],"recent"],
+   ["Email",["priya.s@example.com","","p.sharma@example.org"],"recent"],
+   ["Address (CRM holds delivery, ERP and MDM hold billing)",["Indiranagar, Bengaluru","HSR Layout, Bengaluru","HSR Layout, Bengaluru"],"prio"]
+  ];
+  const SRC=["CRM","ERP","MDM hub"],PRIO=[2,1,0],RECENT=[0,2,1];
+  const RULES=[["prio","Source priority: MDM, ERP, CRM"],["recent","Most recent update"],["agree","Most sources agree"]];
+  function pick(vals,rule){
+    const order=rule==="recent"?RECENT:PRIO;
+    if(rule==="agree"){const n={};vals.forEach(v=>{if(v)n[v]=(n[v]||0)+1;});const best=Math.max(...Object.values(n));const tied=Object.keys(n).filter(v=>n[v]===best);
+      if(tied.length===1&&best>1){const k=PRIO.find(i=>vals[i]===tied[0]);return [tied[0],SRC[k]+" (agreed by "+best+" sources)"];}
+      const k=PRIO.find(i=>vals[i]);return [vals[k],SRC[k]+" (no agreement, so source priority)"];}
+    const k=order.find(i=>vals[i]);return [vals[k],SRC[k]];
+  }
+  const body=$("#surv-body");
+  A.forEach((a,i)=>{const tr=document.createElement("tr");tr.innerHTML="<td>"+a[0]+"</td>"+a[1].map(v=>"<td style='font-weight:400'>"+(v?esc(v):"(empty)")+"</td>").join("")+"<td><select aria-label='Rule for "+a[0]+"' data-i='"+i+"'>"+RULES.map(r=>"<option value='"+r[0]+"'"+(r[0]===a[2]?" selected":"")+">"+r[1]+"</option>").join("")+"</select></td>";body.appendChild(tr);});
+  function draw(){
+    const sel=$$("select",body).map(s=>s.value);let h="<p class='lbl'>Golden record</p><ul style='margin:.2rem 0 .6rem'>";const notes=[];
+    A.forEach((a,i)=>{const r=pick(a[1],sel[i]);h+="<li><b>"+a[0]+":</b> "+esc(r[0])+" <span style='color:var(--muted)'>from "+esc(r[1])+"</span></li>";});
+    h+="</ul>";
+    if(sel[0]==="recent")notes.push("The name now comes from the CRM, where an agent typed an abbreviation, in preference to the verified name in the master data hub.");
+    if(sel[1]!=="recent")notes.push("The phone number is the one the customer replaced in October 2026, so calls and messages will go to the old number.");
+    if(sel[3]==="recent")notes.push("The address is the CRM delivery address. If invoices must go to the billing address, this rule sends them to the wrong place.");
+    if(!notes.length)notes.push(sel.join()==="prio,recent,recent,prio"?"These rules take the name and billing address from the verified source and the phone and email from the latest update.":"None of the choices above triggers a specific warning. Check each surviving value against what the attribute is used for.");
+    $("#surv-out").innerHTML=h+notes.map(n=>"<p>"+n+"</p>").join("");
+  }
+  body.addEventListener("change",draw);draw();
+})();
+
+/* ---------- hands-on drills ---------- */
+drill("dr-incons",["Inconsistent","Looks consistent"],[
+ ["<b>dim_customer.cust_status</b><span class='rec'>description: Customer lifecycle status\nglossary term: Engaged customer (GT-0141)\nlineage: crm.accounts.status_flag</span>",0,"The lineage shows the column is the CRM account flag, which is the meaning of \"Open account\". The business metadata and the lineage disagree, so the term link is wrong."],
+ ["<b>fct_orders</b><span class='rec'>owner: data engineering\ntier: 1, certified\ntests: 6 of 6 passing, last run today\nrefreshed: today 02:10</span>",1,"Ownership, certification, test results and freshness agree with each other."],
+ ["<b>dim_customer.email</b><span class='rec'>classification: PII.Sensitive\nlineage: stg_customers.email (no classification)</span>",0,"The same values are classified as sensitive in one table and unclassified one step upstream. An access policy written against the tag would protect the dimension and leave the staging table open."],
+ ["<b>Glossary term: Net revenue (GT-0120)</b><span class='rec'>status: approved\nowner: finance controller\nreviewers: 2\nlinked columns: 3, all with lineage from ERP billing</span>",1,"The term has an owner, an approval and consistent links."],
+ ["<b>Glossary terms: Client (GT-0210) and Customer (GT-0100)</b><span class='rec'>definitions: word for word the same\nrelation between them: none</span>",0,"Two terms with one meaning and no recorded relation is a terminological duplicate. One should be made a synonym of the other, or the two should be linked with exactMatch."],
+ ["<b>fct_returns</b><span class='rec'>freshness expectation: daily\nlast refreshed: 19 days ago\ndashboard \"Returns overview\": certified</span>",0,"Operational metadata shows the table is stale while governance metadata still marks its dashboard as certified. One of the two is out of date."],
+ ["<b>dim_product.category</b><span class='rec'>description: Product category from the ERP item master\nlineage: erp.products.category\ntest: accepted_values passing</span>",1,"The description matches the lineage and the test is passing."],
+ ["<b>dim_supplier.supplier_id</b><span class='rec'>description: Golden supplier key from master data\nlineage: erp.vendors.vendor_no (direct copy)</span>",0,"The description claims a golden key, and the lineage shows a source identifier copied from the ERP. Anyone joining procurement to accounts payable on this column would believe identity had been resolved when it has not."],
+ ["<b>stg_erp_invoices.amount</b><span class='rec'>type: numeric(18,2)\ndescription: Invoice amount in INR\ntest: not_null passing</span>",1,"Nothing here conflicts. A reviewer might still ask how the currency is known, which is a question for the source owner."],
+ ["<b>Glossary term: Paying customer (GT-0107)</b><span class='rec'>owner: finance controller, status: approved\nmetric paying_customers references: GT-0107\ndbt column meta references: GT-0107</span>",1,"The metric and the dbt column refer to the term by the same identifier, and the term has an owner and an approval."]
+]);
+drill("dr-match",["Accept","Reject"],[
+ ["Probability 0.99<span class='rec'>CRM: Anil Kumar | 14 Mar 1986 | anil.k@example.com | Pune\nERP: Anil Kumar | 14 Mar 1986 | anil.k@example.com | Pune</span>",0,"Name, date of birth, email and city all agree."],
+ ["Probability 0.90<span class='rec'>CRM: Rajesh Iyer | 02 Feb 1961 | 12 Lake Road, Chennai\nERP: Rajesh Iyer | 09 Nov 1990 | 12 Lake Road, Chennai</span>",1,"The dates of birth are 29 years apart. A shared name and address with a generation between the dates points to a parent and child. A date of birth mismatch should outweigh an address match."],
+ ["Probability 0.93<span class='rec'>CRM: Meera Nair | 21 Jul 1992 | meera.nair@example.com | Kochi\nMDM: Meera Thomas | 21 Jul 1992 | meera.nair@example.com | Kochi</span>",0,"Date of birth, a personal email address and city agree, and a changed surname is common. Accept, and let survivorship take the name from the verified source."],
+ ["Probability 0.72<span class='rec'>CRM: S. Banerjee | accounts@example-traders.com | Kolkata\nERP: Arup Dutta | accounts@example-traders.com | Kolkata</span>",1,"The email is a shared company mailbox, so it identifies the organisation and not a person. The names differ. These are two contacts at one company."],
+ ["Probability 0.95<span class='rec'>CRM: Farhan Sheikh | 05 May 1988 | Mumbai | phone ending 231\nERP: Farhan Shaikh | 05 May 1988 | Mumbai | phone ending 231</span>",0,"The surname differs by one letter in a name with several accepted spellings, and date of birth, city and phone agree."],
+ ["Probability 0.58<span class='rec'>CRM: Kavita Rao | phone ending 780 | Bengaluru | created 2026\nERP: Suresh Menon | phone ending 780 | Bengaluru | last active 2022</span>",1,"Only the phone number agrees, the names differ, and the two records are four years apart. The number has most likely been reassigned, as in the telecom case."],
+ ["Probability 0.81<span class='rec'>CRM: Deepa Joshi | 30 Sep 1979 | phone ending 406 | Hyderabad\nMDM: Deepa Joshi | 30 Sep 1979 | phone ending 406 | Nagpur</span>",0,"Name, date of birth and phone agree. A different city is consistent with a move, and survivorship will decide which address to keep."],
+ ["Probability 0.44<span class='rec'>CRM: Amit Patel | (no date of birth) | Ahmedabad\nERP: Amit Patel | 01 Jan 1975 | Ahmedabad</span>",1,"A common name in a large city is weak evidence, and there is nothing else to compare. Keep the records separate and mark the match as unconfirmed until more information arrives."],
+ ["Probability 0.97<span class='rec'>CRM: Lakshmi Traders | tax number ending 4Z1 | Coimbatore\nERP: Lakshmi Traders Pvt Ltd | tax number ending 4Z1 | Coimbatore</span>",0,"A verified tax number agrees, which is strong deterministic evidence for an organisation. The difference in the name is a legal suffix."],
+ ["Probability 0.87<span class='rec'>CRM: Rohan Verma | 03 Aug 1995 | B-204 Green Park, Delhi | rohan.v@example.com\nCRM: Rohit Verma | 03 Aug 1995 | B-204 Green Park, Delhi | rohit.v@example.com</span>",1,"Date of birth and address agree, but the first names and the email addresses differ in a consistent way. This pattern fits twins. Rohan and Rohit are different given names."]
+]);
+drill("dr-link",null,[
+ ["<b>Paying customer</b>: a customer with a paid, non-refunded order in the last 12 months.",1,"is_paying holds this definition directly. The status column is the account flag, and payment_status describes one order.",["dim_customer.status (account status flag from the CRM)","dim_customer.is_paying (true when a paid order exists in the last 12 months)","fct_orders.payment_status (payment state of one order)"]],
+ ["<b>Golden customer key</b>: the identifier that master data assigns to one real-world customer.",1,"golden_key comes from the crosswalk. The surrogate key is internal to the warehouse and can change on a rebuild, and contact_id is one system's identifier.",["dim_customer.customer_sk (warehouse surrogate key)","dim_customer.golden_key (key from the master data crosswalk)","crm.contacts.contact_id (CRM identifier)"]],
+ ["<b>Net revenue (finance)</b>: gross sales less returns, discounts and tax.",2,"Only the month-end figure applies all three deductions. Linking the term to net_of_returns would attach the finance definition to a number that does not implement it.",["fct_sales.gross_amount (before any deduction)","fct_sales.net_of_returns (gross less returns)","finance.month_end.net_revenue (after returns, discounts and tax)"]],
+ ["<b>Order date</b>: the date on which the customer placed the order.",1,"order_date carries the business date from the source. created_at records when the row reached the warehouse, which can be a day later.",["fct_orders.created_at (when the row was inserted in the warehouse)","fct_orders.order_date (date from the source order)","fct_orders.ship_date (date of dispatch)"]],
+ ["<b>Open account</b>: an account whose status flag is ACTIVE.",0,"The status column is the flag itself. The other two columns describe behaviour, which belongs to the terms \"paying customer\" and \"engaged customer\".",["dim_customer.status (account status flag from the CRM)","dim_customer.is_paying (paid order in the last 12 months)","dim_customer.last_seen_date (most recent login or app open)"]],
+ ["<b>Customer contact email</b>: the email address the company uses to contact the customer.",1,"The governed value is the one produced by survivorship in the dimension. The two source columns are connected to it by lineage and keep their own, narrower descriptions.",["crm.contacts.email (as typed in the CRM)","dim_customer.email (after cleaning and survivorship)","erp.customers.email_addr (billing email in the ERP)"]]
+]);
+drill("dr-desc",["Approve","Edit","Reject"],[
+ ["<b>orders.order_ts</b><span class='rec'>type: timestamp without time zone\nprofile: values cluster between 09:00 and 22:00\ndraft: \"Timestamp when the order was placed, in UTC.\"</span>",1,"The meaning is right, but nothing in the evidence supports \"in UTC\", and the clustering suggests local time. Edit to remove the time zone claim until the source owner confirms it."],
+ ["<b>customers.status</b><span class='rec'>lineage: crm.accounts.status_flag\nprofile: values ACTIVE, CLOSED, SUSPENDED\ndraft: \"Indicates whether the customer is active, meaning they have purchased in the last 12 months.\"</span>",2,"The draft asserts a business meaning, the 12-month purchase rule, that belongs to a different term. Which term this column carries is for the term owners to confirm, so reject the draft and propose a link to \"Open account\"."],
+ ["<b>order_items.qty</b><span class='rec'>type: integer, not null\nprofile: minimum 1, maximum 48\ndraft: \"Number of units of the product on this order line.\"</span>",0,"The draft matches the name, the type, the profile and the grain of the table."],
+ ["<b>customers.email</b><span class='rec'>classification: PII\ndraft: \"Customer email address, for example priya.sharma@example.com.\"</span>",1,"The description is correct, but it quotes a value that looks like a real address. Edit to remove the example."],
+ ["<b>returns.refund</b><span class='rec'>lineage: erp.return_lines.refund_amt\ngrain: one row per returned order line\ndraft: \"Refund amount for the returned order line.\"</span>",0,"The draft is consistent with the lineage and states the grain, which is the detail most often left out."],
+ ["<b>suppliers.rating</b><span class='rec'>type: varchar(1)\nprofile: values A, B, C, D, E\ndraft: \"Supplier quality rating from 1 to 5, where 5 is best.\"</span>",2,"The profile shows letters, so the scale in the draft is invented, and nothing says whether A or E is best. Reject and ask the procurement owner."],
+ ["<b>dim_customer.golden_key</b><span class='rec'>lineage: mdm.crosswalk.golden_key\ndraft: \"Primary key of the customer table.\"</span>",1,"Nothing in the evidence shows that this column is the table's primary key, and the lineage shows what it is: the master data key that joins customers across CRM and ERP. The evidence is enough to correct the draft, so edit it and propose the link to the term \"Golden customer key\"."],
+ ["<b>fct_sales.net_revenue</b><span class='rec'>dbt SQL: gross_amount - return_amount\ndraft: \"Net revenue as defined by Finance: gross sales less returns, discounts and tax.\"</span>",2,"The draft attaches the certified finance definition to a column whose code subtracts returns only. Whether the column should be renamed or the code changed is the finance owner's decision, so reject the draft."],
+ ["<b>Draft glossary term: Churned customer</b><span class='rec'>draft definition: \"A customer whose account status is CLOSED.\"\nevidence: column customers.status; marketing's churn report uses \"no purchase in 180 days\"\nproposed owner: none</span>",2,"The draft picks one of two meanings in use and has no owner. A term definition is a business decision, so it cannot be corrected from the evidence. Reject it and raise the term with marketing and customer service."],
+ ["<b>Draft glossary term: Order line</b><span class='rec'>draft definition: \"One product and its quantity within an order. An order has one or more lines.\"\nevidence: grain of order_items is one row per product per order\nproposed owner: head of sales operations, who has accepted ownership and confirmed the wording</span>",0,"The definition matches the grain of the table, and the owner has accepted ownership and confirmed the wording, so the steward can approve it."]
+]);
+
+/* ---------- quiz ---------- */
+(function(){
+  const Q=[
+   ["A table is marked certified and has a named owner. Its accepted-values test has failed every night for a week. Which two kinds of metadata disagree?",["Technical and operational","Governance and quality","Security and business","Operational and security"],1,"Certification and ownership are governance metadata and test results are quality metadata. A catalog that links the two can show the conflict on the asset's page."],
+   ["The CRM holds a phone number that the customer updated last month. The ERP and the master data hub hold an older number, and the two agree with each other. Which survivorship rule puts the customer's current number in the golden record?",["Most sources agree","Most recent update","Source priority with the hub first","Longest value"],1,"The two older systems agree because neither has been updated. For an attribute the customer changes, the most recent update is the better rule, and the agreement of two stale sources is weak evidence."],
+   ["The catalog's lineage for net revenue ends at a dashboard. Finance's published figure is lower than the dashboard's. What is the most likely explanation?",["The catalog's search index is out of date","Finance applies further adjustments in a workbook that no connector reads","The dashboard uses the wrong chart type","Column-level lineage is switched off"],1,"Catalog ingestion reads dbt, query logs, pipelines and the BI tool. Adjustments made in a spreadsheet after export are outside what it can see."],
+   ["A team tags a column as PII in OpenMetadata and concludes that the agency's analysts can no longer query it. What is wrong with that conclusion?",["Nothing; tags are enforced everywhere","The catalog records the classification; the warehouse must enforce access through its own grants and policies","Tags apply only to tables","The tag takes 24 hours to apply"],1,"The catalog controls access to metadata. Access to the data is enforced by each store, as the authorization matrix in Module 7 sets out."],
+   ["A glossary term is renamed and three metrics lose their link to it. What was the underlying mistake?",["The term should never have been renamed","The metrics referred to the term by name instead of by its identifier","The catalog was not re-indexed","The metrics were not certified"],1,"An opaque identifier does not change when the label does. References by name break on every rename."],
+   ["To cut the stewards' workload, a team lowers the automatic-link threshold from 0.95 to 0.70. What is the main risk?",["More missed matches","More false merges, which join different people's records and are hard to reverse","Slower blocking","Loss of the crosswalk"],1,"Pairs scoring between 0.70 and 0.95 include relatives and shared mailboxes. Linking them without review merges different people."],
+   ["A merge of two customers is found to be wrong six months later. What makes it possible to undo?",["The golden record's update date","A crosswalk that still holds each source record's own identifier and link history","The search index","The survivorship rule"],1,"If the source rows and their links were kept, the two records can be separated again. If source identifiers were overwritten by the golden key, the original records cannot be told apart."],
+   ["mkt:Client is declared an exactMatch of crm:Contact, and crm:Contact an exactMatch of fin:Customer. What follows, and why does it matter?",["Nothing follows; mappings are independent","mkt:Client is inferred to be an exactMatch of fin:Customer, so a tool may substitute one for the other in a count","The three terms are merged into one identifier","crm:Contact becomes a broader term"],1,"exactMatch is transitive. If either link was looser than exact, the inferred link is wrong, which is the reason SKOS made closeMatch non-transitive."],
+   ["An LLM drafts this description for customers.status: \"True when the customer has purchased in the last 12 months.\" Lineage shows the column is a CRM account flag. What should the steward do?",["Approve it, since it reads well","Edit the wording to be shorter","Reject it; it contradicts the lineage and asserts a business meaning no owner has approved","Publish it with a warning"],2,"The draft attaches a different term's definition to this column. A description of meaning needs an owner's authority, and the evidence here contradicts the draft."]
+  ];
+  const root=$("#quiz");let answered=0,right=0;
+  function score(){$("#quiz-score").textContent="Score: "+right+" of "+answered+" answered"+(answered===Q.length?(right>=7?". You are ready for Module 3.":". Revisit the sections you missed before Module 3."):"");}
+  Q.forEach((q,qi)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(qi+1)+". "+esc(q[0])+"</p><div class='opts'></div><div class='why'></div>";
+    const opts=d.querySelector(".opts");
+    const order=q[1].map((_,k)=>k);for(let k=order.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[order[k],order[j]]=[order[j],order[k]];}
+    order.forEach(oi=>{const o=q[1][oi];const b=document.createElement("button");b.type="button";b.textContent=o;if(oi===q[2])b.dataset.key="1";b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");answered++;
+      if(oi===q[2]){right++;b.classList.add("right");}else{b.classList.add("wrong");opts.querySelector("[data-key]").classList.add("right");}
+      d.querySelector(".why").innerHTML="<b>"+(oi===q[2]?"Correct. ":"Not quite. ")+"</b>"+esc(q[3]);score();});opts.appendChild(b);});
+    root.appendChild(d);});
+  score();
+})();
+
+})();
+</script>
+</body>
+</html>

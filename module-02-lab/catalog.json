@@ -1,0 +1,45 @@
+{
+ "terms": [
+  {"id": "GT-0100", "name": "Customer", "definition": "A person or organisation that has registered with the retailer.", "owner": "head of customer service", "status": "approved", "related": [], "source_columns": ["crm.accounts.account_id"]},
+  {"id": "GT-0210", "name": "Client", "definition": "A person or organisation that has registered with the retailer.", "owner": "head of marketing", "status": "approved", "related": [], "source_columns": ["crm.accounts.account_id"]},
+  {"id": "GT-0107", "name": "Paying customer", "definition": "A customer with a paid, non-refunded order in the last 12 months.", "owner": "finance controller", "status": "approved", "related": ["GT-0100"], "source_columns": ["erp.orders.payment_status"]},
+  {"id": "GT-0141", "name": "Engaged customer", "definition": "A customer seen on the site or app in the last 90 days.", "owner": "head of marketing", "status": "approved", "related": ["GT-0100"], "source_columns": ["crm.events.last_seen"]},
+  {"id": "GT-0150", "name": "Open account", "definition": "An account whose status flag is ACTIVE.", "owner": "head of customer service", "status": "approved", "related": ["GT-0100"], "source_columns": ["crm.accounts.status_flag"]},
+  {"id": "GT-0120", "name": "Net revenue", "definition": "Gross sales less returns, discounts and tax.", "owner": "finance controller", "status": "approved", "related": [], "source_columns": ["erp.billing.net_amount"]},
+  {"id": "GT-0160", "name": "Golden supplier key", "definition": "The identifier that master data assigns to one real-world supplier.", "owner": "head of procurement", "status": "approved", "related": [], "source_columns": ["mdm.supplier_xwalk.golden_key"]}
+ ],
+ "columns": [
+  {"name": "stg_customers.email", "description": "Email as typed in the CRM", "classification": null, "term": null},
+  {"name": "dim_customer.email", "description": "Customer contact email after cleaning", "classification": "PII.Sensitive", "term": null},
+  {"name": "stg_customers.status_flag", "description": "Account status flag from the CRM", "classification": null, "term": "GT-0150"},
+  {"name": "dim_customer.cust_status", "description": "Customer lifecycle status", "classification": null, "term": "GT-0141"},
+  {"name": "dim_customer.last_seen_date", "description": "Most recent login or app open", "classification": null, "term": "GT-0141"},
+  {"name": "dim_customer.is_paying", "description": "True when a paid order exists in the last 12 months", "classification": null, "term": "GT-0107"},
+  {"name": "dim_supplier.supplier_id", "description": "Golden supplier key from master data", "classification": null, "term": "GT-0160"},
+  {"name": "dim_product.category", "description": "Product category from the ERP item master", "classification": null, "term": null},
+  {"name": "fct_sales.net_revenue", "description": "Net revenue from ERP billing", "classification": null, "term": "GT-0120"},
+  {"name": "stg_customers.phone", "description": "Phone number as typed in the CRM", "classification": "PII.Sensitive", "term": null},
+  {"name": "dim_customer.phone", "description": "Customer phone number", "classification": "PII.Sensitive", "term": null}
+ ],
+ "lineage": [
+  ["crm.accounts.email", "stg_customers.email"], ["stg_customers.email", "dim_customer.email"],
+  ["crm.accounts.phone", "stg_customers.phone"], ["stg_customers.phone", "dim_customer.phone"],
+  ["crm.accounts.status_flag", "stg_customers.status_flag"], ["stg_customers.status_flag", "dim_customer.cust_status"],
+  ["crm.events.last_seen", "dim_customer.last_seen_date"],
+  ["erp.orders.payment_status", "dim_customer.is_paying"],
+  ["erp.vendors.vendor_no", "dim_supplier.supplier_id"],
+  ["erp.products.category", "dim_product.category"],
+  ["erp.billing.net_amount", "fct_sales.net_revenue"]
+ ],
+ "tables": [
+  {"name": "fct_orders", "freshness_days_expected": 1, "days_since_refresh": 0},
+  {"name": "fct_returns", "freshness_days_expected": 1, "days_since_refresh": 19},
+  {"name": "fct_sales", "freshness_days_expected": 1, "days_since_refresh": 0},
+  {"name": "dim_customer", "freshness_days_expected": 1, "days_since_refresh": 1}
+ ],
+ "dashboards": [
+  {"name": "Returns overview", "certified": true, "reads": ["fct_returns"]},
+  {"name": "Daily orders", "certified": true, "reads": ["fct_orders"]},
+  {"name": "Customer base", "certified": false, "reads": ["dim_customer"]}
+ ]
+}

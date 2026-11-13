@@ -1,0 +1,32 @@
+{
+ "GT-0107": {
+  "name": "Paying customer",
+  "definition": "A customer with a paid, non-refunded order in the last 12 months.",
+  "column": "dim_customer.is_paying"
+ },
+ "GT-0180": {
+  "name": "Golden customer key",
+  "definition": "The identifier that master data assigns to one real-world customer.",
+  "column": "dim_customer.golden_key"
+ },
+ "GT-0120": {
+  "name": "Net revenue",
+  "definition": "Gross sales less returns, discounts and tax.",
+  "column": "finance.month_end.net_revenue"
+ },
+ "GT-0131": {
+  "name": "Order date",
+  "definition": "The date on which the customer placed the order.",
+  "column": "fct_orders.order_date"
+ },
+ "GT-0150": {
+  "name": "Open account",
+  "definition": "An account whose status flag is ACTIVE.",
+  "column": "dim_customer.status"
+ },
+ "GT-0171": {
+  "name": "Customer contact email",
+  "definition": "The email address the company uses to contact the customer.",
+  "column": "dim_customer.email"
+ }
+}

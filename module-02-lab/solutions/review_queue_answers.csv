@@ -1,0 +1,7 @@
+crm_id,erp_id,probability,crm_record,erp_record,decision
+C-1043,E-88043,0.754,Tara | Lobo | 1995-09-14 | tara.lobo@example.com | 5550501122 | Mysuru,Tanya | Lobo | 1995-09-14 | - | 5550501122 | Mysuru,reject
+C-1007,E-88007,0.605,Sunita | Iyer | 1986-01-11 | sunita.iyer@example.com | 5550180798 | Hyderabad,Sunita | Iyer | - | - | 5550180798 | Hyderabad,accept
+C-1015,E-88015,0.605,Sneha | Gupta | 1982-04-11 | sneha.gupta@example.com | 5550129156 | Bengaluru,Sneha | Gupta | - | - | 5550129156 | Bengaluru,accept
+C-1023,E-88023,0.605,Jaya | Saxena | 1996-05-08 | jaya.saxena@example.com | 5550123536 | Chennai,Jaya | Saxena | - | - | 5550123536 | Chennai,accept
+C-1041,E-88041,0.605,Amit | Kumar | 1988-07-21 | amit.kumar88@example.com | 5550400011 | Pune,Amit | Kumar | - | - | 5550400022 | Pune,reject
+C-1040,E-88040,0.190,Rajesh | Iyer | 1961-02-02 | iyer.family@example.com | 5550312345 | Chennai,Rajeshwari | Iyer | 1990-11-09 | iyer.family@example.com | 5550312345 | Chennai,reject
