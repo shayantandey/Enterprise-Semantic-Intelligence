@@ -37,3 +37,9 @@ Run a worked script from this folder, for example `python solutions/lab1_fanout.
 `semantic_model.json` is JSON: entries are separated by commas and the last entry in a list has none.
 If the file does not parse, the script names the line. If a metric or measure name is mistyped, the layer names it. To start again, copy `baseline_model.json` over it.
 To look inside the database, run `python -m sqlite3 metrics.db` and type SQL at the prompt (`.quit` to leave).
+
+## Doing the lab again
+
+Run `python reset.py`. It saves the files you changed to a new folder named `my_work_<date>_<time>`, deletes the files
+the scripts generated, and puts every lab file back as it was when you received it. Then start again from the top of this page.
+Add `--yes` to skip the question it asks. Do not edit the `reset_files` folder, which holds the original files.

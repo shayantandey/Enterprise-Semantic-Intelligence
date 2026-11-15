@@ -25,3 +25,9 @@ Each script prints what is still to do. Worked answers are in the `solutions` fo
 Run a worked answer from this folder, for example `python solutions/lab3_wilson.py`. It reads the same data files and overwrites the output files in this folder.
 The VS Code Python extension is optional. Everything here runs from the terminal.
 To look inside the database, run `python -m sqlite3 retail.db` and type SQL at the prompt (`.quit` to leave).
+
+## Doing the lab again
+
+Run `python reset.py`. It saves the files you changed to a new folder named `my_work_<date>_<time>`, deletes the files
+the scripts generated, and puts every lab file back as it was when you received it. Then start again from the top of this page.
+Add `--yes` to skip the question it asks. Do not edit the `reset_files` folder, which holds the original files.

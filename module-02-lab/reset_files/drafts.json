@@ -1,0 +1,22 @@
+[
+ {"id": "d01", "object": "orders.order_ts", "evidence": {"type": "timestamp without time zone", "profile": "values cluster between 09:00 and 22:00"},
+  "draft": "Timestamp when the order was placed, in UTC."},
+ {"id": "d02", "object": "customers.status", "evidence": {"lineage": "crm.accounts.status_flag", "profile": "values ACTIVE, CLOSED, SUSPENDED"},
+  "draft": "Indicates whether the customer is active, meaning they have purchased in the last 12 months."},
+ {"id": "d03", "object": "order_items.qty", "evidence": {"type": "integer, not null", "profile": "minimum 1, maximum 48", "grain": "one row per product per order"},
+  "draft": "Number of units of the product on this order line."},
+ {"id": "d04", "object": "customers.email", "evidence": {"classification": "PII", "type": "varchar(254)"},
+  "draft": "Customer email address, for example priya.sharma@example.com."},
+ {"id": "d05", "object": "returns.refund", "evidence": {"lineage": "erp.return_lines.refund_amt", "grain": "one row per returned order line"},
+  "draft": "Refund amount for the returned order line."},
+ {"id": "d06", "object": "suppliers.rating", "evidence": {"type": "varchar(1)", "profile": "values A, B, C, D, E"},
+  "draft": "Supplier quality rating from 1 to 5, where 5 is best."},
+ {"id": "d07", "object": "dim_customer.golden_key", "evidence": {"lineage": "mdm.crosswalk.golden_key"},
+  "draft": "Primary key of the customer table."},
+ {"id": "d08", "object": "fct_sales.net_revenue", "evidence": {"sql": "gross_amount - return_amount"},
+  "draft": "Net revenue as defined by Finance: gross sales less returns, discounts and tax."},
+ {"id": "d09", "object": "glossary term: Churned customer", "evidence": {"columns": "customers.status", "usage": "marketing's churn report uses no purchase in 180 days", "proposed_owner": "none"},
+  "draft": "A customer whose account status is CLOSED."},
+ {"id": "d10", "object": "glossary term: Order line", "evidence": {"grain": "order_items has one row per product per order", "proposed_owner": "head of sales operations, who has accepted ownership and confirmed the wording"},
+  "draft": "One product and its quantity within an order. An order has one or more lines."}
+]

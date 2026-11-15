@@ -32,3 +32,9 @@ If the text you type contains a comma, put double quotes around it: `"first, sec
 The `solutions` folder also holds three answer files. To see a worked second stage, copy an answer file over
 your own file, for example copy `solutions/review_queue_answers.csv` to `review_queue.csv`, and run the script.
 The matching files are `decisions_answers.csv` for `decisions.csv` and `term_links_answers.json` for `term_links.json`.
+
+## Doing the lab again
+
+Run `python reset.py`. It saves the files you changed to a new folder named `my_work_<date>_<time>`, deletes the files
+the scripts generated, and puts every lab file back as it was when you received it. Then start again from the top of this page.
+Add `--yes` to skip the question it asks. Do not edit the `reset_files` folder, which holds the original files.
