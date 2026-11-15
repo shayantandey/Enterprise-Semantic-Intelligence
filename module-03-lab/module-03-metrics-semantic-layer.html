@@ -1,0 +1,1616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 3: The metrics semantic layer</title>
+<meta name="description" content="Module 3 of Enterprise Semantic Intelligence (StackRoute): semantic models, additive, semi-additive and non-additive measures, fan-out and double counting, slowly changing dimensions, dbt semantic models with MetricFlow, Cube and five other tools, what a semantic layer cannot guarantee, the metric lifecycle, interoperability tests, a revenue reconciliation case study and a Python lab.">
+<style>
+/* ---------- design tokens ---------- */
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --card2:#F9FAFB;
+  --ink:#1B2333; --ink2:#3C465A; --muted:#5E687D; --rule:#D5DAE3; --rule2:#E7EAF0;
+  --code-bg:#161C2A; --code-ink:#E3E8F4; --code-mute:#8D97AF;
+  --biz:#6A3FC0; --biz-ink:#4A2A8E; --biz-t:#ECE4FB;
+  --tech:#1F5FC2; --tech-ink:#17468F; --tech-t:#DFEAFB;
+  --drv:#0A7C72; --drv-ink:#07594F; --drv-t:#D5F1ED;
+  --prob:#A86E00; --prob-ink:#6B4700; --prob-t:#FFEFC7;
+  --pol:#BF3049; --pol-ink:#8B1D32; --pol-t:#FAE1E6;
+  --usr:#4B556B; --usr-t:#E7EAF0;
+  --focus:#1F5FC2;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#111726; --card:#19213A; --card2:#1E2742;
+  --ink:#E8ECF6; --ink2:#C4CBDE; --muted:#9FA8C0; --rule:#2E3859; --rule2:#27304F;
+  --code-bg:#0C1120;
+  --biz:#A88CFF; --biz-ink:#CBBAFF; --biz-t:#2A2150;
+  --tech:#6F9BFF; --tech-ink:#A9C2FF; --tech-t:#17284F;
+  --drv:#2FC3AF; --drv-ink:#80E0D3; --drv-t:#0F3530;
+  --prob:#EFB23A; --prob-ink:#F5CC76; --prob-t:#3A2E12;
+  --pol:#FF6F87; --pol-ink:#FFA4B4; --pol-t:#3F1B27;
+  --usr:#B2B9D4; --usr-t:#262E52;
+  --focus:#8FB0FF;
+  color-scheme:dark;
+}
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.09rem;line-height:1.66;overflow-x:hidden}
+a{color:var(--tech-ink);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+code,pre,kbd{font-family:var(--mono)}
+p code,li code,td code,figcaption code,.note code{font-size:.88em;background:var(--rule2);padding:.08em .36em;border-radius:5px;overflow-wrap:anywhere}
+h1,h2,h3,h4{line-height:1.14;margin:0;color:var(--ink)}
+h2{font-size:clamp(1.8rem,3.2vw,2.5rem);font-weight:800;letter-spacing:-.02em}
+h3{font-size:clamp(1.35rem,2.2vw,1.7rem);font-weight:800;margin-top:3rem}
+h4{font-size:1.16rem;font-weight:700;margin-top:1.8rem}
+p{margin:1rem 0} ul,ol{padding-left:1.4rem} li{margin:.4rem 0}
+/* ---------- layout ---------- */
+.shell{display:grid;grid-template-columns:286px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow:auto;background:var(--card);border-right:1px solid var(--rule);padding:26px 20px 36px}
+.main{min-width:0}
+.wrap{max-width:70rem;margin:0 auto;padding:0 38px}
+.prose{max-width:46rem}
+.sec{padding:66px 0 36px;border-top:1px solid var(--rule)}
+.sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.sec-num{font-weight:800;font-size:clamp(1.8rem,3.2vw,2.5rem);color:var(--muted)}
+.lede{font-size:1.22rem;color:var(--ink2);max-width:45rem}
+@media (max-width:1080px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:min(320px,86vw);z-index:60;transform:translateX(-102%);transition:transform .25s}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(8,12,28,.45)}
+  .wrap{padding:0 20px}
+}
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:58px}
+.where{flex:1;min-width:0;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--tech)}
+.ib{border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:10px;height:38px;padding:0 12px;font:600 .93rem var(--body);cursor:pointer}
+.ib:hover{border-color:var(--ink2)}
+#menuBtn{display:none}
+@media (max-width:1080px){#menuBtn{display:inline-block}}
+/* ---------- sidebar ---------- */
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.brand svg{width:42px;height:42px;flex:none}
+.brand b{display:block;font-size:1.02rem;line-height:1.2}
+.brand span{font-size:.85rem;color:var(--muted)}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:0}
+.toc a{display:grid;grid-template-columns:2.7rem 1fr;gap:4px;padding:7px 10px;border-radius:10px;color:var(--ink2);text-decoration:none;font-size:.95rem;line-height:1.3}
+.toc a .n{font-weight:700;color:var(--muted)}
+.toc a:hover{background:var(--card2);color:var(--ink)}
+.toc a.active{background:var(--tech-t);color:var(--ink)}
+.toc a.active .n{color:var(--tech-ink)}
+.toc a.done .n{color:var(--drv)}
+.toc .sub a{font-size:.88rem;color:var(--muted);padding:4px 10px}
+.legend{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px;font-size:.87rem;color:var(--muted);display:grid;gap:6px}
+.legend span{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:4px;border:2px solid;flex:none}
+/* ---------- hero ---------- */
+.hero{padding:58px 0 30px}
+.hero .line{font-weight:700;color:var(--muted);margin-bottom:16px}
+.hero h1{font-size:clamp(2.5rem,6vw,4.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.02}
+.hero .sub{font-size:clamp(1.12rem,1.7vw,1.34rem);color:var(--ink2);max-width:46rem;margin-top:20px}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.pill{display:inline-flex;flex-wrap:wrap;gap:4px 8px;align-items:center;border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:6px 14px;font-size:.93rem;color:var(--ink2)}
+.pill code{background:none;padding:0}
+/* ---------- figures ---------- */
+.fig{margin:2rem 0 2.3rem;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:20px 20px 12px}
+.fig .scroll{overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;min-width:640px}
+.fig figcaption{font-size:.98rem;color:var(--muted);border-top:1px solid var(--rule2);margin-top:12px;padding:12px 4px 4px}
+.fig figcaption b{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .t{font-size:18px;font-weight:700}
+svg .tl{font-size:22px;font-weight:800}
+svg .ts{font-size:15px;fill:var(--muted)}
+svg .tm{font-size:15.5px;fill:var(--ink2)}
+svg .lab{font-size:14.5px;font-weight:700;fill:var(--ink2)}
+svg .mono{font-family:var(--mono);font-size:14px}
+svg .bx{fill:var(--card);stroke:var(--rule);stroke-width:2}
+svg .bx2{fill:var(--card2);stroke:var(--rule);stroke-width:2}
+svg .biz{fill:var(--biz-t);stroke:var(--biz);stroke-width:2.5}
+svg .tech{fill:var(--tech-t);stroke:var(--tech);stroke-width:2.5}
+svg .drv{fill:var(--drv-t);stroke:var(--drv);stroke-width:2.5}
+svg .prob{fill:var(--prob-t);stroke:var(--prob);stroke-width:2.5}
+svg .pol{fill:var(--pol-t);stroke:var(--pol);stroke-width:2.5}
+svg .usr{fill:var(--usr-t);stroke:var(--usr);stroke-width:2.5}
+svg .asst{fill:var(--ink);stroke:var(--ink);stroke-width:2}
+svg text.on{fill:var(--bg)}
+svg .ln{stroke:var(--ink2);stroke-width:2.5;fill:none}
+svg .ln-pol{stroke:var(--pol);stroke-width:3;fill:none}
+svg .ln-tech{stroke:var(--tech);stroke-width:3;fill:none}
+svg .ln-drv{stroke:var(--drv);stroke-width:3;fill:none}
+svg .ln-prob{stroke:var(--prob);stroke-width:3;fill:none}
+svg .dash{stroke-dasharray:7 7}
+svg .zone{fill:none;stroke:var(--rule);stroke-width:2;stroke-dasharray:8 6}
+svg .ah{fill:var(--ink2)} svg .ah-pol{fill:var(--pol)} svg .ah-tech{fill:var(--tech)} svg .ah-drv{fill:var(--drv)} svg .ah-prob{fill:var(--prob)}
+svg .ink-pol{fill:var(--pol-ink)} svg .ink-tech{fill:var(--tech-ink)} svg .ink-drv{fill:var(--drv-ink)} svg .ink-prob{fill:var(--prob-ink)} svg .ink-biz{fill:var(--biz-ink)}
+svg .pick{cursor:pointer;outline:none}
+svg .pick:focus-visible rect{stroke:var(--focus);stroke-width:5}
+svg.dim .pick{opacity:.4;transition:opacity .2s}
+svg.dim .pick.sel{opacity:1}
+svg .pick.sel rect{stroke-width:4.5}
+/* ---------- callouts ---------- */
+.note{border:1px solid var(--rule);background:var(--card);border-radius:14px;padding:16px 20px;margin:1.5rem 0;max-width:46rem}
+.note h5{margin:0 0 6px;font:700 1rem var(--body);display:flex;align-items:center;gap:10px}
+.note p{margin:.5rem 0}.note p:last-child{margin-bottom:0}
+.note .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:.9rem;font-weight:800;background:var(--usr);color:var(--card)}
+.note.like{background:var(--prob-t);border-color:color-mix(in srgb,var(--prob) 40%,transparent)}
+.note.like .ic{background:var(--prob);color:#fff}
+.note.word{background:var(--tech-t);border-color:color-mix(in srgb,var(--tech) 35%,transparent)}
+.note.word .ic{background:var(--tech);color:#fff}
+.note.warn{background:var(--pol-t);border-color:color-mix(in srgb,var(--pol) 35%,transparent)}
+.note.warn .ic{background:var(--pol);color:#fff}
+.note.lab{background:var(--drv-t);border-color:color-mix(in srgb,var(--drv) 35%,transparent)}
+.note.lab .ic{background:var(--drv);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.5rem 0}
+.two .note{margin:0}
+.two>*,.g2>*{min-width:0}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+/* ---------- steps ---------- */
+.steps{list-style:none;padding:0;margin:1.5rem 0;display:grid;gap:12px;max-width:52rem}
+.steps>li{display:grid;grid-template-columns:50px 1fr;gap:14px;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin:0}
+.steps .k{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:1.1rem;background:var(--usr-t)}
+.steps h4{margin:2px 0 4px;font-size:1.1rem}
+.steps p{margin:.3rem 0}
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto;margin:1.5rem 0;border:1px solid var(--rule);border-radius:14px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.98rem;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:11px 15px;border-bottom:1px solid var(--rule2)}
+thead th{background:var(--card2);font-weight:700}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{font-weight:700}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.82rem;font-weight:700}
+.tag.biz{background:var(--biz-t);color:var(--biz-ink)} .tag.tech{background:var(--tech-t);color:var(--tech-ink)} .tag.drv{background:var(--drv-t);color:var(--drv-ink)} .tag.prob{background:var(--prob-t);color:var(--prob-ink)} .tag.pol{background:var(--pol-t);color:var(--pol-ink)} .tag.usr{background:var(--usr-t);color:var(--ink2)}
+/* ---------- code ---------- */
+.code{margin:1.3rem 0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;overflow:hidden;max-width:56rem}
+.code .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);font:600 .86rem var(--mono);color:var(--code-mute)}
+.code pre{margin:0;padding:14px 16px;overflow-x:auto;font-size:.92rem;line-height:1.58}
+.copy{background:transparent;border:1px solid rgba(255,255,255,.22);color:#DCE2F5;border-radius:8px;padding:3px 10px;font:600 .8rem var(--body);cursor:pointer}
+.c-k{color:#FFB86B}.c-s{color:#9BE29B}.c-c{color:#8D97AF;font-style:italic}.c-n{color:#FFD580}.c-bad{color:#FF8FA3}.c-ok{color:#7FE0A0}
+/* ---------- glossary terms ---------- */
+.kw{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:help;border-bottom:2px dotted var(--tech)}
+.kw:hover,.kw:focus-visible{background:var(--tech-t);border-radius:3px}
+.tip{position:absolute;z-index:80;max-width:340px;background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:12px;font-size:.93rem;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .15s}
+.tip.show{opacity:1}
+.tip b{display:block;margin-bottom:3px;font-size:1.02rem}
+/* ---------- simulations ---------- */
+.sim{margin:2rem 0 2.4rem;border:2px solid var(--rule);border-radius:18px;background:var(--card);overflow:hidden}
+.sim-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 20px;background:var(--card2);border-bottom:1px solid var(--rule)}
+.sim-h h4{margin:0;font-size:1.1rem}
+.sim-h .try{font-size:.83rem;font-weight:700;color:var(--drv-ink);background:var(--drv-t);border-radius:999px;padding:3px 10px}
+.sim-b{padding:18px 20px}
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:13px}
+.chip{border:1.5px solid var(--rule);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:600 .93rem var(--body);cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--ink2)}
+.chip[aria-pressed="true"]{background:var(--tech-t);border-color:var(--tech)}
+.btn{border:1.5px solid var(--ink2);background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 16px;font:700 .95rem var(--body);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.out{background:var(--card2);border:1px solid var(--rule);border-radius:12px;padding:13px 15px;font-size:.98rem}
+.out p{margin:.4rem 0}.out p:first-child{margin-top:0}.out p:last-child{margin-bottom:0}
+.lbl{font-size:.88rem;font-weight:700;color:var(--muted);margin:0 0 6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.g2{grid-template-columns:1fr}}
+.field{display:grid;gap:6px;font-weight:700;font-size:.96rem;margin-bottom:10px}
+.field .v{font-family:var(--mono);color:var(--tech-ink)}
+input[type=range]{width:100%;accent-color:var(--tech)}
+select,textarea,input[type=text]{font:inherit;font-weight:400;border:1.5px solid var(--rule);border-radius:10px;padding:8px 10px;background:var(--card);color:var(--ink);width:100%}
+.big{font-size:2.3rem;font-weight:800;line-height:1.1}
+.rows{display:grid;gap:5px;font-size:.9rem}
+.row{display:grid;grid-template-columns:3.4rem 1fr 5.2rem 5.2rem 5rem;gap:8px;align-items:center;padding:5px 10px;border:1.5px solid var(--rule);border-radius:9px;background:var(--card)}
+.row.hd{border:0;background:none;font-weight:700;color:var(--muted)}
+.row.in{border-color:var(--tech);background:var(--tech-t)}
+.row.dup{border-style:dashed}
+.ci{position:relative;height:34px;background:var(--rule2);border-radius:8px;margin:6px 0 2px}
+.ci i{position:absolute;top:6px;bottom:6px;border-radius:6px}
+.ci b{position:absolute;top:0;bottom:0;width:3px;background:var(--ink)}
+.axis{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.verdict{font-weight:700}
+.verdict.ok{color:var(--drv-ink)} .verdict.no{color:var(--pol-ink)}
+/* ---------- quiz, glossary, refs ---------- */
+.quiz{display:grid;gap:16px;max-width:52rem}
+.q{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:15px 17px}
+.q p{margin:.2rem 0 .8rem;font-weight:700}
+.q .opts{display:grid;gap:8px}
+.q button{text-align:left;border:1.5px solid var(--rule);background:var(--card2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:.98rem;cursor:pointer}
+.q button.right{border-color:var(--drv);background:var(--drv-t)}
+.q button.wrong{border-color:var(--pol);background:var(--pol-t)}
+.q .why{display:none;margin-top:10px;color:var(--ink2);font-size:.98rem}
+.q.done .why{display:block}
+.gloss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px;margin:1.5rem 0}
+.gloss div{border-bottom:1px solid var(--rule2);padding:8px 0}
+.gloss p{margin:.2rem 0 0;font-size:.97rem;color:var(--ink2)}
+@media (max-width:760px){.gloss{grid-template-columns:1fr}}
+.refs{max-width:52rem;font-size:.97rem}
+.refs li{margin:.7rem 0}
+footer{padding:44px 0 72px;color:var(--muted);font-size:.93rem;border-top:1px solid var(--rule)}
+@media print{.side,.top,.ctrls{display:none!important}.shell{display:block}.fig,.sim,.note{break-inside:avoid}body{background:#fff}}
+
+#handson .tbl td code{white-space:nowrap}
+.refs a{overflow-wrap:anywhere}
+.drill{display:grid;gap:12px}
+.drill .q p{font-weight:400;margin:.1rem 0 .7rem}
+.drill .q .opts{display:flex;flex-wrap:wrap;gap:8px}
+.drill.own .q .opts{display:grid}
+.drill .score{font-weight:700;color:var(--muted);font-size:.93rem}
+.rec{display:block;white-space:pre-wrap;font-family:var(--mono);font-size:.84rem;background:var(--card2);border:1px solid var(--rule2);border-radius:8px;padding:8px 10px;margin:8px 0;overflow-x:auto}
+details.note summary{list-style-position:inside}
+.row.dup{background:var(--biz-t);border-color:var(--biz)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-pol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-pol" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-tech" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-tech" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-drv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-drv" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-prob" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-prob" d="M0,0 L10,5 L0,10 z"/></marker>
+</defs></svg>
+<div class="shell">
+<aside class="side" id="side" aria-label="Module contents">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="var(--ink)"/><circle cx="15" cy="16" r="5" fill="var(--biz)"/><circle cx="33" cy="16" r="5" fill="var(--tech)"/><circle cx="24" cy="33" r="5" fill="var(--drv)"/><path d="M15 16 L33 16 L24 33 Z" fill="none" stroke="var(--bg)" stroke-width="2.5"/></svg>
+    <div><b>Enterprise Semantic Intelligence</b><span>StackRoute, an NIIT venture</span></div>
+  </div>
+  <nav><ol class="toc" id="toc">
+    <li><a href="#intro"><span class="n">3.0</span><span>From glossary terms to metric definitions</span></a></li>
+    <li><a href="#models"><span class="n">3.1</span><span>Semantic models</span></a></li>
+    <li><a href="#additivity"><span class="n">3.2</span><span>Additive, semi-additive, non-additive</span></a></li>
+    <li><a href="#time"><span class="n">3.3</span><span>Time, change and double counting</span></a></li>
+    <li><a href="#tools"><span class="n">3.4</span><span>Semantic layer tools</span></a></li>
+    <li><a href="#governs"><span class="n">3.5</span><span>What the layer cannot guarantee</span></a></li>
+    <li><a href="#lifecycle"><span class="n">3.6</span><span>The metric lifecycle</span></a></li>
+    <li><a href="#interop"><span class="n">3.7</span><span>Interoperability tests</span></a></li>
+    <li><a href="#case"><span class="n">3.8</span><span>Case study: revenue reconciliation</span></a></li>
+    <li><a href="#handson"><span class="n">3.9</span><span>Hands-on</span></a></li>
+    <li><a href="#recap"><span class="n">3.10</span><span>Recap and checkpoint quiz</span></a></li>
+    <li><a href="#refs"><span class="n">Ref</span><span>References</span></a></li>
+    <li><a href="#glossary"><span class="n">A-Z</span><span>Glossary</span></a></li>
+  </ol></nav>
+  <div class="legend">
+    <div>Colour code used in the architecture diagrams</div>
+    <span><i class="sw" style="background:var(--biz-t);border-color:var(--biz)"></i>Business authority</span>
+    <span><i class="sw" style="background:var(--tech-t);border-color:var(--tech)"></i>Technical authority</span>
+    <span><i class="sw" style="background:var(--drv-t);border-color:var(--drv)"></i>Derived from other assets</span>
+    <span><i class="sw" style="background:var(--prob-t);border-color:var(--prob)"></i>Probabilistic</span>
+    <span><i class="sw" style="background:var(--pol-t);border-color:var(--pol)"></i>Policy, access and risk</span>
+    <span><i class="sw" style="background:var(--ink);border-color:var(--ink)"></i>The assistant</span>
+  </div>
+</aside>
+<div class="main">
+<header class="top"><div class="wrap">
+  <button class="ib" id="menuBtn" aria-controls="side" aria-expanded="false">Contents</button>
+  <div class="where" id="where">Module 3: The metrics semantic layer</div>
+  <button class="ib" id="themeBtn" aria-label="Switch between light and dark theme">Theme</button>
+</div><div class="bar" id="bar"></div></header>
+
+<div class="wrap">
+<section class="hero" aria-labelledby="title">
+  <div class="line">Enterprise Semantic Intelligence, Module 3 of 8, 3.5 hours</div>
+  <h1 id="title">The metrics semantic layer</h1>
+  <p class="sub">Modules 1 and 2 gave each business term an owner and each customer one identity. This module defines the numbers. A metrics semantic layer holds one definition of each metric, with its grain, its time logic and its join paths, and computes it the same way for a dashboard, a notebook, an API and the assistant.</p>
+  <div class="pills">
+    <span class="pill">Case study: finance revenue reconciliation across three reports</span>
+    <span class="pill">Lab tools: Python 3.13 and VS Code</span>
+    <span class="pill">Hands-on: six exercises in section 3.9</span>
+  </div>
+  <figure class="fig" style="margin-top:30px">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 300" role="img" aria-label="Where the metrics semantic layer sits: warehouse tables feed semantic models, metrics are defined on the semantic models, and a BI tool, a notebook, an API and the assistant all request metrics from the same layer.">
+      <rect x="20" y="30" width="230" height="240" rx="16" class="usr"/>
+      <text x="40" y="64" class="t">Warehouse</text>
+      <text x="40" y="94" class="tm">fct_orders</text>
+      <text x="40" y="118" class="tm">fct_returns</text>
+      <text x="40" y="142" class="tm">fct_inventory_snapshot</text>
+      <text x="40" y="166" class="tm">dim_store, dim_customer</text>
+      <text x="40" y="190" class="tm">dim_date</text>
+      <text x="40" y="244" class="lab">checked by source tests</text>
+      <path d="M250 150 H296" class="ln" marker-end="url(#ah)"/>
+      <rect x="300" y="30" width="470" height="240" rx="16" class="tech"/>
+      <text x="322" y="64" class="t">Metrics semantic layer</text>
+      <rect x="322" y="82" width="204" height="124" rx="12" class="bx"/>
+      <text x="338" y="110" class="lab">Semantic models</text>
+      <text x="338" y="136" class="tm">entities and grain</text>
+      <text x="338" y="160" class="tm">dimensions</text>
+      <text x="338" y="184" class="tm">measures</text>
+      <rect x="544" y="82" width="204" height="124" rx="12" class="bx"/>
+      <text x="560" y="110" class="lab">Metrics</text>
+      <text x="560" y="136" class="tm">simple, ratio, derived,</text>
+      <text x="560" y="160" class="tm">cumulative</text>
+      <text x="560" y="184" class="tm">owner and version</text>
+      <text x="322" y="244" class="lab ink-tech">one definition, compiled to SQL per request</text>
+      <path d="M770 78 H826" class="ln" marker-end="url(#ah)"/>
+      <path d="M770 126 H826" class="ln" marker-end="url(#ah)"/>
+      <path d="M770 174 H826" class="ln" marker-end="url(#ah)"/>
+      <path d="M770 222 H826" class="ln" marker-end="url(#ah)"/>
+      <rect x="830" y="56" width="250" height="42" rx="10" class="bx2"/><text x="848" y="83" class="tm">BI dashboard</text>
+      <rect x="830" y="104" width="250" height="42" rx="10" class="bx2"/><text x="848" y="131" class="tm">Notebook</text>
+      <rect x="830" y="152" width="250" height="42" rx="10" class="bx2"/><text x="848" y="179" class="tm">Metrics API</text>
+      <rect x="830" y="200" width="250" height="42" rx="10" class="asst"/><text x="848" y="227" class="tm on">Assistant (Module 6)</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.1.</b> The metrics semantic layer sits between the warehouse and every consumer of a number. Table names are those of the lab warehouse in section 3.9.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="intro" aria-labelledby="intro-h">
+  <div class="sec-head"><span class="sec-num">3.0</span><h2 id="intro-h">From glossary terms to metric definitions</h2></div>
+  <p class="lede">Module 2 ended with a glossary term for net revenue, GT-0120, and a rule that a column linked to it must come from finance's month-end table. A term with an owner still leaves the calculation to whoever writes the query.</p>
+  <div class="prose">
+    <p>In Module 1 a model-written query joined orders to returns and reported a net revenue that was too high. The query ran without an error and used the agreed definition of net revenue. Its result was wrong because the join repeated order rows. Module 1 classed that as a granularity problem and assigned it to the <button class="kw" data-k="semlayer">metrics semantic layer</button>.</p>
+    <p>A semantic layer stores the calculation as data. A metric is declared once, with the table it comes from, the level of detail of that table, the columns it can be grouped by and the way it behaves over time. A request names a metric, some dimensions, a filter and a period, and the layer writes the SQL. The person or program asking does not write a join.</p>
+    <p>The reference architecture gives this component technical authority for interpretation and computation. It has no authority over whether the source data is right, which is the job of data quality assurance, and no authority over what the business means by a term, which belongs to the term's owner. Section 3.5 returns to that boundary, because the lab warehouse contains a source fault that the layer computes faithfully.</p>
+  </div>
+  <h3>Learning outcomes</h3>
+  <div class="prose">
+    <p>After this module you should be able to:</p>
+    <ol>
+      <li><a href="#models">describe</a> a semantic model in terms of entities, dimensions, measures, grain and join paths, and define metrics on it;</li>
+      <li><a href="#additivity">classify</a> a measure as additive, semi-additive or non-additive and say how each must be rolled up;</li>
+      <li><a href="#time">diagnose</a> double counting caused by a fan-out join, a many-to-many relationship or a slowly changing dimension, and fix it;</li>
+      <li><a href="#tools">read</a> dbt semantic models and MetricFlow metrics, and compare seven semantic layer tools on where definitions live and who can query them;</li>
+      <li><a href="#governs">separate</a> what a semantic layer governs from what it cannot guarantee, and pair it with source validation tests;</li>
+      <li><a href="#lifecycle">manage</a> a metric through a breaking change, with an effective date, a restatement decision and an approval;</li>
+      <li><a href="#interop">design</a> an interoperability test that holds filter, time boundary, security context and aggregation constant across consumers.</li>
+    </ol>
+  </div>
+  <h3>How the 210 minutes run</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Minutes</th><th>Segment</th><th>Section</th><th>In the session</th></tr></thead>
+    <tbody>
+      <tr><td>0 to 5</td><td>From terms to metric definitions</td><td>3.0</td><td>Recap of the Module 1 fan-out failure</td></tr>
+      <tr><td>5 to 23</td><td>Semantic models</td><td>3.1</td><td>The parts of a semantic model, as a room poll</td></tr>
+      <tr><td>23 to 39</td><td>Additivity</td><td>3.2</td><td>The roll-up exercise on three measures</td></tr>
+      <tr><td>39 to 59</td><td>Time, change and double counting</td><td>3.3</td><td>Fan-out, changing dimensions and time boundaries. Many-to-many is self-study with exercise 3.</td></tr>
+      <tr><td>59 to 69</td><td>Break</td><td></td><td></td></tr>
+      <tr><td>69 to 101</td><td>Tools</td><td>3.4</td><td>MetricFlow, with three demonstration queries, for 29 minutes. Three minutes on the comparison table, which is assigned as reading before the session together with the interchange note.</td></tr>
+      <tr><td>101 to 109</td><td>What the layer governs</td><td>3.5</td><td>Which control deals with which fault</td></tr>
+      <tr><td>109 to 121</td><td>Metric lifecycle</td><td>3.6</td><td>Three series for one metric</td></tr>
+      <tr><td>121 to 129</td><td>Interoperability tests</td><td>3.7</td><td>Four things a test holds constant</td></tr>
+      <tr><td>129 to 139</td><td>Case study</td><td>3.8</td><td>Group discussion of questions 3 and 4</td></tr>
+      <tr><td>139 to 199</td><td>Hands-on, in pairs</td><td>3.9</td><td>Python lab: setup and exercises 1, 2, 4 and 5</td></tr>
+      <tr><td>199 to 204</td><td>Review</td><td>3.10</td><td>Start the checkpoint quiz</td></tr>
+      <tr><td>204 to 210</td><td>Reserve</td><td></td><td>Six minutes held back for overruns</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Exercises 3 and 6 are for self-study, as are the restatement note in exercise 5 and the remaining case study questions. Exercise 6 is ADR 2, which is reviewed at the start of Module 4.</p>
+  </div>
+</section>
+
+<section class="sec" id="models" aria-labelledby="models-h">
+  <div class="sec-head"><span class="sec-num">3.1</span><h2 id="models-h">Semantic models</h2></div>
+  <p class="lede">A semantic model describes one table in terms a query engine can reason about: what a row is, what it can be joined to, what it can be grouped by and what can be summed.</p>
+  <div class="prose">
+    <p>The vocabulary below is the one used by dbt and MetricFlow. Other tools use different words for the same parts, and section 3.4 gives the correspondence.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Part</th><th>What it declares</th><th>In the lab's orders model</th></tr></thead>
+    <tbody>
+      <tr><td>Grain</td><td style="font-weight:400">What one row of the table represents. Every other part depends on it.</td><td style="font-weight:400">One row per completed order</td></tr>
+      <tr><td>Entity</td><td style="font-weight:400">A key column, with its role in this table: primary if it identifies the row, foreign if it points to a row in another model. MetricFlow has two further roles, unique and natural, described in section 3.4.</td><td style="font-weight:400"><code>order_id</code> is primary. <code>customer_id</code> and <code>store_id</code> are foreign.</td></tr>
+      <tr><td>Dimension</td><td style="font-weight:400">A column to group or filter by. It is categorical or it is a time dimension with a smallest granularity.</td><td style="font-weight:400"><code>region</code>, <code>segment</code>, and the time dimension <code>date_day</code></td></tr>
+      <tr><td>Measure</td><td style="font-weight:400">A column and the aggregation that applies to it. In the latest dbt specification a measure is written as a simple metric.</td><td style="font-weight:400">Sum of <code>gross_amount</code>; count of <code>order_id</code>; distinct count of <code>customer_id</code></td></tr>
+      <tr><td>Metric</td><td style="font-weight:400">A named, owned quantity built from one or more measures. Consumers ask for metrics.</td><td style="font-weight:400"><code>gross_sales</code>, <code>average_order_value</code>, <code>net_revenue</code></td></tr>
+      <tr><td>Join path</td><td style="font-weight:400">A route from one model to another through a shared entity. The engine derives it from the entity roles.</td><td style="font-weight:400">Orders reach the store model through <code>store_id</code></td></tr>
+    </tbody>
+  </table></div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 380" role="img" aria-label="Three semantic models. Orders has a primary entity order and foreign entities customer and store. Returns has a primary entity return and foreign entities order and store. Stores has a primary entity store. The joins from orders to stores and from returns to stores are many to one and are allowed. A join from orders to returns is one to many and is not allowed.">
+      <rect x="20" y="20" width="330" height="230" rx="16" class="tech"/>
+      <text x="40" y="54" class="t">orders</text>
+      <text x="40" y="80" class="ts">grain: one row per completed order</text>
+      <text x="40" y="110" class="lab">Entities</text>
+      <text x="40" y="134" class="tm">order (primary), customer, store</text>
+      <text x="40" y="164" class="lab">Dimensions</text>
+      <text x="40" y="188" class="tm">date_day, region, segment</text>
+      <text x="40" y="218" class="lab">Measures</text>
+      <text x="40" y="240" class="tm">gross, discount, order count</text>
+      <rect x="750" y="20" width="330" height="230" rx="16" class="tech"/>
+      <text x="770" y="54" class="t">returns</text>
+      <text x="770" y="80" class="ts">grain: one row per return</text>
+      <text x="770" y="110" class="lab">Entities</text>
+      <text x="770" y="134" class="tm">return (primary), order, store</text>
+      <text x="770" y="164" class="lab">Dimensions</text>
+      <text x="770" y="188" class="tm">date_day (the return date)</text>
+      <text x="770" y="218" class="lab">Measures</text>
+      <text x="770" y="240" class="tm">refund amount</text>
+      <rect x="400" y="270" width="300" height="94" rx="16" class="drv"/>
+      <text x="420" y="302" class="t">stores</text>
+      <text x="420" y="326" class="ts">grain: one row per store</text>
+      <text x="420" y="350" class="tm">store (primary); region</text>
+      <path d="M185 250 L400 306" class="ln-drv" marker-end="url(#ah-drv)"/>
+      <path d="M915 250 L700 306" class="ln-drv" marker-end="url(#ah-drv)"/>
+      <text x="200" y="300" class="lab ink-drv">many to one: allowed</text>
+      <text x="760" y="296" class="lab ink-drv">many to one: allowed</text>
+      <path d="M350 120 H750" class="ln-pol dash"/>
+      <text x="550" y="106" text-anchor="middle" class="lab ink-pol">one order, many returns</text>
+      <text x="550" y="146" text-anchor="middle" class="lab ink-pol">joining rows here repeats orders</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.2.</b> Three semantic models from the lab and the join paths between them. A dimension from the stores model can be attached to orders or to returns without repeating a row. Orders and returns are combined only after each has been aggregated.</figcaption>
+  </figure>
+  <h3>Why grain matters for joins</h3>
+  <div class="prose">
+    <p>State the <button class="kw" data-k="grain">grain</button> of a table before anything else about it. A measure is correct only at the grain of the table that holds it. Gross amount is a fact about an order, so summing it is correct while each order appears once. As soon as a query joins orders to a table with a finer grain, such as returns, an order with three returns appears three times and its gross amount is added three times.</p>
+    <p>A semantic layer uses the entity roles to prevent this. A join from a foreign entity to a primary entity can match at most one row, so it is safe, and the engine uses it to fetch dimensions. A join in the other direction can match many rows. MetricFlow refuses to make it, and its documentation lists the combinations of entity types it allows. When a request needs measures from two models, the engine aggregates each model to the requested dimensions in its own subquery and joins the results. Section 3.4 shows the SQL that MetricFlow wrote for exactly this case.</p>
+  </div>
+  <h3>Four kinds of metric</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Type</th><th>Built from</th><th>Lab example</th></tr></thead>
+    <tbody>
+      <tr><td>Simple</td><td style="font-weight:400">One measure</td><td style="font-weight:400"><code>gross_sales</code>: the sum of gross amount on completed orders</td></tr>
+      <tr><td>Ratio</td><td style="font-weight:400">A numerator metric and a denominator metric, each aggregated before the division</td><td style="font-weight:400"><code>average_order_value</code>: gross sales divided by orders</td></tr>
+      <tr><td>Derived</td><td style="font-weight:400">An expression over other metrics</td><td style="font-weight:400"><code>net_revenue</code>: gross sales less discounts less refunds</td></tr>
+      <tr><td>Cumulative</td><td style="font-weight:400">Another metric accumulated over a window or from the start of a period</td><td style="font-weight:400"><code>net_revenue_fytd</code>: net revenue from the start of the fiscal year</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>MetricFlow has a fifth type, the conversion metric, which counts how often one event is followed by another for the same entity within a time window. It is not used in this module.</p>
+    <p>Each metric in the lab also records an owner and the glossary identifier of the term it implements, so that a change to GT-0120 can be traced to the metric <code>net_revenue</code> and from there to every consumer. That link continues the one Module 2 set up between terms and columns.</p>
+    <p>The course design gives master data one golden key each for customer, product and supplier, and has the knowledge graph and the semantic layer join on that key for cross-system questions. The lab warehouse is a cut-down version of the Module 1 retailer, with six stores and 400 customers, and its <code>customer_id</code> stands for that golden key. In a full build the customer entity of each semantic model would be the crosswalk's golden key and not a CRM or ERP identifier.</p>
+  </div>
+  <div class="sim" id="sim-parts">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which part of the semantic model is it?</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-parts"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="additivity" aria-labelledby="additivity-h">
+  <div class="sec-head"><span class="sec-num">3.2</span><h2 id="additivity-h">Additive, semi-additive and non-additive measures</h2></div>
+  <p class="lede">Whether a number can be added up depends on the measure and on the dimension it is being added across. A BI tool that sums every column by default gets two of the three kinds wrong.</p>
+  <div class="prose">
+    <p>The classification comes from dimensional modelling and is set out in Kimball and Ross's The Data Warehouse Toolkit. It matters more in a semantic layer than in a single report, because the layer has to answer requests at grains its author did not anticipate.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Kind</th><th>Can be summed across</th><th>Lab measure</th><th>What goes wrong if it is summed anyway</th></tr></thead>
+    <tbody>
+      <tr><td>Additive</td><td style="font-weight:400">Every dimension</td><td style="font-weight:400">Gross amount, refund amount, order count</td><td style="font-weight:400">Nothing, provided each fact row appears once</td></tr>
+      <tr><td>Semi-additive</td><td style="font-weight:400">Some dimensions, usually every one except time</td><td style="font-weight:400">Units on hand, from a daily stock snapshot</td><td style="font-weight:400">Adding the 30 daily snapshots for June gives 146,624 units. The stock at the end of June was 4,826.</td></tr>
+      <tr><td>Non-additive</td><td style="font-weight:400">No dimension</td><td style="font-weight:400">Distinct customers; any ratio, such as average order value</td><td style="font-weight:400">Monthly active customers of 88, 73 and 98 sum to 259. The quarter had 209 distinct customers.</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 300" role="img" aria-label="Units on hand for two stores on three days. Adding across the two stores on one day gives the stock on that day. Adding one store across the three days gives a number that is not a quantity of stock. The value for the period is the value on the last day.">
+      <text x="240" y="40" class="lab">28 June</text><text x="400" y="40" class="lab">29 June</text><text x="560" y="40" class="lab">30 June</text>
+      <text x="40" y="88" class="tm">Store S01</text>
+      <rect x="220" y="60" width="120" height="44" rx="10" class="bx"/><text x="280" y="88" text-anchor="middle" class="t">410</text>
+      <rect x="380" y="60" width="120" height="44" rx="10" class="bx"/><text x="440" y="88" text-anchor="middle" class="t">402</text>
+      <rect x="540" y="60" width="120" height="44" rx="10" class="drv"/><text x="600" y="88" text-anchor="middle" class="t">395</text>
+      <text x="40" y="148" class="tm">Store S02</text>
+      <rect x="220" y="120" width="120" height="44" rx="10" class="bx"/><text x="280" y="148" text-anchor="middle" class="t">380</text>
+      <rect x="380" y="120" width="120" height="44" rx="10" class="bx"/><text x="440" y="148" text-anchor="middle" class="t">391</text>
+      <rect x="540" y="120" width="120" height="44" rx="10" class="drv"/><text x="600" y="148" text-anchor="middle" class="t">388</text>
+      <path d="M700 82 H760" class="ln-pol" marker-end="url(#ah-pol)"/>
+      <text x="772" y="78" class="lab ink-pol">410 + 402 + 395 = 1,207</text>
+      <text x="772" y="100" class="ts">summed over days: not a stock level</text>
+      <path d="M600 172 V214" class="ln-drv" marker-end="url(#ah-drv)"/>
+      <rect x="500" y="218" width="200" height="48" rx="10" class="drv"/><text x="600" y="248" text-anchor="middle" class="t">395 + 388 = 783</text>
+      <text x="720" y="240" class="lab ink-drv">summed over stores on the last day:</text>
+      <text x="720" y="262" class="lab ink-drv">stock at the end of the period</text>
+      <text x="40" y="248" class="ts">Figures are illustrative.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.3.</b> A semi-additive measure. Units on hand add up across stores and do not add up across days, so the value for a period is taken from one day of the period, here the last.</figcaption>
+  </figure>
+  <h3>How a layer handles each kind</h3>
+  <div class="prose">
+    <p>An additive measure needs no special treatment. A <button class="kw" data-k="semi">semi-additive measure</button> needs the layer to be told which dimension it must not be summed over and which row to take in its place. In MetricFlow this is the <code>non_additive_dimension</code> setting: it names the time dimension and says whether to take the first or the last value in each period. The layer then filters each period to that one day before it sums across the other dimensions.</p>
+    <p>A <button class="kw" data-k="nonadd">non-additive measure</button> has to be recomputed from the detail rows at every grain that is requested. A distinct count for a quarter is a fresh count over the quarter's rows. A ratio for a quarter is the quarter's numerator divided by the quarter's denominator. This is why a ratio is declared as two metrics and a division, and never stored as a precomputed column: a stored ratio can only be averaged, and an average of ratios weights a month with 87 orders the same as a month with 114.</p>
+    <p>The same property limits caching. A table of results aggregated by month can serve a request for quarterly gross sales by adding three rows. It cannot serve quarterly distinct customers. Tools that keep pre-aggregated tables, which Cube calls pre-aggregations, have to know which measures are additive before they can decide whether a stored aggregate answers a request.</p>
+  </div>
+  <div class="sim" id="sim-add">
+    <div class="sim-h"><span class="try">Try it</span><h4>Roll three months up to a quarter</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">Each measure has a monthly value for April, May and June 2026 in the lab warehouse. Choose a measure, then choose how to produce the figure for the quarter.</p>
+      <div class="ctrls" id="add-m" role="group" aria-label="Choose a measure"></div>
+      <div class="ctrls" id="add-r" role="group" aria-label="Choose a roll-up"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Monthly values</p><div id="add-months"></div></div>
+        <div class="out"><p class="lbl">Your figure for the quarter</p><div class="big" id="add-val"></div><div id="add-right"></div></div>
+      </div>
+      <div class="out" id="add-note" style="margin-top:12px" aria-live="polite">Choose a measure and a roll-up.</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="time" aria-labelledby="time-h">
+  <div class="sec-head"><span class="sec-num">3.3</span><h2 id="time-h">Time, change and double counting</h2></div>
+  <p class="lede">Four situations make a correct-looking query return a wrong total: a join that repeats rows, a relationship that is many-to-many, a dimension whose values change, and a period whose edges are drawn differently by different people.</p>
+  <h3>Fan-out and double counting</h3>
+  <div class="prose">
+    <p>A <button class="kw" data-k="fanout">fan-out</button> happens when a table is joined to another table that has several matching rows for each of its own. The first table's rows are repeated, and any sum over its columns is inflated. The lab reproduces the case from Module 1. In fiscal Q2 of FY26-27 the warehouse has 276 completed orders. Joined to returns, they become 303 rows, and gross sales rise from 779,900.00 to 878,550.00.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 330" role="img" aria-label="An order of 1,200 with three returns. Joined first and then summed, the order appears on three rows and its amount is counted as 3,600. Aggregated first and then joined, the three returns become one row of 500 and the order amount is counted once.">
+      <text x="20" y="34" class="lab ink-pol">Joined, then summed</text>
+      <rect x="20" y="48" width="170" height="60" rx="12" class="bx"/><text x="36" y="74" class="tm">order O1</text><text x="36" y="96" class="t">1,200</text>
+      <rect x="250" y="48" width="170" height="36" rx="10" class="bx"/><text x="266" y="72" class="tm">return 200</text>
+      <rect x="250" y="90" width="170" height="36" rx="10" class="bx"/><text x="266" y="114" class="tm">return 200</text>
+      <rect x="250" y="132" width="170" height="36" rx="10" class="bx"/><text x="266" y="156" class="tm">return 100</text>
+      <path d="M190 72 L250 66" class="ln"/><path d="M190 80 L250 108" class="ln"/><path d="M190 88 L250 150" class="ln"/>
+      <path d="M430 108 H486" class="ln-pol" marker-end="url(#ah-pol)"/>
+      <rect x="490" y="48" width="330" height="120" rx="12" class="pol"/>
+      <text x="508" y="76" class="mono">O1 | 1,200 | 200</text>
+      <text x="508" y="102" class="mono">O1 | 1,200 | 200</text>
+      <text x="508" y="128" class="mono">O1 | 1,200 | 100</text>
+      <text x="508" y="156" class="lab ink-pol">gross 3,600, refunds 500</text>
+      <text x="840" y="100" class="lab ink-pol">net revenue 3,100</text>
+      <text x="840" y="124" class="ts">the order is counted</text>
+      <text x="840" y="144" class="ts">three times</text>
+      <text x="20" y="214" class="lab ink-drv">Aggregated, then joined</text>
+      <rect x="20" y="228" width="170" height="60" rx="12" class="bx"/><text x="36" y="254" class="tm">order O1</text><text x="36" y="276" class="t">1,200</text>
+      <rect x="250" y="228" width="170" height="60" rx="12" class="drv"/><text x="266" y="254" class="tm">returns for O1</text><text x="266" y="276" class="t">500</text>
+      <path d="M190 258 H246" class="ln" marker-end="url(#ah)"/>
+      <path d="M430 258 H486" class="ln-drv" marker-end="url(#ah-drv)"/>
+      <rect x="490" y="228" width="330" height="60" rx="12" class="drv"/>
+      <text x="508" y="254" class="mono">O1 | 1,200 | 500</text>
+      <text x="508" y="278" class="lab ink-drv">gross 1,200, refunds 500</text>
+      <text x="840" y="254" class="lab ink-drv">net revenue 700</text>
+      <text x="840" y="278" class="ts">Figures are illustrative.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.4.</b> A fan-out. The refund total is the same both ways, which is why a quick check of the refunds column does not reveal the error. Only the order amount is repeated.</figcaption>
+  </figure>
+  <div class="code"><div class="hd"><span>The join that inflates net revenue, and the fix</span><button class="copy">Copy</button></div><pre><span class="c-c">-- Wrong: an order with three returns is on three rows before SUM runs.</span>
+SELECT SUM(o.gross_amount) - SUM(COALESCE(r.refund_amount, 0)) AS net_revenue
+FROM fct_orders o
+LEFT JOIN fct_returns r ON r.order_id = o.order_id;
+
+<span class="c-c">-- Fixed: bring returns to the grain of orders first, then join one row to one row.</span>
+SELECT SUM(o.gross_amount) - SUM(COALESCE(r.refund_amount, 0)) AS net_revenue
+FROM fct_orders o
+LEFT JOIN (SELECT order_id, SUM(refund_amount) AS refund_amount
+           FROM fct_returns GROUP BY order_id) r ON r.order_id = o.order_id;</pre></div>
+  <div class="prose">
+    <p>Tools take two approaches to this. MetricFlow, and the layer in the lab, never join two fact tables row to row: each is aggregated to the requested dimensions and the aggregates are joined. LookML and Cube allow the row-level join. Each uses the primary key of a table to count that table's values once, and Looker calls its method symmetric aggregates. Both approaches depend on the modeller having declared the keys and the relationships correctly. A primary key that is not unique breaks either one.</p>
+  </div>
+  <div class="sim" id="sim-fan">
+    <div class="sim-h"><span class="try">Try it</span><h4>How many returns does it take to inflate an order?</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">One order of 1,200. Each return refunds 150. Choose the number of returns and compare the two queries. The figures are illustrative.</p>
+      <div class="ctrls" id="fan-n" role="group" aria-label="Number of returns on the order"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Joined, then summed</p><div id="fan-wrong"></div></div>
+        <div class="out"><p class="lbl">Aggregated, then joined</p><div id="fan-right"></div></div>
+      </div>
+      <div class="out" id="fan-note" style="margin-top:12px" aria-live="polite">Choose a number of returns.</div>
+    </div>
+  </div>
+  <h3>Many-to-many relationships</h3>
+  <div class="prose">
+    <p>An order in the lab can carry more than one promotion, and a promotion applies to many orders. A <button class="kw" data-k="bridge">bridge table</button> holds one row per order and promotion. Sales by promotion, computed through the bridge, count an order with two promotions under both. In the first half of FY26-27 the three promotion lines sum to 1,207,450.00, while the orders that had a promotion were worth 944,800.00.</p>
+    <p>Neither figure is wrong by itself. "Sales of orders on which the bank card offer was used" is a legitimate measure, and its lines are not meant to add up. The error is to present them as a breakdown of a total.</p>
+    <p>If a breakdown is wanted, the metric needs an allocation rule, such as an equal split between the promotions on an order or a split in proportion to each discount. The rule is a business decision that belongs to the metric's owner. The layer's job is to hold the rule and apply it, and to refuse a grand total across a dimension where no rule has been given. Exercise 3 implements the equal split.</p>
+    <p>In MetricFlow the bridge table holds the order as a foreign entity, and a join from the orders model to it would be the primary-to-foreign combination that MetricFlow refuses. To report sales by promotion, the allocation therefore has to be done in a dbt model with one row per order and promotion, and that model becomes a semantic model with its own allocated measure. This follows from the join table in dbt's documentation and was not built in the demonstration.</p>
+  </div>
+  <h3>Slowly changing dimensions</h3>
+  <div class="prose">
+    <p>Store S03 in the lab moved from the South region to the West region on 1 July 2026. A dimension that keeps history of this kind is a <button class="kw" data-k="scd">slowly changing dimension</button>. The history table has one row per store and validity period, and an order is joined to the row that was valid on the order date. The lab exposes both views as separate dimensions.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Gross sales, FY26-27 Q1</th><th>Region as it was on the order date</th><th>Region as it is today</th></tr></thead>
+    <tbody>
+      <tr><td>South</td><td>372,950.00</td><td>165,750.00</td></tr>
+      <tr><td>West</td><td>179,950.00</td><td>387,150.00</td></tr>
+      <tr><td>North and East together</td><td>519,400.00</td><td>519,400.00</td></tr>
+      <tr><td>All regions</td><td>1,072,300.00</td><td>1,072,300.00</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Both columns add up to the same total and both are right for some purpose. A bonus for the manager who ran the South region in Q1 should use the first. A plan that sets next year's targets for the regions as they now stand should use the second. A metric request therefore has to say which is meant, and a dimension simply called "region" hides the choice. In exercise 4 an analyst's notebook uses the current region where the semantic layer uses the region on the order date, and the two disagree by 207,200.00.</p>
+    <p>The join to a history table is a range join, on the order date falling between the row's start and end dates. If two history rows for one store overlap, the join returns two rows for each order in the overlap and the result is a fan-out. A test that validity periods do not overlap belongs with the source tests in section 3.5.</p>
+    <p>MetricFlow supports this kind of dimension directly. Its documentation describes a semantic model built on a history table in which the key is declared as a natural entity and the start and end columns are time dimensions marked with <code>validity_params</code>, <code>is_start</code> and <code>is_end</code>. A metric grouped by a dimension from that model is then joined on the validity period.</p>
+    <p>The documentation states two limits: a semantic model built on a history table cannot hold simple metrics of its own, and a request at a coarser grain than the validity dates uses the value that was valid at the start of each period. The demonstration project does the range join in the dbt model instead, as the lab does, and exposes the result as the dimension <code>order__region_on_order_date</code>.</p>
+  </div>
+  <h3>Time intelligence</h3>
+  <div class="prose">
+    <p>Every measure has one time dimension that decides which period a row belongs to. For orders it is the order date and for returns it is the return date. MetricFlow maps each measure's own time dimension to a common one called <code>metric_time</code>, so that a request for net revenue by month puts each order in the month it was placed and each refund in the month it was made. </p>
+    <p>Whether a refund should count against the month of the return or the month of the original order is a definition, and the lab's finance controller has chosen the return date. The sales dashboard in the case study uses the order date, which moves 23,061.25 between quarters.</p>
+    <p>A layer also needs a calendar. The lab's <code>dim_date</code> table has one row per day with its month, fiscal quarter and fiscal year, and the fiscal year starts on 1 April. MetricFlow calls this table the time spine and lets it carry custom granularities such as a fiscal quarter. Cumulative metrics, period-over-period comparisons and the filling of days with no activity all depend on it.</p>
+    <p>The last matter is where a period ends. "Up to 30 September" can include or exclude that day, and a filter on a timestamp column behaves differently from the same filter on a date column. The lab's layer takes an exclusive end date throughout. MetricFlow's <code>--end-time</code> option is inclusive. Either convention works. A consumer that assumes the wrong one drops or adds a day.</p>
+  </div>
+  <div class="sim" id="sim-bound">
+    <div class="sim-h"><span class="try">Try it</span><h4>Four ways to write "the quarter that ends on 30 September"</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">The column <code>order_ts</code> holds a date and time, such as 2026-09-30 14:25:00. The column <code>order_date</code> holds the date only. Choose a filter and see whether the orders placed on 30 September are counted. The figures are gross sales for fiscal Q2 in the lab warehouse.</p>
+      <div class="ctrls" id="bound-f" role="group" aria-label="Choose a filter"></div>
+      <div class="out" id="bound-out" aria-live="polite">Choose a filter.</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="tools" aria-labelledby="tools-h">
+  <div class="sec-head"><span class="sec-num">3.4</span><h2 id="tools-h">Semantic layer tools</h2></div>
+  <p class="lede">The programme's reference tool is dbt with MetricFlow. This section reads a MetricFlow project built on the lab data, looks at Cube, and compares both with five other tools.</p>
+  <div class="prose">
+    <p>The facilitator demonstrates the project in this section. It is in the folder <code>module-03-demo-metricflow</code>, it runs on DuckDB so that no database server is needed, and it can be run from a Python virtual environment or from Docker. Participants do not install it. The lab in section 3.9 uses a small layer written in Python that follows the same model.</p>
+  </div>
+  <h3>dbt semantic models and MetricFlow</h3>
+  <div class="prose">
+    <p><button class="kw" data-k="metricflow">MetricFlow</button> is the engine that turns a metric request into SQL. The definitions it reads are YAML in a dbt project. dbt changed the layout of that YAML in 2026. In the earlier layout, semantic models were a separate top-level list and metrics referred to named measures. </p>
+    <p>In the layout its documentation calls the latest specification, a semantic model is declared on the dbt model it describes, entities and dimensions are declared on columns, and a measure is written as a metric of type simple. The documentation lists the latest specification as supported from dbt Core 1.12, and gives a command, <code>dbt-autofix deprecations --semantic-layer</code>, for converting older files. The demonstration project uses the latest specification with dbt Core 1.12.7.</p>
+  </div>
+  <div class="code"><div class="hd"><span>models/semantic.yml in the demonstration project (abridged)</span><button class="copy">Copy</button></div><pre>models:
+  - name: sem_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: date_day
+    columns:
+      - name: order_id
+        entity:
+          type: primary
+          name: order
+      - name: store_id
+        entity:
+          type: foreign
+          name: store
+      - name: date_day
+        granularity: day
+        dimension:
+          type: time
+      - name: segment
+        dimension:
+          type: categorical
+    metrics:
+      - name: orders
+        type: simple
+        agg: count
+        expr: order_id
+      - name: gross_sales
+        type: simple
+        agg: sum
+        expr: gross_amount
+
+  - name: sem_inventory
+    semantic_model:
+      enabled: true
+    agg_time_dimension: date_day
+    <span class="c-c"># entity and time columns omitted here</span>
+    metrics:
+      - name: inventory_units
+        type: simple
+        agg: sum
+        expr: units_on_hand
+        non_additive_dimension:
+          name: date_day
+          window_agg: max      <span class="c-c"># the lab's JSON uses the same key</span>
+
+metrics:
+  - name: average_order_value
+    type: ratio
+    numerator: gross_sales
+    denominator: orders
+
+  - name: net_revenue
+    type: derived
+    expr: gross_sales - discounts - refunds
+    input_metrics:
+      - name: gross_sales
+      - name: discounts
+      - name: refunds
+
+  - name: gross_sales_ytd
+    type: cumulative
+    input_metric: gross_sales
+    grain_to_date: year
+    period_agg: last</pre></div>
+  <div class="prose">
+    <p>A simple metric is listed under the model whose column it aggregates. Ratio, derived and cumulative metrics are built from other metrics, and one that draws on more than one model, such as <code>net_revenue</code>, which takes gross sales and discounts from orders and refunds from returns, has to go in the top-level <code>metrics</code> list. The demonstration puts all of its ratio, derived and cumulative metrics there. A request is made with the <code>mf</code> command line tool during development, and through the dbt platform's Semantic Layer interfaces in a hosted deployment.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: a MetricFlow query on the lab data, run for this page</span></div><pre>$ mf query --metrics orders,gross_sales,refunds,net_revenue --decimals 2 \
+           --group-by metric_time__fiscal_quarter --order metric_time__fiscal_quarter
+
+metric_time__fiscal_quarter      orders    gross_sales    refunds    net_revenue
+-----------------------------  --------  -------------  ---------  -------------
+FY25-26 Q1                          297         937250   36732.91      859044.59
+FY25-26 Q2                          268         812000   51219.59      724367.91
+FY25-26 Q3                          324         934350   88134.58      805312.92
+FY25-26 Q4                          273         838400   68324.17      721943.33
+FY26-27 Q1                          303        1072300   95054.37      914763.13
+FY26-27 Q2                          276         779900   98809.38      643813.12</pre></div>
+  <div class="prose">
+    <p>Orders, gross sales and refunds are the figures the Python lab returns in section 3.9. The demonstration holds one definition of net revenue, which is the lab's version 2 applied to every quarter. Its column therefore equals the "version 2 restated" series in section 3.6 to the cent, and differs from the lab's first output, which uses version 1. The two engines were written independently and read two copies of the same data. Adding <code>--explain</code> to the command prints the SQL in place of the result.</p>
+  </div>
+  <div class="code"><div class="hd"><span>SQL that MetricFlow wrote for net_revenue by fiscal quarter (aliases shortened)</span></div><pre>SELECT metric_time__fiscal_quarter,
+       gross_sales - discounts - refunds AS net_revenue
+FROM (
+  SELECT COALESCE(o.metric_time__fiscal_quarter, r.metric_time__fiscal_quarter) AS metric_time__fiscal_quarter,
+         MAX(o.gross_sales) AS gross_sales, MAX(o.discounts) AS discounts, MAX(r.refunds) AS refunds
+  FROM (
+    SELECT ts.fiscal_quarter AS metric_time__fiscal_quarter,
+           SUM(src.gross_amount) AS gross_sales, SUM(src.discount_amount) AS discounts
+    FROM sem_orders src
+    LEFT OUTER JOIN metricflow_time_spine ts ON DATE_TRUNC('day', src.date_day) = ts.date_day
+    GROUP BY ts.fiscal_quarter
+  ) o
+  FULL OUTER JOIN (
+    SELECT ts.fiscal_quarter AS metric_time__fiscal_quarter,
+           SUM(src.refund_amount) AS refunds
+    FROM sem_returns src
+    LEFT OUTER JOIN metricflow_time_spine ts ON DATE_TRUNC('day', src.date_day) = ts.date_day
+    GROUP BY ts.fiscal_quarter
+  ) r ON o.metric_time__fiscal_quarter = r.metric_time__fiscal_quarter
+  GROUP BY COALESCE(o.metric_time__fiscal_quarter, r.metric_time__fiscal_quarter)
+) m</pre></div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 230" role="img" aria-label="How a metric request is compiled. The request names a metric, a dimension and a period. The engine finds the measures behind the metric, writes one aggregating subquery for each semantic model, joins the aggregates on the requested dimension and applies the metric's expression.">
+      <rect x="20" y="60" width="200" height="110" rx="14" class="usr"/>
+      <text x="36" y="90" class="lab">Request</text>
+      <text x="36" y="116" class="tm">net_revenue</text>
+      <text x="36" y="138" class="tm">by fiscal quarter</text>
+      <path d="M220 115 H256" class="ln" marker-end="url(#ah)"/>
+      <rect x="260" y="60" width="200" height="110" rx="14" class="tech"/>
+      <text x="276" y="90" class="lab">Resolve</text>
+      <text x="276" y="116" class="tm">inputs: gross sales,</text>
+      <text x="276" y="138" class="tm">discounts, refunds</text>
+      <path d="M460 90 H496" class="ln" marker-end="url(#ah)"/>
+      <path d="M460 140 H496" class="ln" marker-end="url(#ah)"/>
+      <rect x="500" y="40" width="250" height="68" rx="14" class="tech"/>
+      <text x="516" y="68" class="lab">Aggregate orders</text>
+      <text x="516" y="92" class="tm">by quarter, in a subquery</text>
+      <rect x="500" y="122" width="250" height="68" rx="14" class="tech"/>
+      <text x="516" y="150" class="lab">Aggregate returns</text>
+      <text x="516" y="174" class="tm">by quarter, in a subquery</text>
+      <path d="M750 74 L796 104" class="ln" marker-end="url(#ah)"/>
+      <path d="M750 156 L796 126" class="ln" marker-end="url(#ah)"/>
+      <rect x="800" y="60" width="280" height="110" rx="14" class="drv"/>
+      <text x="816" y="90" class="lab">Join and compute</text>
+      <text x="816" y="116" class="tm">full outer join on quarter,</text>
+      <text x="816" y="138" class="tm">then gross - discounts - refunds</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.5.</b> How MetricFlow compiled the request above. Orders and returns never meet row to row, so the fan-out of Figure 3.4 cannot occur.</figcaption>
+  </figure>
+  <h3>More of MetricFlow</h3>
+  <div class="prose">
+    <p>This subsection covers entity types, multi-hop joins, metric filters and time offsets.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Entity type</th><th>Meaning</th><th>Joins that MetricFlow makes</th></tr></thead>
+    <tbody>
+      <tr><td>Primary</td><td style="font-weight:400">Identifies each row of the model.</td><td style="font-weight:400">Can be joined to from a foreign entity of the same name.</td></tr>
+      <tr><td>Unique</td><td style="font-weight:400">Has at most one row per value. The documentation adds that it may be empty for some rows and may cover only a subset of records.</td><td style="font-weight:400">Treated like a primary entity as the target of a join.</td></tr>
+      <tr><td>Foreign</td><td style="font-weight:400">Points to a row of another model. Many rows can share a value.</td><td style="font-weight:400">Left join to the model where the entity is primary or unique. Any join that would land on a foreign entity is refused as a fan-out.</td></tr>
+      <tr><td>Natural</td><td style="font-weight:400">A real-world key in a history table, where one value has several rows with different validity periods.</td><td style="font-weight:400">Used only for slowly changing dimensions, together with <code>validity_params</code>.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>A dimension can be reached through more than one join. dbt's documentation calls this a multi-hop join and sets a limit of two hops, so orders can be grouped by an attribute of the customer's country and not by an attribute of the region that country is in. A wide dimensional model has to be flattened in dbt to stay within that limit.</p>
+    <p>A metric can carry a filter, written as a template that names a dimension through its entity. The filter becomes part of the definition, so every consumer gets it. A request can also add its own filter with <code>--where</code>. A derived metric can take an input shifted in time with <code>offset_window</code>, which is how period-over-period comparisons are declared. Both are in the demonstration project.</p>
+  </div>
+  <div class="code"><div class="hd"><span>A filtered metric and an offset metric in the demonstration project</span><button class="copy">Copy</button></div><pre><span class="c-c"># in the metrics list of sem_orders</span>
+      - name: business_gross_sales
+        type: simple
+        agg: sum
+        expr: gross_amount
+        filter: "{{ Dimension('order__segment') }} = 'Business'"
+
+<span class="c-c"># in the top-level metrics list</span>
+  - name: gross_sales_change_on_prior_month
+    type: derived
+    expr: gross_sales - prior_month
+    input_metrics:
+      - name: gross_sales
+      - name: gross_sales
+        offset_window: 1 month
+        alias: prior_month</pre></div>
+  <div class="code"><div class="hd"><span>Terminal: both metrics for April to June 2026, run for this page (column headings shortened)</span></div><pre>$ mf query --metrics gross_sales,business_gross_sales,gross_sales_change_on_prior_month \
+           --group-by metric_time__month --start-time 2026-04-01 --end-time 2026-06-30 --order metric_time__month
+
+metric_time__month | gross_sales | business_gross_sales | change_on_prior_month
+2026-04-01 | 326600 | 27500 | 21750
+2026-05-01 | 317850 | 80700 | -8750
+2026-06-01 | 427850 | 103600 | 110000</pre></div>
+  <div class="prose">
+    <p>Four subjects are left out of this module. Conversion metrics and saved queries are not used by the programme. The hosted interfaces of the dbt platform, through which BI tools query the Semantic Layer, are listed in the course design as demonstrated and not required. And MetricFlow's validation of a semantic model, run with <code>mf validate-configs</code>, is shown in the demonstration and not discussed further.</p>
+  </div>
+  <div class="note">
+    <h5><span class="ic">i</span>Four things met while building the demonstration</h5>
+    <p>With dbt Core 1.12.7 and MetricFlow 0.213.0, <code>grain_to_date</code> on a cumulative metric accepted <code>year</code> and rejected the custom granularity <code>fiscal_year</code>, with the message that custom granularities are not supported for that field yet. A cumulative metric defined over the derived metric <code>net_revenue</code> failed at query time, so the demonstration accumulates gross sales. Without <code>period_agg: last</code>, a cumulative metric grouped by month showed the running total as of the first day of each month. And <code>--end-time</code> is inclusive. Each of these is a property of specific versions, so check them against the versions you run.</p>
+  </div>
+  <div class="note">
+    <h5><span class="ic">i</span>An interchange format for semantic models</h5>
+    <p>After a build, dbt Core 1.12.7 wrote a file named <code>osi_document.json</code> beside its semantic manifest. Open Semantic Interchange is a vendor-neutral format for exchanging metric and dimension definitions between tools. It was announced in September 2025 by a group that included Snowflake, Salesforce and dbt Labs, and in mid-2026 it entered the Apache Incubator under the name Apache Ossie. </p>
+    <p>The specification is at an early version. The Apache proposal records a version 0.1 released in January 2026, and a review published by Atlan in November 2026 lists 0.1.1 as the latest. The build also warned that the cumulative metric's window could not be represented in the document. Treat the format as young, and test a round trip between two tools before depending on it.</p>
+  </div>
+  <h3>Cube</h3>
+  <div class="prose">
+    <p><button class="kw" data-k="cube">Cube</button> is a semantic layer that runs as a service between the warehouse and its consumers. Its data model is written in YAML or JavaScript and has two kinds of object. A cube describes one table: its dimensions, its measures and its joins to other cubes. A view selects members from one or more cubes along a stated join path and is what consumers are meant to query. Cube's documentation says that all joins are generated as left joins and that a primary key is required on any cube that takes part in a join, because Cube uses the keys to detect and correct row multiplication.</p>
+    <p>Cube differs from MetricFlow mainly in what surrounds the model. It serves requests itself, over REST, GraphQL and a SQL interface. It keeps pre-aggregations, which are summary tables it builds and refreshes and then uses to answer matching requests without querying the warehouse. And it holds access policies in the data model, so that the service applies row-level and member-level rules to every request. The fragment below shows the lab's orders table as a cube. It was written from Cube's documentation and has not been run.</p>
+  </div>
+  <div class="code"><div class="hd"><span>model/cubes/orders.yml (illustrative, not run)</span><button class="copy">Copy</button></div><pre>cubes:
+  - name: orders
+    sql_table: sem_orders
+
+    joins:
+      - name: stores
+        relationship: many_to_one
+        sql: "{CUBE}.store_id = {stores.store_id}"
+
+    dimensions:
+      - name: order_id
+        sql: order_id
+        type: string
+        primary_key: true
+      - name: date_day
+        sql: date_day
+        type: time
+      - name: segment
+        sql: segment
+        type: string
+
+    measures:
+      - name: count
+        type: count
+      - name: gross_sales
+        sql: gross_amount
+        type: sum</pre></div>
+  <h3>How seven tools compare</h3>
+  <div class="prose">
+    <p>The table characterises each tool in general terms as of November 2026. Vendors change these products often, so confirm any detail that a decision depends on against current documentation.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Tool</th><th>Where definitions live</th><th>How it avoids double counting</th><th>Who can query it</th></tr></thead>
+    <tbody>
+      <tr><td>dbt Semantic Layer with MetricFlow</td><td style="font-weight:400">YAML in the dbt project, beside the models. The MetricFlow engine is open source.</td><td style="font-weight:400">Entity roles decide which joins are allowed. Fact tables are aggregated before they are combined.</td><td style="font-weight:400">The <code>mf</code> command line locally. BI tools and applications through the dbt platform's hosted interfaces.</td></tr>
+      <tr><td>Cube</td><td style="font-weight:400">YAML or JavaScript in a Cube project: cubes and views. Open-source core and a hosted product.</td><td style="font-weight:400">Primary keys and declared relationships. Cube rewrites the query when it detects row multiplication.</td><td style="font-weight:400">Any client of its REST, GraphQL or SQL interfaces.</td></tr>
+      <tr><td>LookML (Looker)</td><td style="font-weight:400">LookML files in Git: views, and explores that join them.</td><td style="font-weight:400">Symmetric aggregates, which use each view's primary key to count a row once after a fan-out.</td><td style="font-weight:400">Looker, and tools that connect through Looker.</td></tr>
+      <tr><td>Power BI semantic models</td><td style="font-weight:400">A tabular model of tables, relationships and DAX measures. Called a dataset until November 2023. Can be saved as TMDL text for source control.</td><td style="font-weight:400">Measures are evaluated in filter context over declared relationships. Semi-additive and other special behaviour is written in DAX by the author.</td><td style="font-weight:400">Power BI reports, Excel, and other clients through the XMLA endpoint.</td></tr>
+      <tr><td>AtScale</td><td style="font-weight:400">Semantic Modeling Language, a YAML format that AtScale has published as open source.</td><td style="font-weight:400">A dimensional model with declared relationships. A metric can be marked semi-additive with first or last non-empty behaviour.</td><td style="font-weight:400">BI tools that connect to it as if it were a database or a cube.</td></tr>
+      <tr><td>Snowflake semantic views</td><td style="font-weight:400">Objects in a Snowflake schema that declare tables, relationships, facts, dimensions and metrics.</td><td style="font-weight:400">Relationships declared in the view. A release note of 5 March 2026 describes a clause, NON ADDITIVE BY, that stops a metric being aggregated across named dimensions.</td><td style="font-weight:400">SQL in Snowflake, and Snowflake's own AI features.</td></tr>
+      <tr><td>Databricks metric views</td><td style="font-weight:400">YAML registered in Unity Catalog through SQL. Measures and dimensions are declared separately.</td><td style="font-weight:400">Joins are many-to-one by default, so a source row matches at most one joined row. A one-to-many cardinality can be declared.</td><td style="font-weight:400">SQL, notebooks, dashboards and AI features in Databricks.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Two questions separate these tools more than their syntax does. The first is whether the layer is independent of the warehouse and the BI tool. MetricFlow, Cube and AtScale sit outside both and can serve several BI tools from one definition. LookML and Power BI semantic models live inside a BI product, so a second BI tool needs a second definition or a connection through the first. Snowflake semantic views and Databricks metric views live inside a data platform, inherit its access controls and work only for data in that platform.</p>
+    <p>The second question is who enforces access. A layer that is part of the data platform uses the platform's grants and row policies. A layer that runs as a separate service either passes the user's identity through to the warehouse or enforces its own rules, and in the second case anyone who can reach the warehouse directly bypasses them. The programme's authorization matrix requires the metric query service to run under the user's own database role for this reason. Module 7 returns to it.</p>
+  </div>
+</section>
+
+<section class="sec" id="governs" aria-labelledby="governs-h">
+  <div class="sec-head"><span class="sec-num">3.5</span><h2 id="governs-h">What a semantic layer governs and what it cannot guarantee</h2></div>
+  <p class="lede">A semantic layer guarantees that a metric is interpreted and computed one way. It says nothing about whether the rows it computes from are right.</p>
+  <div class="prose">
+    <p>The lab warehouse has a planted fault. The return file for 17 to 21 August 2026 was loaded twice, so five returns exist as two identical rows each. The semantic layer reports refunds of 98,809.38 for fiscal Q2. With each return counted once the figure is 86,701.88. The layer did what its definition says: it summed the refund amounts dated in the quarter. Every consumer gets the same wrong number, and it carries a certified label.</p>
+    <p>This is the boundary the reference architecture draws between technical authority and data quality assurance. The layer governs interpretation, meaning which rows and columns a metric refers to, and computation, meaning how they are aggregated, joined and placed in time. Source-data correctness needs a separate control that runs before the layer is queried.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="Two controls in sequence. Source validation tests run on the warehouse tables after each load and check keys, references, ranges, reconciliation and freshness. The semantic layer then computes metrics from tables that have passed. A failed source test should block or flag the metrics that depend on the table.">
+      <rect x="20" y="40" width="210" height="150" rx="16" class="usr"/>
+      <text x="38" y="72" class="t">Load</text>
+      <text x="38" y="100" class="tm">files and extracts</text>
+      <text x="38" y="124" class="tm">arrive in the</text>
+      <text x="38" y="148" class="tm">warehouse</text>
+      <path d="M230 115 H276" class="ln" marker-end="url(#ah)"/>
+      <rect x="280" y="40" width="330" height="150" rx="16" class="pol"/>
+      <text x="298" y="72" class="t">Source validation tests</text>
+      <text x="298" y="100" class="tm">keys are unique and present</text>
+      <text x="298" y="124" class="tm">references point to real rows</text>
+      <text x="298" y="148" class="tm">totals reconcile to the source</text>
+      <text x="298" y="176" class="lab ink-pol">owned by data quality assurance</text>
+      <path d="M610 115 H656" class="ln" marker-end="url(#ah)"/>
+      <rect x="660" y="40" width="420" height="150" rx="16" class="tech"/>
+      <text x="678" y="72" class="t">Semantic layer</text>
+      <text x="678" y="100" class="tm">one definition of each metric</text>
+      <text x="678" y="124" class="tm">grain, joins and time logic applied the same way</text>
+      <text x="678" y="148" class="tm">for every consumer</text>
+      <text x="678" y="176" class="lab ink-tech">governs interpretation and computation</text>
+      <text x="445" y="226" text-anchor="middle" class="lab ink-pol">a failed test should flag the metrics that depend on the table</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.6.</b> Two controls with different owners. The semantic layer assumes its inputs have passed the first one.</figcaption>
+  </figure>
+  <h3>Pairing the layer with source validation</h3>
+  <div class="prose">
+    <p>Source validation tests are assertions about a table that are run after every load. In a dbt project they are data tests declared beside the model, and frameworks such as Great Expectations serve the same purpose outside dbt. The table lists five kinds.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Test</th><th>What it asserts</th><th>What it catches in the lab</th></tr></thead>
+    <tbody>
+      <tr><td>Uniqueness and presence</td><td style="font-weight:400">The key that defines the grain is never repeated and never empty.</td><td style="font-weight:400"><code>return_id</code> is repeated for five returns, which reveals the double load.</td></tr>
+      <tr><td>Relationships</td><td style="font-weight:400">Every foreign key points to a row that exists.</td><td style="font-weight:400">A return for an order that is not in <code>fct_orders</code>. The lab has none.</td></tr>
+      <tr><td>Ranges and business rules</td><td style="font-weight:400">Values fall within what the business allows.</td><td style="font-weight:400">Three orders whose refunds exceed what the customer paid, a side effect of the double load.</td></tr>
+      <tr><td>Reconciliation</td><td style="font-weight:400">A total in the warehouse equals the same total in the source system or in a control report.</td><td style="font-weight:400">Refunds in the warehouse against refunds in the ERP for the same days.</td></tr>
+      <tr><td>Freshness</td><td style="font-weight:400">The table was loaded when it was expected to be.</td><td style="font-weight:400">A month-end figure computed before the last day's returns arrived.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>A sixth test guards the layer's own inputs. In the lab, <code>test_no_fanout</code> checks that a query counts each completed order once by comparing its row count with a plain count of the fact table. A test of this shape belongs on any model that a semantic model is built on, because a view that joins too much will pass every test on its source tables and still repeat rows.</p>
+    <p>The pairing has to be visible to consumers. If a source test on the returns table fails, the metrics that read from that table should be flagged or withheld, and the certification of a metric should require that the tables under it have tests. Without that link the two controls exist side by side and a consumer has no way to know that a certified number rests on a failed load.</p>
+  </div>
+  <div class="note warn">
+    <h5><span class="ic">!</span>A consistent wrong number is harder to notice</h5>
+    <p>Before a semantic layer, the three reports in the case study disagreed, and the disagreement prompted someone to look. After every consumer is moved to the layer, they agree, including on the 12,107.50 of refunds that were counted twice. Agreement between consumers shows that the definition is shared. It is no evidence about the data, so source tests become more important once a layer is in place.</p>
+  </div>
+  <div class="sim" id="sim-catch">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which control deals with it?</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-catch"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="lifecycle" aria-labelledby="lifecycle-h">
+  <div class="sec-head"><span class="sec-num">3.6</span><h2 id="lifecycle-h">The metric lifecycle</h2></div>
+  <p class="lede">A metric that many consumers depend on cannot simply be edited. A change to its definition changes numbers that have already been published, so it needs a version, a date, a decision about history and an approval.</p>
+  <h3>States and approval</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>State</th><th>Meaning</th><th>Who moves it on</th></tr></thead>
+    <tbody>
+      <tr><td>Draft</td><td style="font-weight:400">Defined in a branch. Not available to consumers.</td><td style="font-weight:400">The author, by opening a review</td></tr>
+      <tr><td>In review</td><td style="font-weight:400">The definition is checked against the glossary term, and the implementation against tests.</td><td style="font-weight:400">The term's owner approves the meaning. The team that runs the layer approves the implementation.</td></tr>
+      <tr><td>Certified</td><td style="font-weight:400">Approved, tested and published with an owner, a glossary identifier and a version.</td><td style="font-weight:400">The owner, when a change is needed</td></tr>
+      <tr><td>Deprecated</td><td style="font-weight:400">Still computed, with a notice and a date after which it will be withdrawn.</td><td style="font-weight:400">The owner, after consumers have moved</td></tr>
+      <tr><td>Retired</td><td style="font-weight:400">No longer served. The definition is kept so that old figures can be explained.</td><td style="font-weight:400"></td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p><button class="kw" data-k="cert">Certification</button> joins two approvals that Module 1 kept apart. The owner of the glossary term has the business authority to say what net revenue means. The team that runs the layer has the technical authority to say that the YAML computes that meaning and passes its tests. A metric is certified when both have signed, and the record of who signed is part of the metric's metadata. A semantic layer tool stores the label after the two approvals have been given by people.</p>
+  </div>
+  <h3>Breaking and non-breaking changes</h3>
+  <div class="prose">
+    <p>A change is <button class="kw" data-k="breaking">breaking</button> if a consumer that does nothing would get a different number, or an error, for a request it has made before.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Breaking</th><th>Not breaking</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:400">Changing the expression, such as starting to deduct discounts</td><td style="font-weight:400">Adding a new metric</td></tr>
+      <tr><td style="font-weight:400">Adding or removing a filter inside the definition, such as excluding cancelled orders</td><td style="font-weight:400">Adding a dimension that requests can group by</td></tr>
+      <tr><td style="font-weight:400">Changing the time dimension, such as dating refunds by order date</td><td style="font-weight:400">Changing a label or a description</td></tr>
+      <tr><td style="font-weight:400">Renaming or removing the metric, or removing a dimension</td><td style="font-weight:400">Making the same result faster, for example with a pre-aggregation</td></tr>
+      <tr><td style="font-weight:400">Changing the unit or currency of the result</td><td style="font-weight:400">Adding a test</td></tr>
+    </tbody>
+  </table></div>
+  <div class="sim" id="sim-break">
+    <div class="sim-h"><span class="try">Try it</span><h4>Breaking or not?</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-break"></div></div>
+  </div>
+  <h3>Effective-dated definitions and restatement</h3>
+  <div class="prose">
+    <p>Module 1 showed finance's month-end workbook deducting returns, discounts and tax, and Module 2 recorded that definition as GT-0120. The metric that was first built in the layer implemented only part of it: gross sales less refunds, with the discount adjustment still made in the workbook. Dashboards, the board pack and bonus reports took the layer's figure, and only the statutory accounts took the workbook's.</p>
+    <p>In the lab, finance decides that from 1 July 2026 the layer's metric will deduct discounts as well, so that it matches the workbook and the statutory accounts. Version 1 was gross sales less refunds. Version 2 is gross sales less discounts less refunds. The change is recorded as a second version with an <button class="kw" data-k="effdate">effective date</button>, and version 1 is left in place. That leaves three series a consumer could be shown.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Fiscal quarter</th><th>Version 1 throughout</th><th>Effective-dated</th><th>Version 2 restated</th></tr></thead>
+    <tbody>
+      <tr><td>FY25-26 Q3</td><td>846,215.42</td><td>846,215.42</td><td>805,312.92</td></tr>
+      <tr><td>FY25-26 Q4</td><td>770,075.83</td><td>770,075.83</td><td>721,943.33</td></tr>
+      <tr><td>FY26-27 Q1</td><td>977,245.63</td><td>977,245.63</td><td>914,763.13</td></tr>
+      <tr><td>FY26-27 Q2</td><td>681,090.62</td><td>643,813.12</td><td>643,813.12</td></tr>
+      <tr><td>Change from Q1 to Q2</td><td>-30.3%</td><td>-34.1%</td><td>-29.6%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The effective-dated series reproduces what was published at the time: version 1 up to June and version 2 from July. It is the right series for explaining a past report. It is the wrong series for a trend, because the fall of 34.1 percent between Q1 and Q2 includes the change of definition. The restated series applies version 2 to the whole history and shows a fall of 29.6 percent on a like-for-like basis.</p>
+    <p><button class="kw" data-k="restate">Restatement</button> has a cost. Every figure for an earlier quarter now exists in two versions, and someone who compares a new chart with an old slide will see a difference of about 48,000 for Q4 and ask which is right. A restatement note answers that in advance. It states what changed, from when, why, how far back history was restated, how large the effect is and how long the old version remains available. Exercise 5 produces one.</p>
+    <p>MetricFlow holds one definition per metric name, and its history is the Git history of the YAML. A team using it handles a change in one of two ways. One publishes the new definition under a new name, such as <code>net_revenue_v2</code>, and deprecates the old one. The other keeps one name and uses the version control history together with a change log. The lab's layer stores versions inside the metric so that all three series can be requested, which makes the trade-off visible. It is a teaching device and is not how MetricFlow or Cube work.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="A timeline of four fiscal quarters with the change to version 2 on 1 July 2026. The effective-dated series uses version 1 for the first three quarters and version 2 for the fourth. The restated series uses version 2 for all four. Version 1 stays available until its deprecation date.">
+      <path d="M60 60 H1060" class="ln"/>
+      <path d="M60 50 V70" class="ln"/><path d="M310 50 V70" class="ln"/><path d="M560 50 V70" class="ln"/><path d="M810 50 V70" class="ln"/><path d="M1060 50 V70" class="ln"/>
+      <text x="185" y="42" text-anchor="middle" class="lab">FY25-26 Q3</text><text x="435" y="42" text-anchor="middle" class="lab">FY25-26 Q4</text><text x="685" y="42" text-anchor="middle" class="lab">FY26-27 Q1</text><text x="935" y="42" text-anchor="middle" class="lab">FY26-27 Q2</text>
+      <path d="M810 70 V228" class="ln-pol dash"/>
+      <text x="820" y="92" class="lab ink-pol">1 July 2026: version 2 takes effect</text>
+      <text x="60" y="122" class="tm">Effective-dated</text>
+      <rect x="220" y="104" width="590" height="30" rx="8" class="bx2"/><text x="515" y="125" text-anchor="middle" class="lab">version 1</text>
+      <rect x="810" y="104" width="250" height="30" rx="8" class="tech"/><text x="935" y="125" text-anchor="middle" class="lab">version 2</text>
+      <text x="60" y="168" class="tm">Restated</text>
+      <rect x="220" y="150" width="840" height="30" rx="8" class="tech"/><text x="640" y="171" text-anchor="middle" class="lab">version 2 applied to all history</text>
+      <text x="60" y="214" class="tm">Version 1</text>
+      <rect x="220" y="196" width="840" height="30" rx="8" class="bx2"/><text x="640" y="217" text-anchor="middle" class="lab">still served on request until it is deprecated</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.7.</b> One metric, one change, three series. A consumer has to be told which one a chart shows.</figcaption>
+  </figure>
+  <div class="sim" id="sim-ver">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which series does each audience need?</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">Choose a request. The figures are net revenue from the lab warehouse.</p>
+      <div class="ctrls" id="ver-q" role="group" aria-label="Choose a request"></div>
+      <div class="out" id="ver-out" aria-live="polite">Choose a request.</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="interop" aria-labelledby="interop-h">
+  <div class="sec-head"><span class="sec-num">3.7</span><h2 id="interop-h">Interoperability tests</h2></div>
+  <p class="lede">An interoperability test asks the same question through each consumer and requires the same answer. It is the evidence that "one definition" holds in practice.</p>
+  <div class="prose">
+    <p>Declaring a metric in a layer does not make every tool use it. A dashboard may still run SQL that someone saved before the layer existed. A notebook may read the fact table directly. Even tools that do call the layer can pass it different requests. An <button class="kw" data-k="interoptest">interoperability test</button> holds four things constant and compares the results.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Held constant</th><th>What it means</th><th>How a consumer drifts</th><th>Size of the difference in exercise 4</th></tr></thead>
+    <tbody>
+      <tr><td>Filter</td><td style="font-weight:400">The same rows are in scope: the same statuses, regions and segments, with the same meaning.</td><td style="font-weight:400">The notebook filters on the store's current region where the layer uses the region on the order date.</td><td>-207,200.00</td></tr>
+      <tr><td>Time boundary</td><td style="font-weight:400">The same start and end, the same calendar, the same time zone and the same rule for the last day.</td><td style="font-weight:400">The BI report compares a timestamp with the text '2026-09-30' and loses the last day of the quarter.</td><td>-7,800.00</td></tr>
+      <tr><td>Security context</td><td style="font-weight:400">The request runs as the same user, with that user's entitlements.</td><td style="font-weight:400">The notebook reads every store for a user who is entitled to one.</td><td>+906,550.00</td></tr>
+      <tr><td>Aggregation</td><td style="font-weight:400">The same roll-up from detail to the requested grain.</td><td style="font-weight:400">The BI report averages six store averages to get average order value.</td><td>+23.42</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 270" role="img" aria-label="An interoperability test. One test case fixes the metric, the filter, the time boundary, the user and the grain. The same case is sent through the BI report, the notebook and the API. The three results are compared with a tolerance of zero for a deterministic metric.">
+      <rect x="20" y="40" width="270" height="190" rx="16" class="usr"/>
+      <text x="38" y="72" class="t">Test case</text>
+      <text x="38" y="100" class="tm">metric: gross_sales</text>
+      <text x="38" y="124" class="tm">filter: region South</text>
+      <text x="38" y="148" class="tm">period: 1 Apr to 30 Jun</text>
+      <text x="38" y="172" class="tm">user: finance</text>
+      <text x="38" y="196" class="tm">grain: one total</text>
+      <path d="M290 80 H356" class="ln" marker-end="url(#ah)"/><path d="M290 135 H356" class="ln" marker-end="url(#ah)"/><path d="M290 190 H356" class="ln" marker-end="url(#ah)"/>
+      <rect x="360" y="56" width="250" height="48" rx="12" class="bx2"/><text x="378" y="86" class="tm">BI report</text>
+      <rect x="360" y="111" width="250" height="48" rx="12" class="bx2"/><text x="378" y="141" class="tm">Notebook</text>
+      <rect x="360" y="166" width="250" height="48" rx="12" class="tech"/><text x="378" y="196" class="tm">API, through the layer</text>
+      <path d="M610 80 L676 122" class="ln" marker-end="url(#ah)"/><path d="M610 135 H676" class="ln" marker-end="url(#ah)"/><path d="M610 190 L676 148" class="ln" marker-end="url(#ah)"/>
+      <rect x="680" y="70" width="400" height="130" rx="16" class="drv"/>
+      <text x="698" y="102" class="t">Compare</text>
+      <text x="698" y="130" class="tm">372,950.00 / 165,750.00 / 372,950.00</text>
+      <text x="698" y="156" class="tm">tolerance zero for a deterministic metric</text>
+      <text x="698" y="184" class="lab ink-pol">FAIL: the notebook differs</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.8.</b> One test case sent through three consumers. The figures are case D of exercise 4 before the notebook is fixed.</figcaption>
+  </figure>
+  <h3>Designing the test</h3>
+  <div class="prose">
+    <p>Each case should isolate one of the four things, so that a failure points at its cause: one case at a quarter boundary, one for a user with restricted access, one that filters on a dimension with history, one for a ratio and one for a distinct count. A control case that every consumer should pass shows that the harness itself works.</p>
+    <p>For metrics computed by deterministic arithmetic the tolerance is zero at the precision the metric is reported in. The lab compares to two decimal places. The programme's evaluation scorecard requires metric correctness of 100 percent, measured as an exact match against the approved semantic-layer calculation. A tolerance is appropriate only where consumers legitimately round differently, and then it should be stated per metric.</p>
+    <p>The suite should run whenever a definition changes, whenever a consumer changes how it connects, and on a schedule, because a consumer can drift without any change to the layer. In the programme's design the three consumers are a BI tool, a notebook and the API that the assistant calls. The assistant is one of those consumers. Under the programme's contract it computes metrics only through the layer, and the interoperability test is the check that it does.</p>
+    <p>The durable fix for a failed case is usually to remove the consumer's own computation. In exercise 4 each of the four faults can be repaired in place, and each repair copies a piece of the layer's logic into another file where it can drift again. Replacing the consumer's code with a call to the API removes all four at once.</p>
+  </div>
+  <div class="sim" id="sim-interop">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which of the four was not held constant?</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-interop"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="case" aria-labelledby="case-h">
+  <div class="sec-head"><span class="sec-num">3.8</span><h2 id="case-h">Case study: finance revenue reconciliation across three reports</h2></div>
+  <p class="lede">The retailer from Module 1 closes fiscal Q2 of FY26-27. Three reports show net revenue for the quarter and no two agree. The company and its figures are fictional and were written for this course. Every figure can be reproduced from the lab warehouse with <code>python case_reconciliation.py</code>.</p>
+  <div class="prose">
+    <p>The finance controller has four days before she signs the investor presentation. The head of sales operations has already quoted the dashboard figure to the regional managers. The e-commerce lead sends a weekly export to the leadership team, and this week's export gives a third figure.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Report</th><th>Owner</th><th>Net revenue, FY26-27 Q2</th><th>How it is built</th></tr></thead>
+    <tbody>
+      <tr><td>Finance month-end pack</td><td style="font-weight:400">Finance controller</td><td>643,813.12</td><td style="font-weight:400">The semantic layer's <code>net_revenue</code>, version 2: gross sales less discounts less refunds, with refunds dated by return date</td></tr>
+      <tr><td>Sales dashboard</td><td style="font-weight:400">Head of sales operations</td><td>802,801.87</td><td style="font-weight:400">SQL saved in the BI tool two years ago, older than the Metabase measure in Module 1: orders joined to returns, refunds dated by order date, discounts not deducted</td></tr>
+      <tr><td>E-commerce weekly export</td><td style="font-weight:400">E-commerce lead</td><td>769,213.37</td><td style="font-weight:400">A scheduled query: the amount charged to the customer including tax, less refunds, filtered on the order timestamp up to '2026-09-30'</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The spread between the highest and the lowest figure is 158,988.75, about a quarter of the governed figure. A data engineer is asked to explain it, and works from each report towards the governed definition one difference at a time.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 380" role="img" aria-label="Two reconciliations to the governed figure of 643,813.12. From the sales dashboard at 802,801.87: remove 98,650.00 of repeated order rows, move 23,061.25 of refunds to the quarter of the return, and deduct 37,277.50 of discounts. From the e-commerce export at 769,213.37: add back 8,271.80 for 30 September and remove 133,672.05 of tax.">
+      <rect x="20" y="20" width="300" height="70" rx="14" class="bx2"/>
+      <text x="38" y="48" class="lab">Sales dashboard</text><text x="38" y="74" class="t">802,801.87</text>
+      <rect x="20" y="110" width="300" height="56" rx="12" class="pol"/><text x="38" y="134" class="tm">order rows repeated by the join</text><text x="38" y="156" class="lab ink-pol">-98,650.00 (granularity)</text>
+      <rect x="20" y="176" width="300" height="56" rx="12" class="pol"/><text x="38" y="200" class="tm">refunds dated by order date</text><text x="38" y="222" class="lab ink-pol">-23,061.25 (temporal)</text>
+      <rect x="20" y="242" width="300" height="56" rx="12" class="pol"/><text x="38" y="266" class="tm">discounts not deducted</text><text x="38" y="288" class="lab ink-pol">-37,277.50 (terminological)</text>
+      <path d="M320 55 H366" class="ln"/><path d="M366 55 V338" class="ln"/><path d="M366 338 H396" class="ln" marker-end="url(#ah)"/>
+      <rect x="400" y="300" width="300" height="70" rx="14" class="tech"/>
+      <text x="418" y="328" class="lab ink-tech">Governed figure</text><text x="418" y="354" class="t">643,813.12</text>
+      <rect x="780" y="20" width="300" height="70" rx="14" class="bx2"/>
+      <text x="798" y="48" class="lab">E-commerce weekly export</text><text x="798" y="74" class="t">769,213.37</text>
+      <rect x="780" y="110" width="300" height="56" rx="12" class="pol"/><text x="798" y="134" class="tm">30 September dropped by the filter</text><text x="798" y="156" class="lab ink-pol">+8,271.80 (temporal)</text>
+      <rect x="780" y="176" width="300" height="56" rx="12" class="pol"/><text x="798" y="200" class="tm">tax counted as revenue</text><text x="798" y="222" class="lab ink-pol">-133,672.05 (terminological)</text>
+      <path d="M780 55 H734" class="ln"/><path d="M734 55 V338" class="ln"/><path d="M734 338 H704" class="ln" marker-end="url(#ah)"/>
+      <text x="550" y="150" text-anchor="middle" class="ts">Finance month-end pack</text>
+      <text x="550" y="174" text-anchor="middle" class="ts">already shows 643,813.12</text>
+      <path d="M550 186 V296" class="ln-tech dash" marker-end="url(#ah-tech)"/>
+    </svg>
+    </div>
+    <figcaption><b>Figure 3.9.</b> The two reconciliations. Each step is labelled with the kind of inconsistency from Module 1 that it corrects.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Five differences account for the whole gap. The largest in the sales dashboard is the fan-out of section 3.3: 27 extra order rows worth 98,650.00. Five of those rows, worth 24,750.00, exist only because of the duplicate load described below. The largest in the export is a difference of definition: it reports the amount charged, which includes 133,672.05 of tax that the company collects and passes on. None of the three queries failed, and each owner had a reason for the way their report was written.</p>
+    <p>The engineer then runs the source tests, and the reconciliation gains a sixth line. The uniqueness test on the returns table fails: the return file for 17 to 21 August was loaded twice. Refunds for the quarter are overstated by 12,107.50, so the governed figure on the data as loaded is too low, and the figure with each return counted once is 655,920.62. The finance pack, the only report built on the semantic layer, was wrong too. It applied the governed definition to a table that had been loaded twice.</p>
+  </div>
+  <h3>Questions for discussion</h3>
+  <div class="prose">
+    <ol>
+      <li>The controller has four days. What does she need from the data team before she signs, and in what order?</li>
+      <li>The head of sales operations says the dashboard has shown net revenue this way for two years and the regional targets were set on it. Is his figure wrong, or is it a different metric? What would you do with it?</li>
+      <li>Which of the six differences would a semantic layer have prevented if all three reports had used it? Which would it not have prevented?</li>
+      <li>The duplicate load was found only because someone ran the source tests during the reconciliation. Where should that test have been running, and what should have happened to the certified metric when it failed?</li>
+      <li>Once the three reports are moved to the layer they will agree. How would the company then find the next fault of the kind in question 4?</li>
+    </ol>
+  </div>
+  <div class="prose"><p>Questions 3 and 4 are discussed in the session. The others are for self-study.</p></div>
+  <details class="note">
+    <summary style="font-weight:700;cursor:pointer">Points to draw out</summary>
+    <p>The controller needs the corrected load and a rerun of the source tests first, then the governed figure, then a short statement of why the other two reports differ, since the dashboard figure is already in circulation. The sales figure combines one error, the fan-out, with two choices that differ from finance's definition. </p>
+    <p>After the fan-out is fixed it could survive as a separately named metric, such as gross sales less refunds by order date, if sales operations has a use for it and will own it. It cannot keep the name net revenue. </p>
+    <p>A semantic layer would have prevented the fan-out, the date filter that dropped a day, and the three differences of definition. It would not have prevented the duplicate load. That needed a uniqueness test after each load, wired so that a failure flags every metric that reads the returns table. After the reports agree, disagreement is no longer a warning, so scheduled source tests and reconciliation to the ERP have to take its place.</p>
+  </details>
+</section>
+
+<section class="sec" id="handson" aria-labelledby="handson-h">
+  <div class="sec-head"><span class="sec-num">3.9</span><h2 id="handson-h">Hands-on</h2></div>
+  <p class="lede">Six exercises in Python, done in pairs. You need Python 3.13 and VS Code and nothing else. The lab uses only the Python standard library, and its warehouse is a SQLite file that Python creates on your machine. There is no dbt, MetricFlow, Cube, BI tool, database server, package to install or API key.</p>
+  <div class="prose">
+    <p>The course design builds this lab on MetricFlow, Metabase and a notebook. This version replaces them with a small semantic layer, <code>semantic_layer.py</code>, of about 200 lines. It reads metric definitions from <code>semantic_model.json</code>, compiles one SQL query per measure at that measure's own grain, and combines the results, which is the approach Figure 3.5 shows for MetricFlow. You read it and do not change it. The BI report, the notebook and the API in exercise 4 are three Python files that stand in for those tools. The facilitator's MetricFlow project returns the same figures from the same data, as section 3.4 shows.</p>
+    <p>Three other things differ from the course design. The fan-out is fixed in SQL, because the lab's layer cannot produce it in the first place. You write the fan-out test, and the three source tests are written for you. And you define three of the ten metrics, where the course design has participants define all ten.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Exercise</th><th>File</th><th>What you write</th><th>What you produce</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td>Setup</td><td style="font-weight:400"><code>setup_warehouse.py</code></td><td style="font-weight:400">Nothing</td><td style="font-weight:400">The lab warehouse <code>metrics.db</code></td><td>5 min</td></tr>
+      <tr><td>1. Reproduce and fix the fan-out</td><td style="font-weight:400"><code>lab1_fanout.py</code></td><td style="font-weight:400">One SQL query and one test</td><td style="font-weight:400">The inflated figure, the fixed figure and tests that catch the join and a source fault</td><td>12 min</td></tr>
+      <tr><td>2. Define three metrics</td><td style="font-weight:400"><code>semantic_model.json</code></td><td style="font-weight:400">A ratio, a cumulative metric and a semi-additive balance</td><td style="font-weight:400">Ten metrics, three of them new, that return the expected values</td><td>14 min</td></tr>
+      <tr><td>3. Changing regions and promotions</td><td style="font-weight:400"><code>lab3_scd_bridge.py</code></td><td style="font-weight:400">One SQL query</td><td style="font-weight:400">Sales by region two ways, and sales by promotion without double counting</td><td>10 min, self-study</td></tr>
+      <tr><td>4. Run the interoperability test</td><td style="font-weight:400"><code>consumers/bi_report.py</code>, <code>consumers/notebook.py</code></td><td style="font-weight:400">Four fixes</td><td style="font-weight:400">Five passing cases, and the cause of each failure in <code>interop_notes.md</code></td><td>18 min</td></tr>
+      <tr><td>5. Publish version 2 of net revenue</td><td style="font-weight:400"><code>semantic_model.json</code></td><td style="font-weight:400">One version entry</td><td style="font-weight:400">The series three ways. The restatement note is self-study.</td><td>8 min</td></tr>
+      <tr><td>6. Write ADR 2</td><td style="font-weight:400"><code>adr/0002-metric-layer-or-direct-sql.md</code></td><td style="font-weight:400">A five-field ADR</td><td style="font-weight:400">A decision on how the assistant computes metrics</td><td>15 min, self-study</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Setup and the in-class exercises add up to 57 minutes of the 60 in the plan. These times were estimated from the number of steps and have not been tried with a class.</p>
+  </div>
+  <h3>Setup</h3>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Open the folder</h4><p>The facilitator gives you the folder <code>module-03-lab</code>. In VS Code choose File, then Open Folder, and select it.</p></div></li>
+    <li><span class="k">2</span><div><h4>Open a terminal and check Python</h4><p>Choose Terminal, then New Terminal. Run <code>python --version</code> and confirm that it prints 3.13. On macOS or Linux use <code>python3</code> if <code>python</code> is not found. On Windows <code>py</code> also works.</p></div></li>
+    <li><span class="k">3</span><div><h4>Build the warehouse</h4><p>Run <code>python setup_warehouse.py</code>. The data is generated from a fixed seed, so every pair gets the same rows. It covers 1 April 2025 to 30 September 2026, and the fiscal year starts on 1 April.</p></div></li>
+    <li><span class="k">4</span><div><h4>Ask the layer a question</h4><p>Run <code>python semantic_layer.py</code>. It requests five metrics by fiscal quarter and prints the result.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>Terminal: expected output of setup_warehouse.py</span></div><pre>dim_date 548 rows
+dim_store 6 rows
+dim_store_history 7 rows
+dim_customer 400 rows
+fct_orders 1800 rows
+fct_returns 486 rows
+bridge_order_promotion 1239 rows
+fct_inventory_snapshot 8784 rows
+user_store_access 9 rows
+Created metrics.db. Fiscal year starts on 1 April. Store S03 moved from South to West on 2026-07-01.</pre></div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of semantic_layer.py</span></div><pre>All stores, by fiscal quarter
+ fiscal_quarter orders gross_sales refunds net_revenue return_rate
+ FY25-26 Q1 297 937,250.00 36,732.91 900,517.09 0.0392
+ FY25-26 Q2 268 812,000.00 51,219.59 760,780.41 0.0631
+ FY25-26 Q3 324 934,350.00 88,134.58 846,215.42 0.0943
+ FY25-26 Q4 273 838,400.00 68,324.17 770,075.83 0.0815
+ FY26-27 Q1 303 1,072,300.00 95,054.37 977,245.63 0.0886
+ FY26-27 Q2 276 779,900.00 98,809.38 681,090.62 0.1267</pre></div>
+  <div class="prose">
+    <p>Net revenue here is version 1, gross sales less refunds, because version 2 does not exist until exercise 5. Open <code>semantic_model.json</code> beside the output and find the three semantic models and the seven metrics. Each script marks the code you write with a <code>TODO</code> comment and prints what is still missing. Worked answers are in the <code>solutions</code> folder, and adding <code>--answers</code> to a command runs it against the worked semantic model.</p>
+    <p>Two exercises ask you to edit <code>semantic_model.json</code> by hand. JSON needs a comma between entries and none after the last. If the file does not parse, the script names the line. To start again, copy <code>baseline_model.json</code> over it.</p>
+  </div>
+  <h3>Exercise 1: reproduce and fix the fan-out</h3>
+  <div class="prose">
+    <p>Open <code>lab1_fanout.py</code>. The function <code>wrong_sql()</code> computes net revenue for fiscal Q2 the way the sales dashboard in the case study does, by joining orders to returns and then summing. Write <code>fixed_sql()</code>, which brings returns to one row per order before the join. Then write <code>test_no_fanout()</code>, which runs a query and checks that it counts each completed order in the quarter once. The three source tests on the returns table are written for you.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab1_fanout.py when both functions are written</span></div><pre>Joined, then summed: order rows 303 gross sales 878,550.00 refunds 75,748.13 net revenue 802,801.87
+Fixed join: order rows 276 gross sales 779,900.00 refunds 75,748.13 net revenue 704,151.87
+The wrong join overstates gross sales by 98,650.00 and net revenue by 98,650.00.
+
+test_no_fanout on the wrong query: FAIL
+test_no_fanout on the fixed query: pass
+
+Source tests on fct_returns:
+ FAIL return_id is unique in fct_returns (5 failing)
+ pass every return points to an order that exists
+ FAIL refunds for an order do not exceed what the customer paid (3 failing)
+
+The semantic layer reports refunds of 98,809.38 for the quarter, dated by return date.
+With each return counted once the figure is 86,701.88. The layer computed its definition correctly on data that was loaded twice.</pre></div>
+  <div class="prose">
+    <p>Three things to note. The refunds column is the same in both queries, so checking it would not have revealed the fan-out. The fixed query still dates refunds by the order's date, which is why its refunds differ from the layer's. And two source tests fail for a reason that has nothing to do with the join.</p>
+    <p>After the session, find the duplicated rows with <code>python -m sqlite3 metrics.db</code> and a query that groups <code>fct_returns</code> by <code>return_id</code>, and write one line on which control should have caught them and when.</p>
+  </div>
+  <h3>Exercise 2: define a ratio, a cumulative metric and a semi-additive balance</h3>
+  <div class="prose">
+    <p>Seven metrics are defined in <code>semantic_model.json</code>. Add three. The ratio <code>average_order_value</code> is given in full below. Write the other two from the pattern of the metrics already in the file: <code>net_revenue_fytd</code>, a cumulative metric with <code>input_metric</code> set to <code>net_revenue</code> and <code>grain_to_date</code> set to <code>fiscal_year</code>, and <code>inventory_units</code>, a simple metric on the measure <code>inventory.units_on_hand</code>. Give each a label, an owner and a glossary identifier, GT-0308 and GT-0309. Then tell the layer that units on hand must not be summed over time, by adding <code>non_additive_dimension</code> to the <code>units_on_hand</code> measure in the inventory semantic model. Run <code>python lab2_metrics.py</code> after each change.</p>
+  </div>
+  <div class="code"><div class="hd"><span>semantic_model.json: the ratio to add to "metrics", and the measure with its new key</span><button class="copy">Copy</button></div><pre>"average_order_value": {"type": "ratio", "numerator": "gross_sales", "denominator": "orders",
+                        "label": "Gross sales per completed order",
+                        "owner": "head of sales operations", "glossary_term": "GT-0307"},
+
+"units_on_hand": {"agg": "sum", "expr": "units_on_hand",
+                  "non_additive_dimension": {"name": "date_day", "window_agg": "max"}}</pre></div>
+  <div class="prose">
+    <p>If a name is mistyped, the layer stops before it runs any query and says which metric or measure it could not find.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab2_metrics.py when all three are defined (abridged)</span></div><pre>1. Ratio: average order value, fiscal Q1 of FY26-27
+ month gross_sales orders average_order_value
+ 2026-04 326,600.00 102 3,201.96
+ 2026-05 317,850.00 87 3,653.45
+ 2026-06 427,850.00 114 3,753.07
+ ok average order value for the quarter: 3,538.94
+ The average of the three monthly values is 3,536.16.
+
+2. Cumulative: net revenue, fiscal year to date (definition version 1)
+ month net_revenue net_revenue_fytd
+ 2026-02 217,762.50 2,995,793.75
+ 2026-03 281,795.00 3,277,588.75
+ 2026-04 302,788.54 302,788.54
+ 2026-05 277,382.50 580,171.04
+ ok fiscal year to date at September 2026: 1,658,336.25
+
+3. Semi-additive: units on hand
+ month inventory_units
+ 2026-04 4,592
+ 2026-05 4,983
+ 2026-06 4,826
+ ok units on hand at the end of June 2026: 4,826.00
+ Adding all 30 daily snapshots in June gives 146,624, which is not a quantity of stock.
+ Across stores the measure does add up: East 933, North 1,505, South 1,498, West 890 = 4,826
+
+4. Non-additive: active customers (already defined)
+ By month: 2026-04 88, 2026-05 73, 2026-06 98. Sum of months: 259. Distinct customers in the quarter: 209.
+
+3 of 3 new metrics return the expected value.</pre></div>
+  <div class="prose">
+    <p>Define <code>inventory_units</code> before you add <code>non_additive_dimension</code> and run the script in between. It prints 146,624 for June and tells you why. The facilitator's MetricFlow project returns 4,592, 4,983 and 4,826 for the same three months from its own <code>non_additive_dimension</code> setting.</p>
+  </div>
+  <h3>Exercise 3: changing regions and promotions</h3>
+  <div class="prose">
+    <p>Part A of <code>lab3_scd_bridge.py</code> needs no code. It prints gross sales by region for the first half of FY26-27 twice, once with the region each store was in on the order date and once with the region it is in today, and asks which column a bonus report and a planning report should each use. Part B prints sales by promotion through the bridge table, which sum to 1,207,450.00 against 944,800.00 of orders that had a promotion. Write <code>allocated_sql()</code>, which splits each order's amount equally between its promotions, and check that the three lines now sum to the total.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of part B when allocated_sql() is written (abridged)</span></div><pre> With each order split between its promotions:
+ Bank card offer 126 orders 313,475.00
+ Festive sale 144 orders 319,350.00
+ Loyalty coupon 121 orders 311,975.00
+ Sum of the three lines: 944,800.00. It now equals the total.</pre></div>
+  <h3>Exercise 4: run the interoperability test</h3>
+  <div class="prose">
+    <p>Run <code>python lab4_interop.py</code>. It sends five cases through three consumers. <code>consumers/api.py</code> passes each request to the semantic layer. <code>consumers/bi_report.py</code> holds SQL that a report writer saved in a BI tool, and <code>consumers/notebook.py</code> is an analyst's code that reads rows and computes in Python. Four cases fail.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab4_interop.py before any fix</span></div><pre>A orders, FY25-26 Q4, all stores, finance
+ PASS BI report: 273.00 notebook: 273.00 API: 273.00
+B gross sales, FY26-27 Q2, all stores, finance
+ FAIL BI report: 772,100.00 (-7,800.00) notebook: 779,900.00 API: 779,900.00
+C gross sales, FY26-27 Q1, all stores, asha
+ FAIL BI report: 165,750.00 notebook: 1,072,300.00 (+906,550.00) API: 165,750.00
+D gross sales, FY26-27 Q1, region South, finance
+ FAIL BI report: 372,950.00 notebook: 165,750.00 (-207,200.00) API: 372,950.00
+E average order value, FY26-27 Q1, finance
+ FAIL BI report: 3,562.36 (+23.42) notebook: 3,538.94 API: 3,538.94
+
+1 of 5 cases pass.</pre></div>
+  <div class="prose">
+    <p>For each failing case, open the consumer that differs, find the line that causes the difference and fix it. Each consumer has two faults. For the case with a restricted user, the stores a user may see are in the table <code>user_store_access</code>, and the notebook file carries a hint. Record in <code>interop_notes.md</code> which of the four things from section 3.7 each failure breaks: filter, time boundary, security context or aggregation. Run the test again until five cases pass. Case E is skipped until <code>average_order_value</code> exists, so do exercise 2 first.</p>
+    <p>Then answer the question at the bottom of the notes file: which of your four fixes would not have been needed if the consumer had called the API?</p>
+  </div>
+  <details class="note">
+    <summary style="font-weight:700;cursor:pointer">Causes of the four failures</summary>
+    <p>Case B is a time boundary. The BI report filters the timestamp column with <code>order_ts &lt;= '2026-09-30'</code>, and every timestamp on 30 September is later than that text value, so three orders worth 7,800.00 are dropped. Case C is the security context. The notebook reads every store and never applies the user's store access, so asha, who is entitled to one store, sees six. </p>
+    <p>Case D is a filter. The notebook filters on the store's current region, and store S03 was in the South region in Q1. Case E is an aggregation. The BI report averages the six store averages, which gives a store with few orders the same weight as a store with many.</p>
+    <p>None of the four fixes would have been needed if the consumer had called the API.</p>
+  </details>
+  <h3>Exercise 5: publish version 2 of net revenue</h3>
+  <div class="prose">
+    <p>Finance has decided that net revenue deducts discounts from 1 July 2026. In <code>semantic_model.json</code>, add a second entry to the <code>versions</code> list of the <code>net_revenue</code> metric and leave version 1 as it is. Run <code>python lab5_versioning.py</code>. It compares your model with <code>baseline_model.json</code> and classifies each change, then prints net revenue by quarter three ways.</p>
+  </div>
+  <div class="code"><div class="hd"><span>semantic_model.json: the entry to add after version 1</span><button class="copy">Copy</button></div><pre>{"version": 2, "effective_from": "2026-07-01", "expr": "gross_sales - discounts - refunds",
+ "note": "Discounts are deducted from 1 July 2026, to match the statutory accounts."}</pre></div>
+  <div class="code"><div class="hd"><span>Terminal: expected output of lab5_versioning.py (abridged)</span></div><pre>Changes since baseline_model.json:
+ MANAGED net_revenue version 2 added, effective from 2026-07-01: gross_sales - discounts - refunds.
+ non-breaking average_order_value was added. No existing consumer depends on it.
+
+Net revenue by fiscal quarter
+ quarter version 1 throughout effective-dated version 2 restated
+ FY25-26 Q3 846,215.42 846,215.42 805,312.92
+ FY25-26 Q4 770,075.83 770,075.83 721,943.33
+ FY26-27 Q1 977,245.63 977,245.63 914,763.13
+ FY26-27 Q2 681,090.62 643,813.12 643,813.12
+
+Change from FY26-27 Q1 to FY26-27 Q2:
+ effective-dated series -34.1% (mixes the business change with the definition change)
+ version 1 throughout -30.3%
+ version 2 restated -29.6%</pre></div>
+  <div class="prose">
+    <p>After the session, edit the expression of version 1 in place, run the script and read how the change is classified, then put version 1 back. Also after the session, fill in <code>restatement_note.md</code>: what changed, from when, why, how far back history is restated, the size of the effect for the latest quarter, who was told and how long version 1 stays available. A sample is in the <code>solutions</code> folder.</p>
+  </div>
+  <h3>Exercise 6: write ADR 2</h3>
+  <div class="prose">
+    <p>Decide how the assistant in Module 6 should compute metrics: by asking the semantic layer, by writing SQL against the warehouse, or by a named mix of the two. Record the decision in <code>adr/0002-metric-layer-or-direct-sql.md</code>, which is a template with the five fields from Module 1. Use results from exercises 1, 4 and 5 as facts in the context, and mark anything you have not measured as an assumption. Run <code>python check_adr.py</code> to check the form. Another pair reviews the reasoning at the start of Module 4.</p>
+    <p>Routing every question through the layer means a question about something that is not modelled gets a refusal until someone defines the metric. Letting the assistant write SQL means that the join, the time boundary, the security rule and the current version all have to be right in every generated query. Your consequences field should name the cost of the option you chose.</p>
+  </div>
+  <div class="note lab">
+    <h5><span class="ic">L</span>What to hand in</h5>
+    <p>Each pair submits <code>lab1_fanout.py</code>, <code>semantic_model.json</code>, the two files in <code>consumers</code> that they fixed and <code>interop_notes.md</code>. The restatement note, exercise 3 and ADR 2 are handed in before Module 4. All data in the lab is fictional.</p>
+  </div>
+  <div class="note">
+    <h5><span class="ic">i</span>For the facilitator: the MetricFlow demonstration</h5>
+    <p>The folder <code>module-03-demo-metricflow</code> holds the dbt project used in section 3.4. Its <code>requirements.txt</code> pins dbt Core 1.12.7, dbt-duckdb 1.11.1, dbt-metricflow 0.15.0, MetricFlow 0.213.0 and DuckDB 2.0.0, which are the versions it was written and run with on Python 3.13. It can be run from a Python virtual environment or with the Dockerfile in the folder. The project was run in a virtual environment for this page. The Dockerfile was written at the same time and has not been run under Docker, so build it once before the session. The folder's README lists the queries to show and what to point out in each.</p>
+  </div>
+</section>
+
+<section class="sec" id="recap" aria-labelledby="recap-h">
+  <div class="sec-head"><span class="sec-num">3.10</span><h2 id="recap-h">Recap and checkpoint quiz</h2></div>
+  <p class="lede">The table summarises the module. The quiz has nine scenario questions and, together with the review of the hands-on exercises, is the formative check for Module 3.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Idea</th><th>Summary</th></tr></thead>
+    <tbody>
+      <tr><td>Semantic models</td><td>A semantic model declares a table's grain, entities, dimensions and measures. Metrics are defined on measures, and join paths follow from the entity roles.</td></tr>
+      <tr><td>Additivity</td><td>Additive measures sum across every dimension. Semi-additive measures do not sum across time. Non-additive measures, such as distinct counts and ratios, are recomputed at each grain.</td></tr>
+      <tr><td>Double counting</td><td>A fan-out join repeats rows of the coarser table. A many-to-many relationship needs an allocation rule before its lines can be added. A changing dimension needs a statement of which point in time is meant.</td></tr>
+      <tr><td>Tools</td><td>MetricFlow aggregates each fact table before combining them. Cube and LookML correct row multiplication using primary keys. Tools differ most in whether they are independent of the warehouse and the BI product, and in who enforces access.</td></tr>
+      <tr><td>What the layer governs</td><td>Interpretation and computation. Source-data correctness needs validation tests that run after each load and are linked to the metrics that depend on the table.</td></tr>
+      <tr><td>Metric lifecycle</td><td>A breaking change gets a new version, an effective date, a restatement decision and the approval of the term's owner. The old version stays available for a stated period.</td></tr>
+      <tr><td>Interoperability tests</td><td>The same case is sent through each consumer with the filter, time boundary, security context and aggregation held constant, and the results must match exactly.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Checkpoint quiz</h3>
+  <div class="prose"><p>Select an answer to see whether it is correct and why.</p></div>
+  <div class="quiz" id="quiz"></div>
+  <p class="pill" id="quiz-score" style="margin-top:16px">Score: 0 of 0 answered</p>
+  <div class="note lab" style="margin-top:2.2rem">
+    <h5><span class="ic">4</span>Module 4: ontology engineering and knowledge graphs</h5>
+    <p>Module 4 covers the questions a metrics layer cannot answer, which are questions about how things are connected. The course design has you write competency questions for supply-chain risk, design an ontology, load a knowledge graph through the golden keys from Module 2 with validation on every load, and compare a physical graph with a virtual one. ADR 2 from this module is reviewed at the start.</p>
+  </div>
+</section>
+
+<section class="sec" id="refs" aria-labelledby="refs-h">
+  <div class="sec-head"><span class="sec-num">Ref</span><h2 id="refs-h">References</h2></div>
+  <p class="lede">Sources for the claims in this module, checked in November 2026.</p>
+  <ol class="refs">
+    <li>dbt Labs. "Semantic models" and "Migrate to the latest YAML spec". dbt documentation, accessed November 2026. <a href="https://docs.getdbt.com/docs/build/semantic-models">docs.getdbt.com/docs/build/semantic-models</a> and <a href="https://docs.getdbt.com/docs/build/latest-metrics-spec">docs.getdbt.com/docs/build/latest-metrics-spec</a>. The source for the latest specification, the versions that support it and the migration command.</li>
+    <li>dbt Labs. "Creating metrics". dbt documentation, accessed November 2026. <a href="https://docs.getdbt.com/docs/build/metrics-overview">docs.getdbt.com/docs/build/metrics-overview</a>. Metric types and their parameters, including <code>non_additive_dimension</code>, <code>grain_to_date</code> and <code>period_agg</code>.</li>
+    <li>dbt Labs. "Joins". dbt documentation, accessed November 2026. <a href="https://docs.getdbt.com/docs/build/join-logic">docs.getdbt.com/docs/build/join-logic</a>. The table of entity-type combinations that MetricFlow allows and refuses, and the two-hop limit on multi-hop joins.</li>
+    <li>Demonstration project for this module, run in November 2026 with dbt Core 1.12.7, dbt-duckdb 1.11.1, dbt-metricflow 0.15.0 and MetricFlow 0.213.0 on Python 3.13. The source for the query output, the compiled SQL and the four observations in section 3.4.</li>
+    <li>Cube. "Joins" reference and "Data modeling concepts". Cube documentation, accessed November 2026. <a href="https://docs.cube.dev/reference/data-modeling/joins">docs.cube.dev/reference/data-modeling/joins</a>. All joins are generated as left joins, and a primary key is required when a join is defined.</li>
+    <li>Google Cloud. "Understanding symmetric aggregates". Looker documentation, accessed November 2026. <a href="https://docs.cloud.google.com/looker/docs/best-practices/understanding-symmetric-aggregates">docs.cloud.google.com/looker/docs/best-practices/understanding-symmetric-aggregates</a>.</li>
+    <li>Microsoft. "Datasets renamed to semantic models". Microsoft Learn, accessed November 2026. <a href="https://learn.microsoft.com/en-us/power-bi/connect-data/service-datasets-rename">learn.microsoft.com/en-us/power-bi/connect-data/service-datasets-rename</a>.</li>
+    <li>AtScale. "Metrics", Semantic Modeling Language reference. AtScale documentation, accessed November 2026. <a href="https://documentation.atscale.com/container/creating-and-sharing-cubes/sml-reference/metrics">documentation.atscale.com/container/creating-and-sharing-cubes/sml-reference/metrics</a>. The <code>semi_additive</code> property.</li>
+    <li>Snowflake. "Preventing a semantic view metric from being aggregated across specific dimensions". Release note, 5 March 2026. <a href="https://docs.snowflake.com/release-notes/2026/other/2026-03-05-semantic-views-semi-additive-metrics">docs.snowflake.com/release-notes/2026/other/2026-03-05-semantic-views-semi-additive-metrics</a>. The note introduces the NON ADDITIVE BY clause.</li>
+    <li>Databricks. "Unity Catalog metric views" and its page on joins. Databricks documentation, accessed November 2026. <a href="https://docs.databricks.com/aws/en/metric-views/">docs.databricks.com/aws/en/metric-views</a>.</li>
+    <li>Kimball, R. and Ross, M. The Data Warehouse Toolkit, third edition. Wiley, 2013. Additive, semi-additive and non-additive facts, bridge tables and slowly changing dimensions.</li>
+    <li>Connors, D. "What the Open Semantic Interchange (OSI) spec means for metrics, semantics, and AI". dbt Labs blog, updated 29 January 2026. <a href="https://www.getdbt.com/blog/the-osi-spec-updates">getdbt.com/blog/the-osi-spec-updates</a>.</li>
+    <li>Apache Incubator. "Ossie proposal". Apache Software Foundation wiki, 2026. <a href="https://cwiki.apache.org/confluence/spaces/INCUBATOR/pages/430408796/OssieProposal">cwiki.apache.org/confluence/spaces/INCUBATOR/pages/430408796/OssieProposal</a>. The history of the initiative from September 2025, including the release of version 0.1 in January 2026.</li>
+    <li>Winks, E. "What Is Open Semantic Interchange (OSI)?". Atlan, 5 November 2026. <a href="https://atlan.com/know/ai-agent/semantic-layer/what-is-open-semantic-interchange/">atlan.com/know/ai-agent/semantic-layer/what-is-open-semantic-interchange</a>. A secondary source, used for the rename to Apache Ossie in 2026 and for the released version of the specification.</li>
+    <li>dbt Labs. "Entities" and "Dimensions". dbt documentation, accessed November 2026. <a href="https://docs.getdbt.com/docs/build/entities">docs.getdbt.com/docs/build/entities</a> and <a href="https://docs.getdbt.com/docs/build/dimensions">docs.getdbt.com/docs/build/dimensions</a>. The four entity types, and <code>validity_params</code> for slowly changing dimensions.</li>
+  </ol>
+</section>
+
+<section class="sec" id="glossary" aria-labelledby="glossary-h">
+  <div class="sec-head"><span class="sec-num">A-Z</span><h2 id="glossary-h">Glossary</h2></div>
+  <p class="lede">Definitions of the underlined terms used on this page.</p>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<footer>
+  <p>Enterprise Semantic Intelligence, Module 3. Prepared by Shayantan Dey for StackRoute and RPS Consulting, NIIT's enterprise capability arm. November 2026.</p>
+  <p>Tool versions, product names and vendor features change. Where this page differs from a vendor's current documentation, that documentation takes precedence.</p>
+</footer>
+</div>
+</div>
+</div>
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function press(group,btn){$$("[aria-pressed]",group).forEach(b=>b.setAttribute("aria-pressed",b===btn?"true":"false"));}
+function chips(box,labels,onPick,first){labels.forEach((t,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=t;b.setAttribute("aria-pressed",i===first?"true":"false");b.addEventListener("click",()=>{press(box,b);onPick(i);});box.appendChild(b);});}
+
+
+/* ---------- drill engine: a list of items, each with options, a key and an explanation ---------- */
+function drill(id,opts,items){
+  const root=document.getElementById(id);if(!root)return;let right=0,done=0;
+  if(!opts)root.classList.add("own");
+  const score=document.createElement("p");score.className="score";
+  const upd=()=>{score.textContent=right+" correct of "+done+" answered, "+items.length+" in total";};
+  items.forEach((it,n)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(n+1)+". "+it[0]+"</p><div class='opts'></div><div class='why'></div>";
+    const box=d.querySelector(".opts");(it[3]||opts).forEach((o,oi)=>{const b=document.createElement("button");b.type="button";b.textContent=o;
+      b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");done++;
+        if(oi===it[1]){right++;b.classList.add("right");}else{b.classList.add("wrong");box.children[it[1]].classList.add("right");}
+        d.querySelector(".why").innerHTML="<b>"+(oi===it[1]?"Correct. ":"The keyed answer is \""+esc((it[3]||opts)[it[1]])+"\". ")+"</b>"+esc(it[2]);upd();});
+      box.appendChild(b);});
+    root.appendChild(d);});
+  root.appendChild(score);upd();
+}
+
+/* ---------- theme ---------- */
+const saved=store("esi-theme");
+if(saved==="dark"||saved==="light")document.documentElement.setAttribute("data-theme",saved);
+else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.setAttribute("data-theme","dark");
+$("#themeBtn").addEventListener("click",()=>{const next=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);store("esi-theme",next);});
+
+/* ---------- menu ---------- */
+const side=$("#side"),menuBtn=$("#menuBtn");
+menuBtn.addEventListener("click",()=>{const o=side.classList.toggle("open");menuBtn.setAttribute("aria-expanded",String(o));});
+$$("#toc a").forEach(a=>a.addEventListener("click",()=>{side.classList.remove("open");menuBtn.setAttribute("aria-expanded","false");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){side.classList.remove("open");hideTip();}});
+
+/* ---------- scrollspy and progress ---------- */
+const links=$$("#toc a");
+const targets=links.map(a=>document.getElementById(a.getAttribute("href").slice(1)));
+function onScroll(){
+  const h=document.documentElement,max=h.scrollHeight-h.clientHeight;
+  $("#bar").style.width=(max>0?h.scrollTop/max*100:0)+"%";
+  let cur=0;targets.forEach((t,i)=>{if(t&&t.getBoundingClientRect().top<=110)cur=i;});
+  links.forEach((a,i)=>{a.classList.toggle("active",i===cur);a.classList.toggle("done",i<cur&&!a.parentElement.classList.contains("sub"));});
+  const a=links[cur],sp=a.querySelectorAll("span");
+  $("#where").textContent=(sp[0].textContent?sp[0].textContent+" ":"")+sp[1].textContent;
+}
+window.addEventListener("scroll",onScroll,{passive:true});onScroll();
+
+/* ---------- glossary ---------- */
+const G={
+ "semlayer":["Metrics semantic layer","The component that holds one definition of each metric, with its grain, join paths and time logic, and compiles each request into a query. It has technical authority for interpretation and computation."],
+ "grain":["Grain","What one row of a table represents, such as one order or one return. A measure is correct only at the grain of the table that holds it."],
+ "semi":["Semi-additive measure","A measure that can be summed across some dimensions and not others, usually every dimension except time. Balances and stock levels are the common cases."],
+ "nonadd":["Non-additive measure","A measure that cannot be summed across any dimension, such as a distinct count or a ratio. It is recomputed from detail rows at each requested grain."],
+ "fanout":["Fan-out","The repetition of a table's rows when it is joined to a table with several matching rows for each of its own. Sums over the first table's columns are then inflated."],
+ "bridge":["Bridge table","A table with one row per pair in a many-to-many relationship, such as one row per order and promotion."],
+ "scd":["Slowly changing dimension","A dimension whose attribute values change over time. A type 2 dimension keeps one row per validity period, so that a fact can be joined to the value that applied on its date."],
+ "metricflow":["MetricFlow","The open-source engine behind the dbt Semantic Layer. It reads semantic models and metrics from a dbt project and compiles metric requests into SQL."],
+ "cube":["Cube","A semantic layer that runs as a service. Its data model consists of cubes and views, and it serves requests over REST, GraphQL and SQL interfaces."],
+ "cert":["Certification","The recorded statement that a metric's meaning has been approved by its business owner and its implementation by the team that runs the layer."],
+ "breaking":["Breaking change","A change after which a consumer that does nothing gets a different number, or an error, for a request it has made before."],
+ "effdate":["Effective date","The date from which a version of a definition applies."],
+ "restate":["Restatement","Recomputing figures for past periods under a new definition, so that a series uses one definition throughout."],
+ "interoptest":["Interoperability test","A test that sends the same case through each consumer of a metric, with filter, time boundary, security context and aggregation held constant, and requires the same result."]
+};
+const tip=document.createElement("div");tip.className="tip";tip.id="kw-tip";tip.setAttribute("role","tooltip");document.body.appendChild(tip);
+let tipFor=null;
+function showTip(el){const d=G[el.dataset.k];if(!d)return;tip.innerHTML="<b>"+esc(d[0])+"</b>"+esc(d[1]);tip.classList.add("show");tipFor=el;el.setAttribute("aria-describedby","kw-tip");
+  const r=el.getBoundingClientRect(),tw=Math.min(340,window.innerWidth-24);tip.style.maxWidth=tw+"px";
+  let left=r.left+window.scrollX+r.width/2-tw/2;left=Math.max(12+window.scrollX,Math.min(left,window.scrollX+window.innerWidth-tw-12));tip.style.left=left+"px";
+  let top=r.bottom+window.scrollY+8;if(r.bottom+tip.offsetHeight+16>window.innerHeight)top=r.top+window.scrollY-tip.offsetHeight-8;tip.style.top=top+"px";}
+function hideTip(){tip.classList.remove("show");if(tipFor)tipFor.removeAttribute("aria-describedby");tipFor=null;}
+$$(".kw").forEach(el=>{el.type="button";el.addEventListener("mouseenter",()=>showTip(el));el.addEventListener("mouseleave",hideTip);el.addEventListener("focus",()=>showTip(el));el.addEventListener("blur",hideTip);el.addEventListener("click",e=>{e.preventDefault();if(tipFor===el)hideTip();else showTip(el);});});
+Object.keys(G).sort((a,b)=>G[a][0].localeCompare(G[b][0])).forEach(k=>{const d=document.createElement("div");d.innerHTML="<b>"+esc(G[k][0])+"</b><p>"+esc(G[k][1])+"</p>";$("#gloss").appendChild(d);});
+
+/* ---------- copy ---------- */
+document.addEventListener("click",e=>{const b=e.target.closest(".copy");if(!b)return;const txt=b.closest(".code").querySelector("pre").textContent;
+  const done=()=>{const o=b.textContent;b.textContent="Copied";setTimeout(()=>{b.textContent=o;},1400);};
+  try{navigator.clipboard.writeText(txt).then(done,done);}catch(err){done();}});
+
+
+/* ---------- drill: parts of a semantic model ---------- */
+drill("dr-parts",["Grain","Entity","Dimension","Measure","Metric"],[
+ ["\"One row per return\" in the description of the returns table.",0,"That sentence states what a row represents, which is the grain. Every measure in the table is correct only at that grain."],
+ ["<code>store_id</code> in the orders table, which points to one row of the stores table.",1,"A key column is an entity. Here it is a foreign entity, and the engine uses it to join orders to stores without repeating rows."],
+ ["<code>segment</code>, with the values Retail, Business and Loyalty.",2,"A column to group or filter by is a dimension. This one is categorical."],
+ ["The sum of <code>refund_amount</code>.",3,"A column with an aggregation is a measure. In the latest dbt specification it is written as a metric of type simple."],
+ ["Refunds divided by gross sales, published as <code>return_rate</code> with an owner.",4,"A named, owned quantity built from measures is a metric. This one is a ratio, so the two parts are aggregated before the division."],
+ ["<code>date_day</code> on the returns table, holding the date of the return.",2,"It is a time dimension. It decides which period each refund belongs to."],
+ ["<code>order_id</code> in the orders table.",1,"It identifies the row, so it is the primary entity of the orders model. The same column in the returns table is a foreign entity."]
+]);
+
+/* ---------- sim: additivity ---------- */
+(function(){
+  const fmt=(n,d)=>n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const M=[
+   {name:"Gross sales",kind:"additive",d:2,months:[326600,317850,427850],right:1072300,ok:"sum",why:"Gross sales are additive, so the quarter is the sum of the months. This holds only while each order is counted once."},
+   {name:"Average order value",kind:"non-additive",d:2,months:[3201.96,3653.45,3753.07],right:3538.94,ok:"recompute",why:"A ratio is recomputed from its parts: 1,072,300.00 of gross sales divided by 303 orders. Averaging the three monthly values gives 3,536.16, because it weights May's 87 orders the same as June's 114."},
+   {name:"Active customers",kind:"non-additive",d:0,months:[88,73,98],right:209,ok:"recompute",why:"A distinct count is recomputed over the quarter's rows. A customer who ordered in April and in June is one customer, and adding the months counts them twice."},
+   {name:"Units on hand",kind:"semi-additive",d:0,months:[4592,4983,4826],right:4826,ok:"last",why:"Stock adds up across stores and does not add up across time. The figure for the quarter is the figure at the end of its last month."}
+  ];
+  const R=[["sum","Add the three months"],["avg","Average the three months"],["last","Take the last month"],["recompute","Recompute from the detail rows"]];
+  let m=-1,r=-1;
+  function draw(){
+    if(m<0){return;}
+    const x=M[m];
+    $("#add-months").innerHTML="<div class='rows'>"+["April","May","June"].map((n,i)=>"<div>"+n+": <b>"+fmt(x.months[i],x.d)+"</b></div>").join("")+"</div><p style='margin-top:8px'>"+esc(x.name)+" is "+x.kind+".</p>";
+    if(r<0){$("#add-val").textContent="";$("#add-right").innerHTML="";$("#add-note").textContent="Now choose a roll-up.";return;}
+    const key=R[r][0];
+    let v;
+    if(key==="sum")v=x.months.reduce((a,b)=>a+b,0);
+    else if(key==="avg")v=x.months.reduce((a,b)=>a+b,0)/3;
+    else if(key==="last")v=x.months[2];
+    else v=x.right;
+    const good=Math.abs(v-x.right)<0.005;
+    $("#add-val").textContent=fmt(v,x.d===0&&key==="avg"?2:x.d);
+    $("#add-right").innerHTML='<p class="verdict '+(good?"ok":"no")+'">'+(good?"Correct for the quarter":"Not the figure for the quarter, which is "+fmt(x.right,x.d))+"</p>";
+    $("#add-note").textContent=(good&&key!==x.ok&&key!=="recompute"?"This roll-up happens to give the right figure here. The rule that always works: ":"")+x.why;
+  }
+  chips($("#add-m"),M.map(x=>x.name),i=>{m=i;draw();},-1);
+  chips($("#add-r"),R.map(x=>x[1]),i=>{r=i;draw();},-1);
+})();
+
+/* ---------- sim: fan-out ---------- */
+(function(){
+  const fmt=n=>n.toLocaleString("en-US");
+  chips($("#fan-n"),["No returns","1 return","2 returns","3 returns","4 returns"],n=>{
+    const rows=Math.max(n,1),refund=150*n;
+    $("#fan-wrong").innerHTML="<div class='rows'><div>Rows after the join: <b>"+rows+"</b></div><div>Sum of gross amount: <b>"+fmt(1200*rows)+"</b></div><div>Sum of refunds: <b>"+fmt(refund)+"</b></div><div>Net revenue: <b>"+fmt(1200*rows-refund)+"</b></div></div>";
+    $("#fan-right").innerHTML="<div class='rows'><div>Rows after the join: <b>1</b></div><div>Sum of gross amount: <b>1,200</b></div><div>Sum of refunds: <b>"+fmt(refund)+"</b></div><div>Net revenue: <b>"+fmt(1200-refund)+"</b></div></div>";
+    $("#fan-note").textContent=n<2?"With "+(n===0?"no returns":"one return")+" the order is on one row either way, so both queries agree. A test on an order like this one would pass, which is why the fault survives review.":"The order is on "+rows+" rows, so its amount is counted "+rows+" times and net revenue is overstated by "+fmt(1200*(rows-1))+". The refund total is identical in both queries.";
+  },-1);
+})();
+
+/* ---------- sim: time boundary ---------- */
+(function(){
+  const F=[
+   ["order_ts <= '2026-09-30'","no","772,100.00","A timestamp such as 2026-09-30 14:25:00 is later than the text '2026-09-30', which the database reads as the start of that day. Three orders worth 7,800.00 on the last day are dropped. This is the filter in the BI report of exercise 4."],
+   ["order_ts < '2026-10-01'","ok","779,900.00","An exclusive end at the start of the next day includes every moment of 30 September, whatever the precision of the column. The lab's semantic layer uses this convention."],
+   ["order_date <= '2026-09-30'","ok","779,900.00","The column holds a date with no time, so an inclusive end works. The result depends on the column type, and the same text on a timestamp column drops the day."],
+   ["order_ts BETWEEN '2026-07-01' AND '2026-09-30'","no","772,100.00","BETWEEN is inclusive at both ends, and on a timestamp column its upper end is still the start of 30 September. The last day is dropped, as in the first filter."]
+  ];
+  chips($("#bound-f"),F.map(f=>f[0]),i=>{const f=F[i];
+    $("#bound-out").innerHTML='<p class="verdict '+f[1]+'">'+(f[1]==="ok"?"30 September is counted":"30 September is dropped")+"</p><p>Gross sales for the quarter: <b>"+f[2]+"</b></p><p>"+esc(f[3])+"</p>";},-1);
+})();
+
+/* ---------- drill: which control ---------- */
+drill("dr-catch",["Semantic layer","Source validation test","The owner's decision"],[
+ ["An analyst joins orders to returns and reports gross sales that are 98,650.00 too high.",0,"This is a computation fault. A layer that aggregates each fact table before combining them cannot produce it, provided the analyst asks the layer."],
+ ["The return file for five days is loaded twice.",1,"The layer sums whatever rows are present. A uniqueness test on return_id after each load reports the duplicates."],
+ ["Marketing wants net revenue to exclude orders paid for with loyalty points.",2,"That is a change to what the term means. The finance controller owns GT-0120 and decides. The layer implements the decision once it is made."],
+ ["Two dashboards show different average order values because one averages store averages.",0,"A ratio defined once in the layer is computed from the summed numerator and denominator for every consumer."],
+ ["A return refers to an order number that does not exist in the orders table.",1,"A relationships test on the foreign key catches it. The layer's join would silently leave the return out of any result grouped by an order attribute."],
+ ["Quarterly active customers are produced by adding three monthly figures.",0,"A distinct count declared in the layer is recomputed at the quarter's grain. Adding months counts a returning customer more than once."],
+ ["The stock snapshot for yesterday has not arrived, and the dashboard shows the day before as the closing balance.",1,"A freshness test knows when the table should have been loaded. The layer correctly takes the last day present, which is the wrong day."]
+]);
+
+/* ---------- drill: breaking or not ---------- */
+drill("dr-break",["Breaking","Not breaking"],[
+ ["Net revenue starts to deduct discounts.",0,"The same request returns a lower number. It needs a new version, an effective date and a notice."],
+ ["A new dimension, sales channel, is added to the orders model.",1,"No existing request changes. Consumers can start to group by it when they choose."],
+ ["<code>gross_sales</code> is renamed <code>gross_revenue</code>.",0,"Every saved request for the old name fails. Publish the new name, deprecate the old one and remove it after consumers have moved."],
+ ["The label of <code>return_rate</code> changes from \"Return rate\" to \"Refunds as a share of gross sales\".",1,"The value and the name used in requests are unchanged. Only the display text differs."],
+ ["Refunds are moved from the return date to the date of the original order.",0,"Totals over all time stay the same, and every monthly and quarterly figure changes. A change to the time dimension is breaking."],
+ ["A pre-aggregated table is added so that monthly gross sales return faster.",1,"The result is the same. If it were not, the pre-aggregation would be a fault and not a change."],
+ ["The orders model starts to exclude orders with the status TEST.",0,"A filter inside the definition changes which rows count. Even a small effect on the number makes the change breaking."]
+]);
+
+/* ---------- sim: versions ---------- */
+(function(){
+  const V=[
+   ["Reproduce the Q1 figure in last quarter's board pack","Effective-dated, or version 1","977,245.63","The board pack was published under version 1. A request for net revenue with the definition in force at the time returns the same figure, so the old report can be explained line by line."],
+   ["Chart the trend over the last four quarters","Version 2 restated","805,312.92, 721,943.33, 914,763.13, 643,813.12","A trend compares like with like only if one definition covers the whole period. The restated series shows a fall of 29.6 percent from Q1 to Q2. The effective-dated series shows 34.1 percent, of which the change of definition accounts for the difference."],
+   ["State net revenue for Q2 in the investor presentation","Version 2","643,813.12","Version 2 is in force for Q2, so the effective-dated and restated series give the same figure. Any comparison with Q1 printed beside it should use the restated Q1 of 914,763.13 and say so."],
+   ["Check a regional manager's bonus that was calculated in May","Version 1","770,075.83 for FY25-26 Q4","The bonus was calculated under the definition in force when it was earned. Restating it would change a payment that has already been agreed. Version 1 has to stay available for as long as such questions can be asked."]
+  ];
+  chips($("#ver-q"),V.map(v=>v[0]),i=>{const v=V[i];
+    $("#ver-out").innerHTML="<p class='lbl'>Series to use</p><p><b>"+esc(v[1])+"</b></p><p>Figure: "+esc(v[2])+"</p><p>"+esc(v[3])+"</p>";},-1);
+})();
+
+/* ---------- drill: interoperability ---------- */
+drill("dr-interop",["Filter","Time boundary","Security context","Aggregation"],[
+ ["The dashboard excludes cancelled orders. The export counts every order.",0,"The two consumers have different rows in scope. A status filter that belongs in the metric's definition has been applied in one place only."],
+ ["The notebook groups by calendar quarter. The finance report groups by fiscal quarter.",1,"Both say \"Q2\" and mean different three-month periods. The calendar is part of the time boundary."],
+ ["The API is called with a service account that can see every region. The dashboard runs as the user.",2,"The same request returns more rows for the service account. The programme's authorization matrix requires the metric query to run under the user's own role."],
+ ["A BI tool sums a stored column called margin_pct over all products.",3,"A percentage is non-additive. It has to be recomputed from margin and revenue at the requested grain."],
+ ["The warehouse stores timestamps in UTC. One tool converts them to Indian Standard Time before it cuts the day.",1,"Orders placed between 18:30 and midnight UTC fall on different days in the two tools. The time zone is part of the time boundary."],
+ ["One report counts distinct customers per month and adds the months to get the year.",3,"A distinct count has to be recomputed over the year's rows. Adding months counts a returning customer once for each month."]
+]);
+
+/* ---------- quiz ---------- */
+(function(){
+  const Q=[
+   ["A query joins invoices, with one row per invoice, to shipments, with one row per shipment, and sums the invoice amount. Some invoices ship in three parts. What happens to the total, and what is the fix?",["It is too low; use an inner join","It is too high; aggregate shipments to one row per invoice before joining","It is unchanged; sums ignore duplicate rows","It is too high; add DISTINCT to the SELECT list"],1,"An invoice with three shipments is on three rows, so its amount is added three times. Bringing shipments to the grain of invoices first means one row joins to one row. DISTINCT on the select list would also remove two different invoices that happen to have the same amount."],
+   ["A bank's dashboard shows \"total deposits for the year\" as the sum of twelve month-end balances. What kind of measure is a balance, and what should the yearly figure be?",["Additive; the sum is right","Semi-additive; the balance at the end of the last month","Non-additive; it cannot be reported for a year","Additive across time and non-additive across accounts"],1,"A balance adds up across accounts and does not add up across time. The figure for a period is the value at one point in it, usually the end."],
+   ["Average order value is stored as a column on a monthly summary table. A request asks for it by quarter. What should the semantic layer do?",["Average the three monthly values","Sum the three monthly values","Divide the quarter's gross sales by the quarter's orders","Return the latest month's value"],2,"A ratio is recomputed from its numerator and denominator at the requested grain. An average of monthly ratios gives a month with few orders the same weight as a month with many."],
+   ["In MetricFlow, an orders model has store_id as a foreign entity and a stores model has it as a primary entity. A returns model has order_id as a foreign entity. Which join will MetricFlow refuse?",["Orders to stores, to fetch the region","Returns to orders, to fetch the order's segment","Orders to returns, row to row, to fetch each refund","None; it joins whatever is requested"],2,"A join from a primary entity to a foreign entity can match many rows and would repeat each order. MetricFlow's documentation lists that combination as a fan-out that is not allowed. It combines the two models after aggregating each."],
+   ["Every dashboard, notebook and API in a company now takes net revenue from the semantic layer, and all agree. A week later finance finds the figure is 12,000 too low because a refund file was loaded twice. What does this show?",["The semantic layer has a bug","The metric was not certified","Agreement between consumers says the definition is shared and says nothing about the source data","The interoperability test was skipped"],2,"The layer computed its definition faithfully on wrong input. Source-data correctness needs validation tests after each load, linked to the metrics that depend on the table."],
+   ["Finance changes net revenue to deduct discounts from 1 July. A chart of the last eight quarters is drawn from the effective-dated series. What will a reader conclude, and why is it misleading?",["Nothing unusual; the series is continuous","That revenue fell sharply in the first quarter under the new definition, partly because the definition changed","That revenue rose, because discounts were added","That the earlier quarters were wrong"],1,"The effective-dated series switches definition part way through, so the step at the switch mixes a real change with a change of definition. A trend needs the restated series, with a note saying that history was restated."],
+   ["A team wants to change a certified metric so that it excludes test orders. They estimate the effect at 0.1 percent and propose editing the definition in place. What is wrong with that?",["Nothing; small changes do not need a version","A filter inside the definition changes the numbers consumers get, so it is breaking and needs a version, an effective date and the owner's approval","Test orders should be removed by the BI tool","Only the layer team needs to approve it"],1,"Size does not decide whether a change is breaking. A consumer who does nothing gets a different number, and a figure published last month can no longer be reproduced unless the old version is kept."],
+   ["An interoperability test for gross sales passes for a finance user and fails for a regional manager, where the notebook returns six times the API's figure. Which of the four things was not held constant?",["Filter","Time boundary","Security context","Aggregation"],2,"The notebook does not apply the manager's entitlements, so she sees every region. The case passes for a user who is entitled to everything, which is why a test suite needs a case with a restricted user."],
+   ["A company uses Power BI for finance and a second BI tool for operations, and wants one definition of each metric for both and for an AI assistant. Which property of a semantic layer matters most for that goal?",["That it is written in YAML","That it is independent of any one BI product and of any one consumer","That it has the most metric types","That it stores pre-aggregations"],1,"A definition held inside one BI product serves that product. A layer that sits outside the BI tools, or inside the data platform they all query, can serve each of them and the assistant from one definition."]
+  ];
+  const root=$("#quiz");let answered=0,right=0;
+  function score(){$("#quiz-score").textContent="Score: "+right+" of "+answered+" answered"+(answered===Q.length?(right>=7?". You are ready for Module 4.":". Revisit the sections you missed before Module 4."):"");}
+  Q.forEach((q,qi)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(qi+1)+". "+esc(q[0])+"</p><div class='opts'></div><div class='why'></div>";
+    const opts=d.querySelector(".opts");
+    const order=q[1].map((_,k)=>k);for(let k=order.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[order[k],order[j]]=[order[j],order[k]];}
+    order.forEach(oi=>{const o=q[1][oi];const b=document.createElement("button");b.type="button";b.textContent=o;if(oi===q[2])b.dataset.key="1";b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");answered++;
+      if(oi===q[2]){right++;b.classList.add("right");}else{b.classList.add("wrong");opts.querySelector("[data-key]").classList.add("right");}
+      d.querySelector(".why").innerHTML="<b>"+(oi===q[2]?"Correct. ":"Not quite. ")+"</b>"+esc(q[3]);score();});opts.appendChild(b);});
+    root.appendChild(d);});
+  score();
+})();
+
+})();
+</script>
+</body>
+</html>

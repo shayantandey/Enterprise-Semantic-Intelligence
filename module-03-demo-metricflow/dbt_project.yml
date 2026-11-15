@@ -1,0 +1,14 @@
+name: esi_metrics_demo
+version: "1.0"
+profile: esi_metrics_demo
+model-paths: ["models"]
+seed-paths: ["seeds"]
+seeds:
+  esi_metrics_demo:
+    dim_store_history:
+      +column_types:
+        valid_from: varchar
+        valid_to: varchar
+models:
+  esi_metrics_demo:
+    +materialized: table

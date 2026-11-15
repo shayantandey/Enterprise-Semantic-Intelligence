@@ -1,0 +1,54 @@
+{
+ "semantic_models": {
+  "orders": {
+   "description": "One row per completed order.",
+   "relation": "sem_orders",
+   "primary_entity": "order_id",
+   "entities": ["order_id", "customer_id", "store_id"],
+   "time_dimension": "date_day",
+   "dimensions": ["region", "region_current", "segment", "store_id"],
+   "measures": {
+    "order_count": {"agg": "count", "expr": "order_id"},
+    "gross_amount": {"agg": "sum", "expr": "gross_amount"},
+    "discount_amount": {"agg": "sum", "expr": "discount_amount"},
+    "customers": {"agg": "count_distinct", "expr": "customer_id"}
+   }
+  },
+  "returns": {
+   "description": "One row per return. An order can have several returns, on different dates.",
+   "relation": "sem_returns",
+   "primary_entity": "return_id",
+   "entities": ["return_id", "order_id", "customer_id", "store_id"],
+   "time_dimension": "date_day",
+   "dimensions": ["region", "region_current", "segment", "store_id"],
+   "measures": {
+    "refund_amount": {"agg": "sum", "expr": "refund_amount"}
+   }
+  },
+  "inventory": {
+   "description": "One row per store, product and day: units on hand at the end of the day.",
+   "relation": "sem_inventory",
+   "primary_entity": "store_id, product_id, date_day",
+   "entities": ["store_id", "product_id"],
+   "time_dimension": "date_day",
+   "dimensions": ["region", "region_current", "store_id", "product_id"],
+   "measures": {
+    "units_on_hand": {"agg": "sum", "expr": "units_on_hand"}
+   }
+  }
+ },
+ "metrics": {
+  "orders": {"type": "simple", "measure": "orders.order_count", "label": "Completed orders", "owner": "head of sales operations", "glossary_term": "GT-0301"},
+  "gross_sales": {"type": "simple", "measure": "orders.gross_amount", "label": "Gross sales before discount and tax", "owner": "finance controller", "glossary_term": "GT-0302"},
+  "discounts": {"type": "simple", "measure": "orders.discount_amount", "label": "Discounts given", "owner": "finance controller", "glossary_term": "GT-0303"},
+  "refunds": {"type": "simple", "measure": "returns.refund_amount", "label": "Refunds, dated by return date", "owner": "finance controller", "glossary_term": "GT-0304"},
+  "active_customers": {"type": "simple", "measure": "orders.customers", "label": "Customers with a completed order in the period", "owner": "head of marketing", "glossary_term": "GT-0305"},
+  "return_rate": {"type": "ratio", "numerator": "refunds", "denominator": "gross_sales", "label": "Refunds as a share of gross sales", "owner": "finance controller", "glossary_term": "GT-0306"},
+  "net_revenue": {
+   "type": "derived", "label": "Net revenue", "owner": "finance controller", "glossary_term": "GT-0120", "status": "certified",
+   "versions": [
+    {"version": 1, "effective_from": "1900-01-01", "expr": "gross_sales - refunds", "note": "Original definition."}
+   ]
+  }
+ }
+}

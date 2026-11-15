@@ -1,0 +1,180 @@
+# Semantic models and metrics in the latest dbt YAML spec (dbt Core 1.12 and later).
+models:
+  - name: metricflow_time_spine
+    time_spine:
+      standard_granularity_column: date_day
+      custom_granularities:
+        - name: fiscal_year
+          column_name: fiscal_year
+        - name: fiscal_quarter
+          column_name: fiscal_quarter
+    columns:
+      - name: date_day
+        granularity: day
+      - name: fiscal_year
+      - name: fiscal_quarter
+
+  - name: sem_stores
+    semantic_model:
+      enabled: true
+    columns:
+      - name: store_id
+        entity:
+          type: primary
+          name: store
+      - name: region
+        dimension:
+          type: categorical
+
+  - name: sem_orders
+    semantic_model:
+      enabled: true
+    agg_time_dimension: date_day
+    columns:
+      - name: order_id
+        entity:
+          type: primary
+          name: order
+      - name: customer_id
+        entity:
+          type: foreign
+          name: customer
+      - name: store_id
+        entity:
+          type: foreign
+          name: store
+      - name: date_day
+        granularity: day
+        dimension:
+          type: time
+      - name: region_on_order_date
+        dimension:
+          type: categorical
+      - name: segment
+        dimension:
+          type: categorical
+    metrics:
+      - name: orders
+        label: Completed orders
+        type: simple
+        agg: count
+        expr: order_id
+      - name: gross_sales
+        label: Gross sales before discount and tax
+        type: simple
+        agg: sum
+        expr: gross_amount
+      - name: discounts
+        label: Discounts given
+        type: simple
+        agg: sum
+        expr: discount_amount
+      - name: active_customers
+        label: Customers with a completed order in the period
+        type: simple
+        agg: count_distinct
+        expr: customer_id
+      - name: business_gross_sales
+        label: Gross sales to the Business segment
+        type: simple
+        agg: sum
+        expr: gross_amount
+        filter: "{{ Dimension('order__segment') }} = 'Business'"
+
+  - name: sem_returns
+    semantic_model:
+      enabled: true
+    agg_time_dimension: date_day
+    columns:
+      - name: return_id
+        entity:
+          type: primary
+          name: return
+      - name: order_id
+        entity:
+          type: foreign
+          name: order
+      - name: store_id
+        entity:
+          type: foreign
+          name: store
+      - name: date_day
+        granularity: day
+        dimension:
+          type: time
+    metrics:
+      - name: refunds
+        label: Refunds, dated by return date
+        type: simple
+        agg: sum
+        expr: refund_amount
+
+  - name: sem_inventory
+    semantic_model:
+      enabled: true
+    agg_time_dimension: date_day
+    columns:
+      - name: snapshot_key
+        entity:
+          type: primary
+          name: snapshot
+      - name: store_id
+        entity:
+          type: foreign
+          name: store
+      - name: date_day
+        granularity: day
+        dimension:
+          type: time
+    metrics:
+      - name: inventory_units
+        label: Units on hand at the end of the period
+        type: simple
+        agg: sum
+        expr: units_on_hand
+        non_additive_dimension:
+          name: date_day
+          window_agg: max
+
+metrics:
+  - name: average_order_value
+    label: Gross sales per completed order
+    type: ratio
+    numerator: gross_sales
+    denominator: orders
+
+  - name: return_rate
+    label: Refunds as a share of gross sales
+    type: ratio
+    numerator: refunds
+    denominator: gross_sales
+
+  - name: gross_sales_change_on_prior_month
+    label: Gross sales less gross sales one month earlier
+    type: derived
+    expr: gross_sales - prior_month
+    input_metrics:
+      - name: gross_sales
+      - name: gross_sales
+        offset_window: 1 month
+        alias: prior_month
+
+  - name: net_revenue
+    label: Net revenue (version 2)
+    type: derived
+    expr: gross_sales - discounts - refunds
+    input_metrics:
+      - name: gross_sales
+      - name: discounts
+      - name: refunds
+
+  # Two limits met with dbt Core 1.12.7 and MetricFlow 0.213.0 while writing this demo:
+  # grain_to_date takes a standard granularity and rejects a custom one such as fiscal_year,
+  # and a cumulative metric over the derived metric net_revenue failed at query time.
+  # So this metric accumulates gross sales over the calendar year. The Python lab accumulates net revenue over the fiscal year.
+  - name: gross_sales_ytd
+    label: Gross sales, calendar year to date
+    type: cumulative
+    input_metric: gross_sales
+    grain_to_date: year
+    period_agg: last   # at month grain, report the value at the end of the month. The default is first.
