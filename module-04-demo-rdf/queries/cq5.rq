@@ -1,0 +1,12 @@
+# CQ5. Which organizations of any kind are in the graph, and how is each one typed?
+# With inference off this returns nothing, because no node is typed ph:Organization directly.
+PREFIX ph: <https://example.org/pharma#>
+PREFIX id: <https://example.org/id/>
+PREFIX schema: <https://schema.org/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+
+SELECT ?name WHERE {
+  ?org a ph:Organization ; schema:name ?name .
+}
+ORDER BY ?name

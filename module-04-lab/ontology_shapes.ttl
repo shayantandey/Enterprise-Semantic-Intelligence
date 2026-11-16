@@ -1,0 +1,19 @@
+# SHACL shapes for the ontology file itself. This is the check a CI pipeline would run on every change.
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ph: <https://example.org/pharma#> .
+
+ph:ClassDocShape a sh:NodeShape ; sh:targetClass owl:Class ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Every class needs a label." ] ;
+    sh:property [ sh:path rdfs:comment ; sh:minCount 1 ; sh:message "Every class needs a comment that defines it." ] .
+
+ph:ObjectPropertyDocShape a sh:NodeShape ; sh:targetClass owl:ObjectProperty ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Every property needs a label." ] ;
+    sh:property [ sh:path rdfs:domain ; sh:minCount 1 ; sh:message "Every object property needs a domain." ] ;
+    sh:property [ sh:path rdfs:range ; sh:minCount 1 ; sh:message "Every object property needs a range." ] .
+
+ph:DatatypePropertyDocShape a sh:NodeShape ; sh:targetClass owl:DatatypeProperty ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Every property needs a label." ] ;
+    sh:property [ sh:path rdfs:domain ; sh:minCount 1 ; sh:message "Every datatype property needs a domain." ] ;
+    sh:property [ sh:path rdfs:range ; sh:minCount 1 ; sh:message "Every datatype property needs a range." ] .

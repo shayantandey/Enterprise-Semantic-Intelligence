@@ -1,0 +1,18 @@
+# CQ3. Which critical products contain a component that is sole-sourced today?
+PREFIX ph: <https://example.org/pharma#>
+PREFIX id: <https://example.org/id/>
+PREFIX schema: <https://schema.org/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+
+SELECT DISTINCT ?productName ?componentName WHERE {
+  ?product ph:critical true ; ph:contains ?component ; schema:name ?productName .
+  ?agr ph:supplier ?supplier ; ph:component ?component ; ph:validFrom ?from ; ph:validTo ?to .
+  FILTER(?from <= "2026-11-01"^^xsd:date && ?to > "2026-11-01"^^xsd:date)
+  FILTER NOT EXISTS {
+    ?other ph:component ?component ; ph:supplier ?supplier2 ; ph:validFrom ?from2 ; ph:validTo ?to2 .
+    FILTER(?supplier2 != ?supplier && ?from2 <= "2026-11-01"^^xsd:date && ?to2 > "2026-11-01"^^xsd:date)
+  }
+  ?component schema:name ?componentName .
+}
+ORDER BY ?productName ?componentName
