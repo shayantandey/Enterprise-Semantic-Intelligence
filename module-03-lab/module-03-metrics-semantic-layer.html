@@ -1141,7 +1141,7 @@ metric_time__month | gross_sales | business_gross_sales | change_on_prior_month
 
 <section class="sec" id="handson" aria-labelledby="handson-h">
   <div class="sec-head"><span class="sec-num">3.9</span><h2 id="handson-h">Hands-on</h2></div>
-  <p class="lede">Six exercises in Python, done in pairs. You need Python 3.13 and VS Code and nothing else. The lab uses only the Python standard library, and its warehouse is a SQLite file that Python creates on your machine. There is no dbt, MetricFlow, Cube, BI tool, database server, package to install or API key.</p>
+  <p class="lede">Six exercises in Python, done in pairs, and an optional seventh in dbt and MetricFlow. You need Python 3.13 and VS Code and nothing else. The lab uses only the Python standard library, and its warehouse is a SQLite file that Python creates on your machine. For the six exercises there is no dbt, MetricFlow, Cube, BI tool, database server, package to install or API key. Exercise 7 is the only one that installs anything.</p>
   <div class="prose">
     <p>The course design builds this lab on MetricFlow, Metabase and a notebook. This version replaces them with a small semantic layer, <code>semantic_layer.py</code>, of about 200 lines. It reads metric definitions from <code>semantic_model.json</code>, compiles one SQL query per measure at that measure's own grain, and combines the results, which is the approach Figure 3.5 shows for MetricFlow. You read it and do not change it. The BI report, the notebook and the API in exercise 4 are three Python files that stand in for those tools. The facilitator's MetricFlow project returns the same figures from the same data, as section 3.4 shows.</p>
     <p>Three other things differ from the course design. The fan-out is fixed in SQL, because the lab's layer cannot produce it in the first place. You write the fan-out test, and the three source tests are written for you. And you define three of the ten metrics, where the course design has participants define all ten.</p>
@@ -1156,6 +1156,7 @@ metric_time__month | gross_sales | business_gross_sales | change_on_prior_month
       <tr><td>4. Run the interoperability test</td><td style="font-weight:400"><code>consumers/bi_report.py</code>, <code>consumers/notebook.py</code></td><td style="font-weight:400">Four fixes</td><td style="font-weight:400">Five passing cases, and the cause of each failure in <code>interop_notes.md</code></td><td>18 min</td></tr>
       <tr><td>5. Publish version 2 of net revenue</td><td style="font-weight:400"><code>semantic_model.json</code></td><td style="font-weight:400">One version entry</td><td style="font-weight:400">The series three ways. The restatement note is self-study.</td><td>8 min</td></tr>
       <tr><td>6. Write ADR 2</td><td style="font-weight:400"><code>adr/0002-metric-layer-or-direct-sql.md</code></td><td style="font-weight:400">A five-field ADR</td><td style="font-weight:400">A decision on how the assistant computes metrics</td><td>15 min, self-study</td></tr>
+      <tr><td>7. The same metrics in MetricFlow (optional)</td><td style="font-weight:400"><code>module-03-demo-metricflow</code></td><td style="font-weight:400">One edit to a metric</td><td style="font-weight:400">The lab's figures from dbt and MetricFlow. Needs internet access to install packages, or Docker.</td><td>20 min, optional</td></tr>
     </tbody>
   </table></div>
   <div class="prose">
@@ -1190,6 +1191,9 @@ Created metrics.db. Fiscal year starts on 1 April. Store S03 moved from South to
     <p>Net revenue here is version 1, gross sales less refunds, because version 2 does not exist until exercise 5. Open <code>semantic_model.json</code> beside the output and find the three semantic models and the seven metrics. Each script marks the code you write with a <code>TODO</code> comment and prints what is still missing. Worked answers are in the <code>solutions</code> folder, and adding <code>--answers</code> to a command runs it against the worked semantic model.</p>
     <p>Two exercises ask you to edit <code>semantic_model.json</code> by hand. JSON needs a comma between entries and none after the last. If the file does not parse, the script names the line. To start again, copy <code>baseline_model.json</code> over it.</p>
   </div>
+  <div class="prose">
+    <p>To do the lab again from the start, run <code>python reset.py</code>. It copies the files you changed to a new folder named <code>my_work</code> with the date and time, deletes the files that the scripts generated, and puts every lab file back as it was when you received it. Your earlier work stays in the <code>my_work</code> folder.</p>
+  </div>
   <h3>Exercise 1: reproduce and fix the fan-out</h3>
   <div class="prose">
     <p>Open <code>lab1_fanout.py</code>. The function <code>wrong_sql()</code> computes net revenue for fiscal Q2 the way the sales dashboard in the case study does, by joining orders to returns and then summing. Write <code>fixed_sql()</code>, which brings returns to one row per order before the join. Then write <code>test_no_fanout()</code>, which runs a query and checks that it counts each completed order in the quarter once. The three source tests on the returns table are written for you.</p>
@@ -1216,11 +1220,13 @@ With each return counted once the figure is 86,701.88. The layer computed its de
   <div class="prose">
     <p>Seven metrics are defined in <code>semantic_model.json</code>. Add three. The ratio <code>average_order_value</code> is given in full below. Write the other two from the pattern of the metrics already in the file: <code>net_revenue_fytd</code>, a cumulative metric with <code>input_metric</code> set to <code>net_revenue</code> and <code>grain_to_date</code> set to <code>fiscal_year</code>, and <code>inventory_units</code>, a simple metric on the measure <code>inventory.units_on_hand</code>. Give each a label, an owner and a glossary identifier, GT-0308 and GT-0309. Then tell the layer that units on hand must not be summed over time, by adding <code>non_additive_dimension</code> to the <code>units_on_hand</code> measure in the inventory semantic model. Run <code>python lab2_metrics.py</code> after each change.</p>
   </div>
-  <div class="code"><div class="hd"><span>semantic_model.json: the ratio to add to "metrics", and the measure with its new key</span><button class="copy">Copy</button></div><pre>"average_order_value": {"type": "ratio", "numerator": "gross_sales", "denominator": "orders",
+  <div class="code"><div class="hd"><span>semantic_model.json: the ratio to add to the "metrics" section</span><button class="copy">Copy</button></div><pre>"average_order_value": {"type": "ratio", "numerator": "gross_sales", "denominator": "orders",
                         "label": "Gross sales per completed order",
-                        "owner": "head of sales operations", "glossary_term": "GT-0307"},
-
-"units_on_hand": {"agg": "sum", "expr": "units_on_hand",
+                        "owner": "head of sales operations", "glossary_term": "GT-0307"},</pre></div>
+  <div class="prose">
+    <p>The second change is in a different part of the file. Near the top, under <code>semantic_models</code>, then <code>inventory</code>, then <code>measures</code>, the measure <code>units_on_hand</code> already exists. Edit that line so that it reads as below. Do not add it to the <code>metrics</code> section.</p>
+  </div>
+  <div class="code"><div class="hd"><span>semantic_model.json: the existing units_on_hand measure, with its new key</span><button class="copy">Copy</button></div><pre>"units_on_hand": {"agg": "sum", "expr": "units_on_hand",
                   "non_additive_dimension": {"name": "date_day", "window_agg": "max"}}</pre></div>
   <div class="prose">
     <p>If a name is mistyped, the layer stops before it runs any query and says which metric or measure it could not find.</p>
@@ -1325,9 +1331,107 @@ Change from FY26-27 Q1 to FY26-27 Q2:
     <h5><span class="ic">L</span>What to hand in</h5>
     <p>Each pair submits <code>lab1_fanout.py</code>, <code>semantic_model.json</code>, the two files in <code>consumers</code> that they fixed and <code>interop_notes.md</code>. The restatement note, exercise 3 and ADR 2 are handed in before Module 4. All data in the lab is fictional.</p>
   </div>
-  <div class="note">
-    <h5><span class="ic">i</span>For the facilitator: the MetricFlow demonstration</h5>
-    <p>The folder <code>module-03-demo-metricflow</code> holds the dbt project used in section 3.4. Its <code>requirements.txt</code> pins dbt Core 1.12.7, dbt-duckdb 1.11.1, dbt-metricflow 0.15.0, MetricFlow 0.213.0 and DuckDB 2.0.0, which are the versions it was written and run with on Python 3.13. It can be run from a Python virtual environment or with the Dockerfile in the folder. The project was run in a virtual environment for this page. The Dockerfile was written at the same time and has not been run under Docker, so build it once before the session. The folder's README lists the queries to show and what to point out in each.</p>
+  <h3>Exercise 7 (optional): the same metrics in dbt and MetricFlow</h3>
+  <div class="prose">
+    <p>This exercise runs the real tool on the lab data. It is the facilitator's demonstration for section 3.4, and a participant can also do it if their machine has internet access and they are allowed to install Python packages, or if it has Docker. It is not part of the standard setup, because it needs more than Python 3.13 and VS Code. It takes about 20 minutes, most of it the installation.</p>
+    <p>The folder <code>module-03-demo-metricflow</code> is a dbt project. The CSV files in <code>seeds</code> were exported from the lab warehouse, <code>models</code> holds four SQL models and the file <code>semantic.yml</code> shown in section 3.4, and the database is DuckDB, which is a single file. <code>requirements.txt</code> pins the versions the project was written and run with: dbt Core 1.12.7, dbt-duckdb 1.11.1, dbt-metricflow 0.15.0, MetricFlow 0.213.0 and DuckDB 2.0.0.</p>
+  </div>
+  <h4>Step 1: install, with a virtual environment or with Docker</h4>
+  <div class="prose">
+    <p>Open the folder <code>module-03-demo-metricflow</code> in VS Code and open a terminal. Use one of the two routes. Route A installs the packages into a virtual environment inside the folder, so nothing else on the machine changes.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Route A on Windows (PowerShell)</span><button class="copy">Copy</button></div><pre>python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:DBT_PROFILES_DIR = "."</pre></div>
+  <div class="code"><div class="hd"><span>Route A on macOS or Linux</span><button class="copy">Copy</button></div><pre>python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export DBT_PROFILES_DIR=.</pre></div>
+  <div class="prose">
+    <p>If PowerShell refuses to run the activation script, run <code>Set-ExecutionPolicy -Scope Process RemoteSigned</code> first and try again. The variable <code>DBT_PROFILES_DIR</code> tells dbt to read the connection settings from <code>profiles.yml</code> in this folder. It has to be set again in every new terminal.</p>
+    <p>Route B needs Docker and nothing else. The image installs the packages and builds the project, and the container opens a shell in which the commands from step 3 onward work. If you use route B, skip step 2. The Dockerfile was written with the project and has not been run under Docker by the author of this material, so build it before the session.</p>
+  </div>
+  <div class="code"><div class="hd"><span>Route B: Docker</span><button class="copy">Copy</button></div><pre>docker build -t esi-metricflow-demo .
+docker run -it --rm esi-metricflow-demo</pre></div>
+  <h4>Step 2: build the project and validate the semantic model</h4>
+  <div class="code"><div class="hd"><span>Terminal</span><button class="copy">Copy</button></div><pre>dbt build
+mf validate-configs</pre></div>
+  <div class="prose">
+    <p><code>dbt build</code> loads the seven seed files and builds five models. Its last line should read <code>Done. PASS=12 WARN=0 ERROR=0 SKIP=0</code>. It also prints a warning that the cumulative metric cannot be represented in the interchange document, which is expected. <code>mf validate-configs</code> checks the semantic model against the database and should report no errors.</p>
+  </div>
+  <h4>Step 3: list the metrics</h4>
+  <div class="code"><div class="hd"><span>Terminal</span><button class="copy">Copy</button></div><pre>mf list metrics</pre></div>
+  <div class="prose">
+    <p>It lists twelve metrics, each with the dimensions it can be grouped by. Note the names: a dimension is written with its entity, as in <code>order__segment</code> and <code>store__region</code>. <code>inventory_units</code> has fewer dimensions than the order metrics, because the stock snapshot has no customer.</p>
+  </div>
+  <h4>Step 4: ask for four metrics by fiscal quarter</h4>
+  <div class="code"><div class="hd"><span>Terminal</span><button class="copy">Copy</button></div><pre>mf query --metrics orders,gross_sales,refunds,net_revenue --decimals 2 --group-by metric_time__fiscal_quarter --order metric_time__fiscal_quarter</pre></div>
+  <div class="prose">
+    <p>The result is the table shown in section 3.4. Compare it with the output of <code>python semantic_layer.py</code> in the Python lab. Orders, gross sales and refunds are the same in both. Net revenue differs, because this project holds version 2 of the definition and the lab's first output uses version 1. After exercise 5, the lab's "version 2 restated" column equals this one: 643,813.12 for FY26-27 Q2.</p>
+  </div>
+  <h4>Step 5: read the SQL</h4>
+  <div class="code"><div class="hd"><span>Terminal</span><button class="copy">Copy</button></div><pre>mf query --metrics net_revenue --group-by metric_time__fiscal_quarter --explain</pre></div>
+  <div class="prose">
+    <p><code>--explain</code> prints the SQL and does not run it. Find the two subqueries, one that reads <code>sem_orders</code> and one that reads <code>sem_returns</code>, and the <code>FULL OUTER JOIN</code> between them. Each fact table is grouped by quarter before the two are joined, which is why the fan-out of exercise 1 cannot occur here.</p>
+  </div>
+  <h4>Step 6: a ratio, a semi-additive balance and a cumulative metric</h4>
+  <div class="code"><div class="hd"><span>Terminal</span><button class="copy">Copy</button></div><pre>mf query --metrics average_order_value --start-time 2026-04-01 --end-time 2026-06-30 --decimals 2
+mf query --metrics inventory_units --group-by metric_time__month --order metric_time__month
+mf query --metrics gross_sales,gross_sales_ytd --group-by metric_time__month --start-time 2026-01-01 --end-time 2026-06-30 --order metric_time__month</pre></div>
+  <div class="code"><div class="hd"><span>Expected results (column headings shortened)</span></div><pre>average_order_value: 3538.94
+
+month | inventory_units
+2026-04 | 4592
+2026-05 | 4983
+2026-06 | 4826
+2026-07 | 4991
+2026-08 | 5061
+2026-09 | 5210
+
+month | gross_sales | gross_sales_ytd
+2026-01 | 293700 | 293700
+2026-02 | 239850 | 533550
+2026-03 | 304850 | 838400
+2026-04 | 326600 | 1165000
+2026-05 | 317850 | 1482850
+2026-06 | 427850 | 1910700</pre></div>
+  <div class="prose">
+    <p>The first two results are the ones exercise 2 produces in Python: 3,538.94, and 4,592, 4,983 and 4,826 for April to June. The third differs from the lab on purpose. This metric accumulates over the calendar year, so the running total does not start again in April, where the lab's <code>net_revenue_fytd</code> does. Note also that <code>--end-time 2026-06-30</code> includes 30 June, while the lab's <code>end</code> is exclusive.</p>
+  </div>
+  <h4>Step 7: a dimension from another model, and a filtered metric</h4>
+  <div class="code"><div class="hd"><span>Terminal</span><button class="copy">Copy</button></div><pre>mf query --metrics net_revenue --group-by store__region --start-time 2026-07-01 --end-time 2026-09-30 --order store__region --decimals 2
+mf query --metrics gross_sales,business_gross_sales,gross_sales_change_on_prior_month --group-by metric_time__month --start-time 2026-04-01 --end-time 2026-06-30 --order metric_time__month</pre></div>
+  <div class="code"><div class="hd"><span>Expected results (column headings shortened)</span></div><pre>store__region | net_revenue
+East | 104111.87
+North | 203242.50
+South | 65350.00
+West | 271108.75
+
+month | gross_sales | business_gross_sales | change_on_prior_month
+2026-04 | 326600 | 27500 | 21750
+2026-05 | 317850 | 80700 | -8750
+2026-06 | 427850 | 103600 | 110000</pre></div>
+  <div class="prose">
+    <p>In the first query, region comes from the stores model and is joined to orders and to returns through the <code>store</code> entity. It is the store's current region, so store S03 counts under West. The four regions sum to 643,813.12. In the second, <code>business_gross_sales</code> carries a filter in its definition, and the last column is a derived metric that subtracts the previous month with <code>offset_window</code>. April's 21,750 is April's gross sales less March's.</p>
+  </div>
+  <h4>Step 8: change a definition and see every query follow</h4>
+  <div class="prose">
+    <p>Open <code>models/semantic.yml</code> and find the metric <code>net_revenue</code> in the top-level <code>metrics</code> list. Change its expression to <code>gross_sales - refunds</code>, which is version 1 of the lab's definition, and save. Run <code>dbt parse</code> so that MetricFlow reads the change. It warns that the input metric <code>discounts</code> is no longer used in the expression, which is expected. Then repeat the query from step 4. Net revenue for FY26-27 Q2 should now be 681,090.62, the lab's version 1 figure. Put the expression back and run <code>dbt parse</code> again.</p>
+    <p>One edit changed the result of every request for that metric, and the earlier figure can no longer be asked for. That is the behaviour section 3.6 describes: MetricFlow holds one definition per metric name, and its history is the Git history of this file.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>If this happens</th><th>Do this</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:400"><code>dbt</code> or <code>mf</code> is not recognised</td><td style="font-weight:400">The virtual environment is not active in this terminal. Run the activation line from step 1 again.</td></tr>
+      <tr><td style="font-weight:400">dbt cannot find a profile named <code>esi_metrics_demo</code></td><td style="font-weight:400"><code>DBT_PROFILES_DIR</code> is not set in this terminal. Run the last line of step 1 again.</td></tr>
+      <tr><td style="font-weight:400"><code>pip install</code> fails to download</td><td style="font-weight:400">The machine has no access to the Python package index. Use route B, or watch the facilitator's run.</td></tr>
+      <tr><td style="font-weight:400">A query reports that the database file is locked</td><td style="font-weight:400">Another terminal or program has <code>demo.duckdb</code> open. Close it and run the query again.</td></tr>
+      <tr><td style="font-weight:400">A metric query fails after you edited <code>semantic.yml</code></td><td style="font-weight:400">Run <code>dbt parse</code> and read its message. YAML depends on indentation, so check that the edited line starts in the same column as the lines around it.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>To start this exercise again, delete the file <code>demo.duckdb</code> and the folders <code>target</code> and <code>logs</code>, undo any edit to <code>semantic.yml</code>, and return to step 2.</p>
   </div>
 </section>
 
