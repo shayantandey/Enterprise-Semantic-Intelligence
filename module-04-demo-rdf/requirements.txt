@@ -1,4 +1,0 @@
-# Versions used when this demonstration was written and run (November 2026, Python 3.13).
-rdflib==7.6.0
-pyshacl==0.40.2
-owlrl==7.6.2
