@@ -1,0 +1,78 @@
+# Controlled vocabulary for the Module 4 lab, as a SKOS concept scheme. Worked answer to exercise 2.
+# A vocabulary names and defines the terms people use. It carries no logic: the ontology does that.
+# The glossary identifiers (gt:GT-...) are fictional and stand for the terms a Module 2 glossary would hold.
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix voc: <https://example.org/vocab/> .
+@prefix gt: <https://example.org/glossary/> .
+@prefix ph: <https://example.org/pharma#> .
+
+voc:supply-risk a skos:ConceptScheme ;
+    skos:prefLabel "Medicine supply risk vocabulary"@en ;
+    skos:hasTopConcept voc:component , voc:customer .
+
+# ---------------------------------------------------------------- component types
+
+voc:component a skos:Concept ; skos:inScheme voc:supply-risk ; skos:topConceptOf voc:supply-risk ;
+    skos:prefLabel "Component"@en ;
+    skos:altLabel "Material"@en , "Input material"@en ;
+    skos:definition "A material that goes into a finished medicine."@en ;
+    skos:exactMatch gt:GT-0410 .
+
+voc:active-ingredient a skos:Concept ; skos:inScheme voc:supply-risk ; skos:broader voc:component ;
+    skos:prefLabel "Active ingredient"@en ;
+    skos:altLabel "API"@en , "Active pharmaceutical ingredient"@en , "Drug substance"@en ;
+    skos:definition "The component that gives a medicine its therapeutic effect."@en ;
+    skos:exactMatch gt:GT-0411 .
+
+voc:excipient a skos:Concept ; skos:inScheme voc:supply-risk ; skos:broader voc:component ;
+    skos:prefLabel "Excipient"@en ;
+    skos:altLabel "Inactive ingredient"@en ;
+    skos:definition "An inactive component, such as a filler or a binder."@en ;
+    skos:exactMatch gt:GT-0412 .
+
+voc:packaging-component a skos:Concept ; skos:inScheme voc:supply-risk ; skos:broader voc:component ;
+    skos:prefLabel "Packaging component"@en ;
+    skos:altLabel "Primary packaging"@en , "Container closure"@en ;
+    skos:definition "A component in contact with the medicine, such as a vial or a stopper."@en ;
+    skos:exactMatch gt:GT-0413 .
+
+# ---------------------------------------------------------------- customer types
+
+voc:customer a skos:Concept ; skos:inScheme voc:supply-risk ; skos:topConceptOf voc:supply-risk ;
+    skos:prefLabel "Customer"@en ;
+    skos:altLabel "Account"@en , "Buyer"@en ;
+    skos:definition "An organization that receives shipments of finished products."@en ;
+    skos:exactMatch gt:GT-0420 .
+
+voc:hospital a skos:Concept ; skos:inScheme voc:supply-risk ; skos:broader voc:customer ;
+    skos:prefLabel "Hospital"@en ;
+    skos:altLabel "Medical centre"@en , "Clinic group"@en ;
+    skos:definition "A customer that administers medicines to patients."@en ;
+    skos:exactMatch gt:GT-0421 .
+
+voc:pharmacy-chain a skos:Concept ; skos:inScheme voc:supply-risk ; skos:broader voc:customer ;
+    skos:prefLabel "Pharmacy chain"@en ;
+    skos:altLabel "Retail pharmacy"@en ;
+    skos:definition "A customer that dispenses medicines through retail pharmacies."@en ;
+    skos:exactMatch gt:GT-0422 .
+
+voc:distributor a skos:Concept ; skos:inScheme voc:supply-risk ; skos:broader voc:customer ;
+    skos:prefLabel "Distributor"@en ;
+    skos:altLabel "Wholesaler"@en , "Stockist"@en ;
+    skos:definition "A customer that resells medicines to hospitals and pharmacies."@en ;
+    skos:exactMatch gt:GT-0423 .
+
+# ---------------------------------------------------------------- links from the ontology to the vocabulary
+# Each class points to the concept that names and defines it. A query can then start from a word a person
+# uses, such as "API", and arrive at the class the data is typed with.
+
+ph:Component         rdfs:seeAlso voc:component .
+ph:ActiveIngredient  rdfs:seeAlso voc:active-ingredient .
+ph:Excipient         rdfs:seeAlso voc:excipient .
+ph:Customer          rdfs:seeAlso voc:customer .
+ph:Hospital          rdfs:seeAlso voc:hospital .
+ph:PharmacyChain     rdfs:seeAlso voc:pharmacy-chain .
+
+ph:PackagingComponent rdfs:seeAlso voc:packaging-component .
+ph:Distributor        rdfs:seeAlso voc:distributor .

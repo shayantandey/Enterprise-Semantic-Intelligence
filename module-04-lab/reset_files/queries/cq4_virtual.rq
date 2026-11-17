@@ -1,0 +1,16 @@
+# CQ4 for the virtual graph. Ontop does not support FILTER NOT EXISTS, so the negation is written with MINUS.
+# On the physical graph both forms return the same answer.
+PREFIX ph: <https://example.org/pharma#>
+PREFIX id: <https://example.org/id/>
+PREFIX schema: <https://schema.org/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT DISTINCT ?supplierName WHERE {
+  ?old ph:supplier ?supplier ; ph:component id:C-HEPA ; ph:validFrom ?from ; ph:validTo ?to .
+  FILTER(?from <= "2025-11-01"^^xsd:date && ?to > "2025-11-01"^^xsd:date)
+  ?supplier schema:name ?supplierName .
+  MINUS {
+    ?now ph:supplier ?supplier ; ph:component id:C-HEPA ; ph:validFrom ?from2 ; ph:validTo ?to2 .
+    FILTER(?from2 <= "2026-11-01"^^xsd:date && ?to2 > "2026-11-01"^^xsd:date)
+  }
+}
+ORDER BY ?supplierName

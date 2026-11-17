@@ -1,0 +1,16 @@
+# CQ8. Which disruption notices concern a supplier with an agreement in force today,
+# and which document and extraction confidence does each notice rest on?
+PREFIX ph: <https://example.org/pharma#>
+PREFIX id: <https://example.org/id/>
+PREFIX schema: <https://schema.org/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+
+SELECT DISTINCT ?notice ?supplierName ?document ?confidence WHERE {
+  ?notice a ph:DisruptionNotice ; ph:aboutSupplier ?supplier ;
+          prov:wasDerivedFrom ?document ; ph:extractionConfidence ?confidence .
+  ?agr ph:supplier ?supplier ; ph:validFrom ?from ; ph:validTo ?to .
+  FILTER(?from <= "2026-11-01"^^xsd:date && ?to > "2026-11-01"^^xsd:date)
+  ?supplier schema:name ?supplierName .
+}
+ORDER BY ?notice

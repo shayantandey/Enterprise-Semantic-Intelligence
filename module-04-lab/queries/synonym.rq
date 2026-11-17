@@ -1,0 +1,12 @@
+# From a word a person uses to the data. "API" is an alternative label in the vocabulary, not a class name.
+# The path: label -> concept -> class that points to the concept -> components typed with that class.
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX schema: <https://schema.org/>
+
+SELECT ?componentName ?preferredLabel WHERE {
+  ?concept skos:altLabel "API"@en ; skos:prefLabel ?preferredLabel .
+  ?class rdfs:seeAlso ?concept .
+  ?component a ?class ; schema:name ?componentName .
+}
+ORDER BY ?componentName

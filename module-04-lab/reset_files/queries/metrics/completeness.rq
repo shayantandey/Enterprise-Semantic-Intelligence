@@ -1,0 +1,7 @@
+# Quality metric: completeness. How many products have a GTIN, a plant and at least one component?
+PREFIX ph: <https://example.org/pharma#>
+
+SELECT (COUNT(DISTINCT ?product) AS ?products) (COUNT(DISTINCT ?complete) AS ?complete) WHERE {
+  ?product a ph:Product .
+  OPTIONAL { ?product ph:gtin ?gtin ; ph:madeAt ?plant ; ph:contains ?component . BIND(?product AS ?complete) }
+}

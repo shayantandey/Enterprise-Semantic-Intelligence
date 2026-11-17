@@ -1,0 +1,23 @@
+# SHACL shapes for the ontology file itself: the documentation every class and property must carry.
+# This is the check a CI job runs on every change. See ci/README.md.
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ph: <https://example.org/pharma#> .
+
+# A class written as an expression, such as "Product and (critical value true)", has no name of its own and
+# is a blank node. Only named classes need documentation, so the shape lets blank nodes pass.
+ph:ClassDocShape a sh:NodeShape ; sh:targetClass owl:Class ;
+    sh:or ( [ sh:nodeKind sh:BlankNode ]
+            [ sh:property [ sh:path rdfs:label ; sh:minCount 1 ] ; sh:property [ sh:path rdfs:comment ; sh:minCount 1 ] ] ) ;
+    sh:message "Every named class needs a label and a comment that defines it." .
+
+ph:ObjectPropertyDocShape a sh:NodeShape ; sh:targetClass owl:ObjectProperty ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Every property needs a label." ] ;
+    sh:property [ sh:path rdfs:domain ; sh:minCount 1 ; sh:message "Every object property needs a domain." ] ;
+    sh:property [ sh:path rdfs:range ; sh:minCount 1 ; sh:message "Every object property needs a range." ] .
+
+ph:DatatypePropertyDocShape a sh:NodeShape ; sh:targetClass owl:DatatypeProperty ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "Every property needs a label." ] ;
+    sh:property [ sh:path rdfs:domain ; sh:minCount 1 ; sh:message "Every datatype property needs a domain." ] ;
+    sh:property [ sh:path rdfs:range ; sh:minCount 1 ; sh:message "Every datatype property needs a range." ] .

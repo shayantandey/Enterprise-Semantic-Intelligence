@@ -1,0 +1,26 @@
+# Configuration of the scratch repository that check.py creates and deletes.
+# It asks for the same three things you choose in the Workbench form: the OWL 2 RL ruleset,
+# consistency checks, and SHACL validation.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rep: <http://www.openrdf.org/config/repository#> .
+@prefix sr: <http://www.openrdf.org/config/repository/sail#> .
+@prefix sail: <http://www.openrdf.org/config/sail#> .
+@prefix graphdb: <http://www.ontotext.com/config/graphdb#> .
+@prefix shacl: <http://rdf4j.org/config/sail/shacl#> .
+
+[] a rep:Repository ;
+    rep:repositoryID "scratch" ;
+    rdfs:label "Scratch repository used by check.py" ;
+    rep:repositoryImpl [
+        rep:repositoryType "graphdb:SailRepository" ;
+        sr:sailImpl [
+            sail:sailType "rdf4j:ShaclSail" ;                       # SHACL validation wraps the store
+            sail:delegate [
+                sail:sailType "graphdb:Sail" ;
+                graphdb:ruleset "owl2-rl-optimized" ;               # OWL 2 RL inference, applied when data is written
+                graphdb:disable-sameAs "false" ;                    # the Workbench form leaves owl:sameAs on for OWL rulesets
+                graphdb:check-for-inconsistencies "true" ;          # reject a transaction that breaks a disjointness axiom
+            ] ;
+            shacl:validationEnabled "true" ;
+        ]
+    ] .

@@ -1,0 +1,23 @@
+[PrefixDeclaration]
+ph:		https://example.org/pharma#
+id:		https://example.org/id/
+schema:		https://schema.org/
+xsd:		http://www.w3.org/2001/XMLSchema#
+
+[MappingDeclaration] @collection [[
+mappingId	suppliers
+target		id:{GOLDEN_KEY} a ph:Supplier ; ph:goldenKey {GOLDEN_KEY}^^xsd:string ; schema:name {NAME}^^xsd:string .
+source		SELECT x.GOLDEN_KEY, MIN(v.VENDOR_NAME) AS NAME FROM SUPPLIER_CROSSWALK x JOIN ERP_VENDORS v ON v.VENDOR_ID = x.SOURCE_ID WHERE x.SOURCE_SYSTEM = 'ERP' GROUP BY x.GOLDEN_KEY
+
+mappingId	plants
+target		id:{PLANT_ID} a ph:Plant ; schema:name {PLANT_NAME}^^xsd:string .
+source		SELECT PLANT_ID, PLANT_NAME FROM PLANTS
+
+mappingId	components
+target		id:{COMPONENT_ID} a ph:Component ; schema:name {COMPONENT_NAME}^^xsd:string .
+source		SELECT COMPONENT_ID, COMPONENT_NAME FROM COMPONENTS
+
+mappingId	agreements
+target		id:{AGREEMENT_ID} a ph:SupplyAgreement ; ph:supplier id:{VENDOR_ID} ; ph:component id:{COMPONENT_ID} ; ph:toPlant id:{PLANT_ID} ; ph:validFrom {VALID_FROM}^^xsd:date ; ph:validTo {VALID_TO}^^xsd:date .
+source		SELECT a.AGREEMENT_ID, a.VENDOR_ID, a.COMPONENT_ID, a.PLANT_ID, a.VALID_FROM, a.VALID_TO FROM SUPPLY_AGREEMENTS a
+]]

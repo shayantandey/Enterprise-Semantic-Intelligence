@@ -1,0 +1,9 @@
+# Quality metric: currency. How recent is the newest fact from each source, and when was the graph last loaded?
+PREFIX ph: <https://example.org/pharma#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+
+SELECT (MAX(?shipped) AS ?latestShipment) (MAX(?noticed) AS ?latestNotice) (MAX(?loaded) AS ?lastLoad) WHERE {
+  ?shipment ph:shipDate ?shipped .
+  ?notice ph:noticeDate ?noticed .
+  ?load prov:endedAtTime ?loaded .
+}

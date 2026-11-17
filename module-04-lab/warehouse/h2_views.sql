@@ -1,0 +1,7 @@
+-- Run by H2 each time the virtual repository opens a connection. Each view reads one CSV file of the
+-- warehouse extract. H2 stores nothing: a query sees the files as they are when it runs.
+CREATE VIEW IF NOT EXISTS ERP_VENDORS AS SELECT VENDOR_ID, VENDOR_NAME, COUNTRY FROM CSVREAD('/warehouse/erp_vendors.csv');
+CREATE VIEW IF NOT EXISTS SUPPLIER_CROSSWALK AS SELECT GOLDEN_KEY, SOURCE_SYSTEM, SOURCE_ID FROM CSVREAD('/warehouse/supplier_crosswalk.csv');
+CREATE VIEW IF NOT EXISTS COMPONENTS AS SELECT COMPONENT_ID, COMPONENT_NAME, COMPONENT_TYPE FROM CSVREAD('/warehouse/components.csv');
+CREATE VIEW IF NOT EXISTS PLANTS AS SELECT PLANT_ID, PLANT_NAME FROM CSVREAD('/warehouse/plants.csv');
+CREATE VIEW IF NOT EXISTS SUPPLY_AGREEMENTS AS SELECT AGREEMENT_ID, VENDOR_ID, COMPONENT_ID, PLANT_ID, CAST(VALID_FROM AS DATE) AS VALID_FROM, CAST(VALID_TO AS DATE) AS VALID_TO FROM CSVREAD('/warehouse/supply_agreements.csv');

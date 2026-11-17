@@ -1,0 +1,103 @@
+# Ontology for the Module 4 lab: medicine supply risk at a fictional manufacturer.
+# This is the SEED for exercise 3. Upload it to WebProtege, make the seven edits listed on the page, and download the result.
+@prefix ph: <https://example.org/pharma#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix schema: <https://schema.org/> .
+@prefix gs1: <https://ref.gs1.org/voc/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+
+<https://example.org/pharma> a owl:Ontology ;
+    rdfs:label "Medicine supply risk ontology" ;
+    owl:versionInfo "0.3.0" ;
+    rdfs:comment "Classes and properties for suppliers, components, plants, products, shipments and customers. Written for a training lab." .
+
+# ---------------------------------------------------------------- classes
+
+ph:Organization a owl:Class ; rdfs:subClassOf schema:Organization ;
+    rdfs:label "Organization" ; rdfs:comment "A company or institution that the manufacturer trades with." .
+ph:Supplier a owl:Class ; rdfs:subClassOf ph:Organization ;
+    rdfs:label "Supplier" ; rdfs:comment "An organization that supplies a component under a supply agreement." .
+ph:Customer a owl:Class ; rdfs:subClassOf ph:Organization ;
+    rdfs:label "Customer" ; rdfs:comment "An organization that receives shipments of finished products." .
+ph:PharmacyChain a owl:Class ; rdfs:subClassOf ph:Customer ;
+    rdfs:label "Pharmacy chain" ; rdfs:comment "A customer that dispenses medicines through retail pharmacies." .
+ph:Distributor a owl:Class ; rdfs:subClassOf ph:Customer ;
+    rdfs:label "Distributor" ; rdfs:comment "A customer that resells medicines to hospitals and pharmacies." .
+
+ph:Plant a owl:Class ;
+    rdfs:label "Plant" ; rdfs:comment "A manufacturing site of the company where products are made." .
+
+
+ph:Component a owl:Class ;
+    rdfs:label "Component" ; rdfs:comment "A material that goes into a product." .
+ph:ActiveIngredient a owl:Class ; rdfs:subClassOf ph:Component ;
+    rdfs:label "Active ingredient" ; rdfs:comment "The component that gives a medicine its therapeutic effect." .
+ph:Excipient a owl:Class ; rdfs:subClassOf ph:Component ;
+    rdfs:label "Excipient" ; rdfs:comment "An inactive component, such as a filler or binder." .
+ph:PackagingComponent a owl:Class ; rdfs:subClassOf ph:Component ;
+    rdfs:label "Packaging component" ; rdfs:comment "A component in contact with the medicine, such as a vial or a stopper." .
+
+ph:Product a owl:Class ;
+    rdfs:label "Product" ; rdfs:comment "A finished medicine identified by a GTIN." .
+# Terms reused from published vocabularies. They are declared here so that an editor shows them by name.
+gs1:Product a owl:Class ; rdfs:label "Product (GS1)" ; rdfs:comment "A trade item as defined by the GS1 Web Vocabulary." .
+schema:Product a owl:Class ; rdfs:label "Product (schema.org)" ; rdfs:comment "Any offered product or service, as defined by schema.org." .
+schema:Organization a owl:Class ; rdfs:label "Organization (schema.org)" ; rdfs:comment "An organization, as defined by schema.org." .
+
+ph:SupplyAgreement a owl:Class ;
+    rdfs:label "Supply agreement" ; rdfs:comment "The fact that a supplier is approved to supply one component to one plant during a validity period." .
+ph:Shipment a owl:Class ;
+    rdfs:label "Shipment" ; rdfs:comment "A delivery of one product from one plant to one customer on one date." .
+ph:DisruptionNotice a owl:Class ;
+    rdfs:label "Disruption notice" ; rdfs:comment "A report that a supplier's ability to supply is impaired, extracted from a document." .
+
+# ---------------------------------------------------------------- properties
+
+ph:goldenKey a owl:DatatypeProperty ; rdfs:domain ph:Organization ; rdfs:range xsd:string ;
+    rdfs:label "golden key" ; rdfs:comment "The identifier that master data assigns to one real-world organization." .
+ph:gtin a owl:DatatypeProperty ; rdfs:subPropertyOf gs1:gtin ; rdfs:domain ph:Product ; rdfs:range xsd:string ;
+    rdfs:label "GTIN" ; rdfs:comment "The 14-digit Global Trade Item Number of the product." .
+ph:critical a owl:DatatypeProperty ; rdfs:domain ph:Product ; rdfs:range xsd:boolean ;
+    rdfs:label "critical" ; rdfs:comment "True when a shortage of the product puts patients at immediate risk." .
+
+ph:madeAt a owl:ObjectProperty ; rdfs:domain ph:Product ; rdfs:range ph:Plant ;
+    rdfs:label "made at" ; rdfs:comment "The plant where the product is manufactured." .
+ph:contains a owl:ObjectProperty ; rdfs:domain ph:Product ; rdfs:range ph:Component ;
+    rdfs:label "contains" ; rdfs:comment "A component in the product's bill of materials." .
+
+ph:supplier a owl:ObjectProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range ph:Supplier ;
+    rdfs:label "supplier" ; rdfs:comment "The supplier in a supply agreement." .
+ph:component a owl:ObjectProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range ph:Component ;
+    rdfs:label "component" ; rdfs:comment "The component covered by a supply agreement." .
+ph:toPlant a owl:ObjectProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range ph:Plant ;
+    rdfs:label "to plant" ; rdfs:comment "The plant a supply agreement delivers to." .
+ph:validFrom a owl:DatatypeProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range xsd:date ;
+    rdfs:label "valid from" ; rdfs:comment "First day on which the agreement holds." .
+ph:validTo a owl:DatatypeProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range xsd:date ;
+    rdfs:label "valid to" ; rdfs:comment "First day on which the agreement no longer holds. 9999-12-31 means no end date is known." .
+
+ph:ofProduct a owl:ObjectProperty ; rdfs:domain ph:Shipment ; rdfs:range ph:Product ;
+    rdfs:label "of product" ; rdfs:comment "The product shipped." .
+ph:fromPlant a owl:ObjectProperty ; rdfs:domain ph:Shipment ; rdfs:range ph:Plant ;
+    rdfs:label "from plant" ; rdfs:comment "The plant that dispatched the shipment." .
+ph:toCustomer a owl:ObjectProperty ; rdfs:domain ph:Shipment ; rdfs:range ph:Customer ;
+    rdfs:label "to customer" ; rdfs:comment "The customer that received the shipment." .
+ph:quantity a owl:DatatypeProperty ; rdfs:domain ph:Shipment ; rdfs:range xsd:integer ;
+    rdfs:label "quantity" ; rdfs:comment "Number of packs shipped." .
+
+ph:eventType a owl:DatatypeProperty ; rdfs:domain ph:DisruptionNotice ; rdfs:range xsd:string ;
+    rdfs:label "event type" ; rdfs:comment "The kind of disruption reported." .
+ph:noticeDate a owl:DatatypeProperty ; rdfs:domain ph:DisruptionNotice ; rdfs:range xsd:date ;
+    rdfs:label "notice date" ; rdfs:comment "The date of the document the notice was extracted from." .
+ph:extractionConfidence a owl:DatatypeProperty ; rdfs:domain ph:DisruptionNotice ; rdfs:range xsd:decimal ;
+    rdfs:label "extraction confidence" ; rdfs:comment "The extraction model's confidence, from 0 to 1. A probabilistic value." .
+
+ph:receivesShipment a owl:ObjectProperty ; owl:inverseOf ph:toCustomer ;
+    rdfs:domain ph:Customer ; rdfs:range ph:Shipment ;
+    rdfs:label "receives shipment" ; rdfs:comment "Inverse of to customer." .
+ph:receives a owl:ObjectProperty ; owl:propertyChainAxiom ( ph:receivesShipment ph:ofProduct ) ;
+    rdfs:domain ph:Customer ; rdfs:range ph:Product ;
+    rdfs:label "receives" ; rdfs:comment "A customer receives a product if it has received a shipment of it. Derived, with no dates." .

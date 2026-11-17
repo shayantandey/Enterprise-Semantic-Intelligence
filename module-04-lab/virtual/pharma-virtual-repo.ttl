@@ -1,0 +1,12 @@
+# Configuration of the virtual repository "pharma-virtual". Used by lab10_virtual.py.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rep: <http://www.openrdf.org/config/repository#> .
+
+[] a rep:Repository ;
+    rep:repositoryID "pharma-virtual" ;
+    rdfs:label "Medicine supply risk, virtual graph over the warehouse" ;
+    rep:repositoryImpl [
+        rep:repositoryType "graphdb:OntopRepository" ;
+        <http://inf.unibz.it/krdb/obda/quest#propertiesFile> "pharma.properties" ;
+        <http://inf.unibz.it/krdb/obda/quest#obdaFile> "mapping.obda" ;
+    ] .

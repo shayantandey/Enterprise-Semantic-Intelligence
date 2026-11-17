@@ -1,0 +1,14 @@
+# A sample CI job for the repository that holds the ontology (GitHub Actions syntax).
+# The pyshacl command was run for this lab. The workflow around it was not.
+name: validate-ontology
+on: [pull_request]
+jobs:
+  shacl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install pyshacl==0.40.2
+      # the ontology file against its documentation shapes; a non-zero exit status fails the build
+      - run: pyshacl -s ci/ontology_shapes.ttl 03_ontology/ontology.ttl

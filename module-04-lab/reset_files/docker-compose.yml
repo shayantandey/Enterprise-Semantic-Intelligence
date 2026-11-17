@@ -1,0 +1,17 @@
+# Module 4 lab: GraphDB is the only container.
+# Start:  docker compose up -d      Stop:  docker compose stop      Remove with data:  docker compose down -v
+services:
+  graphdb:
+    image: ontotext/graphdb:10.8.14
+    container_name: esi-graphdb
+    ports:
+      - "7200:7200"
+    environment:
+      GDB_JAVA_OPTS: "-Xmx2g -Dgraphdb.workbench.importDirectory=/import"
+    volumes:
+      - graphdb-home:/opt/graphdb/home          # repositories live here, in a Docker volume
+      - ./graphdb/import:/import                # files offered under Import, Server files
+      - ./graphdb/jdbc:/opt/graphdb/dist/lib/jdbc   # JDBC driver for the virtual repository
+      - ./warehouse:/warehouse                  # the warehouse extract, read by the virtual repository
+volumes:
+  graphdb-home:

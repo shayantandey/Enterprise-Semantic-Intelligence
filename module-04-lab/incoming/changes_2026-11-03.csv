@@ -1,0 +1,4 @@
+change,agreement_id,vendor_id,component_id,plant_id,valid_from,valid_to
+ended,AGR-013,V-1002,C-METF,PL-GOA,2026-01-01,2026-10-31
+changed,AGR-007,V-1044,C-AMOX,PL-HYD,2025-06-01,9999-12-31
+new,AGR-025,V-1009,C-HEPA,PL-VIZ,2026-11-10,9999-12-31

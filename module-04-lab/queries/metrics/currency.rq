@@ -1,0 +1,14 @@
+# Quality metric: currency. How recent is the newest fact from each source, and when was the graph last loaded?
+#
+# TODO (exercise 12): complete the query so that it returns three values:
+#   ?latestShipment   the newest ph:shipDate of any shipment           -> MAX(?shipped)
+#   ?latestNotice     the newest ph:noticeDate of any disruption notice -> MAX(?noticed)
+#   ?lastLoad         the newest prov:endedAtTime of any load record    -> MAX(?loaded)
+# The first is written. Add the other two: one more pattern in the WHERE block for each, and one more
+# (MAX(...) AS ...) in the SELECT line.
+PREFIX ph: <https://example.org/pharma#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+
+SELECT (MAX(?shipped) AS ?latestShipment) WHERE {
+  ?shipment ph:shipDate ?shipped .
+}

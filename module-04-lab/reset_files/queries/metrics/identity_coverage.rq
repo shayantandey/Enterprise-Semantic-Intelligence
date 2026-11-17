@@ -1,0 +1,7 @@
+# Quality metric: identity coverage. How many organizations have a golden key, out of all organizations?
+PREFIX ph: <https://example.org/pharma#>
+
+SELECT (COUNT(DISTINCT ?org) AS ?organizations) (COUNT(DISTINCT ?keyed) AS ?withGoldenKey) WHERE {
+  ?org a ph:Organization .
+  OPTIONAL { ?org ph:goldenKey ?key . BIND(?org AS ?keyed) }
+}
