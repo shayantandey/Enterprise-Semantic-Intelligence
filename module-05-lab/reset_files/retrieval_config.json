@@ -1,0 +1,11 @@
+{
+  "contextual_headers": false,
+  "parent_child": false,
+  "glossary_expansion": false,
+  "metadata_filter": false,
+  "decompose": false,
+  "candidates": 40,
+  "rerank_top": 20,
+  "k": 5,
+  "rrf_k": 60
+}

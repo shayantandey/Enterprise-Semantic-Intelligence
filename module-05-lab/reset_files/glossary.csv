@@ -1,0 +1,19 @@
+term_id,preferred_term,synonyms,definition
+G01,monthly average balance,minimum balance|MAB|average monthly balance,The sum of end-of-day balances in a month divided by the number of days in it.
+G02,non-maintenance charge,minimum balance penalty|low balance fee|balance shortfall charge,The charge applied when the monthly average balance requirement is not met.
+G03,premature withdrawal,breaking a deposit|early closure of deposit|early withdrawal|pre-closure of FD,Withdrawing a fixed deposit before its maturity date.
+G04,prepayment,foreclosure|foreclose|pre-closure of loan|early repayment|paying off the loan early,"Repaying a loan, in part or in full, ahead of its schedule."
+G05,EMI return charge,bounce charge|EMI bounce|ECS return charge|failed EMI fee,The charge applied when a loan instalment is returned unpaid by the customer's bank.
+G06,late payment charge,late fee|overdue fee|late payment fee,The charge applied when a credit card's minimum amount due is not paid by the due date.
+G07,finance charge,interest on card|card interest rate|revolving interest,Interest applied to credit card balances that are not paid in full.
+G08,transaction dispute,chargeback|disputed transaction|unrecognised transaction,A cardholder's formal challenge to a card transaction.
+G09,hotlisting,blocking the card|card block|deactivating a lost card,Blocking a card permanently after it is reported lost or stolen.
+G10,inoperative account,dormant account|inactive account,An account with no customer-initiated transaction for 24 months.
+G11,deceased claim,death claim|claim after death of account holder|settlement for a dead customer,A claim on the accounts of a customer who has died.
+G12,tax deducted at source,TDS|tax cut on interest,Tax withheld by the bank from interest paid.
+G13,periodic KYC update,re-KYC|KYC renewal|KYC refresh,The scheduled re-verification of a customer's identity and address.
+G14,foreign currency mark-up,forex markup|currency conversion fee|foreign transaction fee,The percentage added to a card transaction made in a foreign currency.
+G15,positive pay,cheque pre-confirmation|high-value cheque confirmation,Advance confirmation of the details of a high-value cheque.
+G16,account takeover,ATO|account hijack,A fraud in which someone other than the customer gains control of the account.
+G17,moratorium,payment holiday|EMI holiday|instalment pause,A period during which loan instalments are not collected.
+G18,annual fee,yearly fee|renewal fee|card membership fee,The fee charged each year for holding a card.

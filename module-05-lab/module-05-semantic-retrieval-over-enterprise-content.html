@@ -1,0 +1,1669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 5: Semantic retrieval over enterprise content</title>
+<meta name="description" content="Module 5 of Enterprise Semantic Intelligence (StackRoute): similarity, relevance, evidence sufficiency, factual correctness and faithfulness; enterprise ingestion with tables, glossary terms, versions, incremental indexing, deletions and inherited access control; embedding model choice; hybrid retrieval with pgvector and PostgreSQL full-text search in one engine; six retrieval architectures; evaluation with a 60-question gold set and confidence intervals; a bank policy search case study; and a six-part lab on PostgreSQL in Docker.">
+<style>
+/* ---------- design tokens ---------- */
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --card2:#F9FAFB;
+  --ink:#1B2333; --ink2:#3C465A; --muted:#5E687D; --rule:#D5DAE3; --rule2:#E7EAF0;
+  --code-bg:#161C2A; --code-ink:#E3E8F4; --code-mute:#8D97AF;
+  --biz:#6A3FC0; --biz-ink:#4A2A8E; --biz-t:#ECE4FB;
+  --tech:#1F5FC2; --tech-ink:#17468F; --tech-t:#DFEAFB;
+  --drv:#0A7C72; --drv-ink:#07594F; --drv-t:#D5F1ED;
+  --prob:#A86E00; --prob-ink:#6B4700; --prob-t:#FFEFC7;
+  --pol:#BF3049; --pol-ink:#8B1D32; --pol-t:#FAE1E6;
+  --usr:#4B556B; --usr-t:#E7EAF0;
+  --focus:#1F5FC2;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#111726; --card:#19213A; --card2:#1E2742;
+  --ink:#E8ECF6; --ink2:#C4CBDE; --muted:#9FA8C0; --rule:#2E3859; --rule2:#27304F;
+  --code-bg:#0C1120;
+  --biz:#A88CFF; --biz-ink:#CBBAFF; --biz-t:#2A2150;
+  --tech:#6F9BFF; --tech-ink:#A9C2FF; --tech-t:#17284F;
+  --drv:#2FC3AF; --drv-ink:#80E0D3; --drv-t:#0F3530;
+  --prob:#EFB23A; --prob-ink:#F5CC76; --prob-t:#3A2E12;
+  --pol:#FF6F87; --pol-ink:#FFA4B4; --pol-t:#3F1B27;
+  --usr:#B2B9D4; --usr-t:#262E52;
+  --focus:#8FB0FF;
+  color-scheme:dark;
+}
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1.09rem;line-height:1.66;overflow-x:hidden}
+a{color:var(--tech-ink);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+code,pre,kbd{font-family:var(--mono)}
+p code,li code,td code,figcaption code,.note code{font-size:.88em;background:var(--rule2);padding:.08em .36em;border-radius:5px;overflow-wrap:anywhere}
+h1,h2,h3,h4{line-height:1.14;margin:0;color:var(--ink)}
+h2{font-size:clamp(1.8rem,3.2vw,2.5rem);font-weight:800;letter-spacing:-.02em}
+h3{font-size:clamp(1.35rem,2.2vw,1.7rem);font-weight:800;margin-top:3rem}
+h4{font-size:1.16rem;font-weight:700;margin-top:1.8rem}
+p{margin:1rem 0} ul,ol{padding-left:1.4rem} li{margin:.4rem 0}
+/* ---------- layout ---------- */
+.shell{display:grid;grid-template-columns:286px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow:auto;background:var(--card);border-right:1px solid var(--rule);padding:26px 20px 36px}
+.main{min-width:0}
+.wrap{max-width:70rem;margin:0 auto;padding:0 38px}
+.prose{max-width:46rem}
+.sec{padding:66px 0 36px;border-top:1px solid var(--rule)}
+.sec-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.sec-num{font-weight:800;font-size:clamp(1.8rem,3.2vw,2.5rem);color:var(--muted)}
+.lede{font-size:1.22rem;color:var(--ink2);max-width:45rem}
+@media (max-width:1080px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:min(320px,86vw);z-index:60;transform:translateX(-102%);transition:transform .25s}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(8,12,28,.45)}
+  .wrap{padding:0 20px}
+}
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:58px}
+.where{flex:1;min-width:0;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{position:absolute;left:0;bottom:-1px;height:3px;width:0;background:var(--tech)}
+.ib{border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:10px;height:38px;padding:0 12px;font:600 .93rem var(--body);cursor:pointer}
+.ib:hover{border-color:var(--ink2)}
+#menuBtn{display:none}
+@media (max-width:1080px){#menuBtn{display:inline-block}}
+/* ---------- sidebar ---------- */
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.brand svg{width:42px;height:42px;flex:none}
+.brand b{display:block;font-size:1.02rem;line-height:1.2}
+.brand span{font-size:.85rem;color:var(--muted)}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:0}
+.toc a{display:grid;grid-template-columns:2.7rem 1fr;gap:4px;padding:7px 10px;border-radius:10px;color:var(--ink2);text-decoration:none;font-size:.95rem;line-height:1.3}
+.toc a .n{font-weight:700;color:var(--muted)}
+.toc a:hover{background:var(--card2);color:var(--ink)}
+.toc a.active{background:var(--tech-t);color:var(--ink)}
+.toc a.active .n{color:var(--tech-ink)}
+.toc a.done .n{color:var(--drv)}
+.toc .sub a{font-size:.88rem;color:var(--muted);padding:4px 10px}
+.legend{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px;font-size:.87rem;color:var(--muted);display:grid;gap:6px}
+.legend span{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:4px;border:2px solid;flex:none}
+/* ---------- hero ---------- */
+.hero{padding:58px 0 30px}
+.hero .line{font-weight:700;color:var(--muted);margin-bottom:16px}
+.hero h1{font-size:clamp(2.5rem,6vw,4.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.02}
+.hero .sub{font-size:clamp(1.12rem,1.7vw,1.34rem);color:var(--ink2);max-width:46rem;margin-top:20px}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.pill{display:inline-flex;flex-wrap:wrap;gap:4px 8px;align-items:center;border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:6px 14px;font-size:.93rem;color:var(--ink2)}
+.pill code{background:none;padding:0}
+/* ---------- figures ---------- */
+.fig{margin:2rem 0 2.3rem;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:20px 20px 12px}
+.fig .scroll{overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;min-width:640px}
+.fig figcaption{font-size:.98rem;color:var(--muted);border-top:1px solid var(--rule2);margin-top:12px;padding:12px 4px 4px}
+.fig figcaption b{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink)}
+svg .t{font-size:18px;font-weight:700}
+svg .tl{font-size:22px;font-weight:800}
+svg .ts{font-size:15px;fill:var(--muted)}
+svg .tm{font-size:15.5px;fill:var(--ink2)}
+svg .lab{font-size:14.5px;font-weight:700;fill:var(--ink2)}
+svg .mono{font-family:var(--mono);font-size:14px}
+svg .bx{fill:var(--card);stroke:var(--rule);stroke-width:2}
+svg .bx2{fill:var(--card2);stroke:var(--rule);stroke-width:2}
+svg .biz{fill:var(--biz-t);stroke:var(--biz);stroke-width:2.5}
+svg .tech{fill:var(--tech-t);stroke:var(--tech);stroke-width:2.5}
+svg .drv{fill:var(--drv-t);stroke:var(--drv);stroke-width:2.5}
+svg .prob{fill:var(--prob-t);stroke:var(--prob);stroke-width:2.5}
+svg .pol{fill:var(--pol-t);stroke:var(--pol);stroke-width:2.5}
+svg .usr{fill:var(--usr-t);stroke:var(--usr);stroke-width:2.5}
+svg .asst{fill:var(--ink);stroke:var(--ink);stroke-width:2}
+svg text.on{fill:var(--bg)}
+svg .ln{stroke:var(--ink2);stroke-width:2.5;fill:none}
+svg .ln-pol{stroke:var(--pol);stroke-width:3;fill:none}
+svg .ln-tech{stroke:var(--tech);stroke-width:3;fill:none}
+svg .ln-drv{stroke:var(--drv);stroke-width:3;fill:none}
+svg .ln-prob{stroke:var(--prob);stroke-width:3;fill:none}
+svg .dash{stroke-dasharray:7 7}
+svg .zone{fill:none;stroke:var(--rule);stroke-width:2;stroke-dasharray:8 6}
+svg .ah{fill:var(--ink2)} svg .ah-pol{fill:var(--pol)} svg .ah-tech{fill:var(--tech)} svg .ah-drv{fill:var(--drv)} svg .ah-prob{fill:var(--prob)}
+svg .ink-pol{fill:var(--pol-ink)} svg .ink-tech{fill:var(--tech-ink)} svg .ink-drv{fill:var(--drv-ink)} svg .ink-prob{fill:var(--prob-ink)} svg .ink-biz{fill:var(--biz-ink)}
+svg .pick{cursor:pointer;outline:none}
+svg .pick:focus-visible rect{stroke:var(--focus);stroke-width:5}
+svg.dim .pick{opacity:.4;transition:opacity .2s}
+svg.dim .pick.sel{opacity:1}
+svg .pick.sel rect{stroke-width:4.5}
+/* ---------- callouts ---------- */
+.note{border:1px solid var(--rule);background:var(--card);border-radius:14px;padding:16px 20px;margin:1.5rem 0;max-width:46rem}
+.note h5{margin:0 0 6px;font:700 1rem var(--body);display:flex;align-items:center;gap:10px}
+.note p{margin:.5rem 0}.note p:last-child{margin-bottom:0}
+.note .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:.9rem;font-weight:800;background:var(--usr);color:var(--card)}
+.note.like{background:var(--prob-t);border-color:color-mix(in srgb,var(--prob) 40%,transparent)}
+.note.like .ic{background:var(--prob);color:#fff}
+.note.word{background:var(--tech-t);border-color:color-mix(in srgb,var(--tech) 35%,transparent)}
+.note.word .ic{background:var(--tech);color:#fff}
+.note.warn{background:var(--pol-t);border-color:color-mix(in srgb,var(--pol) 35%,transparent)}
+.note.warn .ic{background:var(--pol);color:#fff}
+.note.lab{background:var(--drv-t);border-color:color-mix(in srgb,var(--drv) 35%,transparent)}
+.note.lab .ic{background:var(--drv);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.5rem 0}
+.two .note{margin:0}
+.two>*,.g2>*{min-width:0}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+/* ---------- steps ---------- */
+.steps{list-style:none;padding:0;margin:1.5rem 0;display:grid;gap:12px;max-width:52rem}
+.steps>li{display:grid;grid-template-columns:50px 1fr;gap:14px;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin:0}
+.steps .k{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:1.1rem;background:var(--usr-t)}
+.steps h4{margin:2px 0 4px;font-size:1.1rem}
+.steps p{margin:.3rem 0}
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto;margin:1.5rem 0;border:1px solid var(--rule);border-radius:14px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.98rem;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:11px 15px;border-bottom:1px solid var(--rule2)}
+thead th{background:var(--card2);font-weight:700}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{font-weight:700}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.82rem;font-weight:700}
+.tag.biz{background:var(--biz-t);color:var(--biz-ink)} .tag.tech{background:var(--tech-t);color:var(--tech-ink)} .tag.drv{background:var(--drv-t);color:var(--drv-ink)} .tag.prob{background:var(--prob-t);color:var(--prob-ink)} .tag.pol{background:var(--pol-t);color:var(--pol-ink)} .tag.usr{background:var(--usr-t);color:var(--ink2)}
+/* ---------- code ---------- */
+.code{margin:1.3rem 0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;overflow:hidden;max-width:56rem}
+.code .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);font:600 .86rem var(--mono);color:var(--code-mute)}
+.code pre{margin:0;padding:14px 16px;overflow-x:auto;font-size:.92rem;line-height:1.58}
+.copy{background:transparent;border:1px solid rgba(255,255,255,.22);color:#DCE2F5;border-radius:8px;padding:3px 10px;font:600 .8rem var(--body);cursor:pointer}
+.c-k{color:#FFB86B}.c-s{color:#9BE29B}.c-c{color:#8D97AF;font-style:italic}.c-n{color:#FFD580}.c-bad{color:#FF8FA3}.c-ok{color:#7FE0A0}
+/* ---------- glossary terms ---------- */
+.kw{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:help;border-bottom:2px dotted var(--tech)}
+.kw:hover,.kw:focus-visible{background:var(--tech-t);border-radius:3px}
+.tip{position:absolute;z-index:80;max-width:340px;background:var(--ink);color:var(--bg);padding:11px 14px;border-radius:12px;font-size:.93rem;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .15s}
+.tip.show{opacity:1}
+.tip b{display:block;margin-bottom:3px;font-size:1.02rem}
+/* ---------- simulations ---------- */
+.sim{margin:2rem 0 2.4rem;border:2px solid var(--rule);border-radius:18px;background:var(--card);overflow:hidden}
+.sim-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 20px;background:var(--card2);border-bottom:1px solid var(--rule)}
+.sim-h h4{margin:0;font-size:1.1rem}
+.sim-h .try{font-size:.83rem;font-weight:700;color:var(--drv-ink);background:var(--drv-t);border-radius:999px;padding:3px 10px}
+.sim-b{padding:18px 20px}
+.ctrls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:13px}
+.chip{border:1.5px solid var(--rule);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:600 .93rem var(--body);cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--ink2)}
+.chip[aria-pressed="true"]{background:var(--tech-t);border-color:var(--tech)}
+.btn{border:1.5px solid var(--ink2);background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 16px;font:700 .95rem var(--body);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+.out{background:var(--card2);border:1px solid var(--rule);border-radius:12px;padding:13px 15px;font-size:.98rem}
+.out p{margin:.4rem 0}.out p:first-child{margin-top:0}.out p:last-child{margin-bottom:0}
+.lbl{font-size:.88rem;font-weight:700;color:var(--muted);margin:0 0 6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.g2{grid-template-columns:1fr}}
+.field{display:grid;gap:6px;font-weight:700;font-size:.96rem;margin-bottom:10px}
+.field .v{font-family:var(--mono);color:var(--tech-ink)}
+input[type=range]{width:100%;accent-color:var(--tech)}
+select,textarea,input[type=text]{font:inherit;font-weight:400;border:1.5px solid var(--rule);border-radius:10px;padding:8px 10px;background:var(--card);color:var(--ink);width:100%}
+.big{font-size:2.3rem;font-weight:800;line-height:1.1}
+.rows{display:grid;gap:5px;font-size:.9rem}
+.row{display:grid;grid-template-columns:3.4rem 1fr 5.2rem 5.2rem 5rem;gap:8px;align-items:center;padding:5px 10px;border:1.5px solid var(--rule);border-radius:9px;background:var(--card)}
+.row.hd{border:0;background:none;font-weight:700;color:var(--muted)}
+.row.in{border-color:var(--tech);background:var(--tech-t)}
+.row.dup{border-style:dashed}
+.ci{position:relative;height:34px;background:var(--rule2);border-radius:8px;margin:6px 0 2px}
+.ci i{position:absolute;top:6px;bottom:6px;border-radius:6px}
+.ci b{position:absolute;top:0;bottom:0;width:3px;background:var(--ink)}
+.axis{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.verdict{font-weight:700}
+.verdict.ok{color:var(--drv-ink)} .verdict.no{color:var(--pol-ink)}
+/* ---------- quiz, glossary, refs ---------- */
+.quiz{display:grid;gap:16px;max-width:52rem}
+.q{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:15px 17px}
+.q p{margin:.2rem 0 .8rem;font-weight:700}
+.q .opts{display:grid;gap:8px}
+.q button{text-align:left;border:1.5px solid var(--rule);background:var(--card2);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:.98rem;cursor:pointer}
+.q button.right{border-color:var(--drv);background:var(--drv-t)}
+.q button.wrong{border-color:var(--pol);background:var(--pol-t)}
+.q .why{display:none;margin-top:10px;color:var(--ink2);font-size:.98rem}
+.q.done .why{display:block}
+.gloss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px;margin:1.5rem 0}
+.gloss div{border-bottom:1px solid var(--rule2);padding:8px 0}
+.gloss p{margin:.2rem 0 0;font-size:.97rem;color:var(--ink2)}
+@media (max-width:760px){.gloss{grid-template-columns:1fr}}
+.refs{max-width:52rem;font-size:.97rem}
+.refs li{margin:.7rem 0}
+footer{padding:44px 0 72px;color:var(--muted);font-size:.93rem;border-top:1px solid var(--rule)}
+@media print{.side,.top,.ctrls{display:none!important}.shell{display:block}.fig,.sim,.note{break-inside:avoid}body{background:#fff}}
+
+#handson .tbl td code{white-space:nowrap}
+.refs a{overflow-wrap:anywhere}
+.drill{display:grid;gap:12px}
+.drill .q p{font-weight:400;margin:.1rem 0 .7rem}
+.drill .q .opts{display:flex;flex-wrap:wrap;gap:8px}
+.drill.own .q .opts{display:grid}
+.drill .score{font-weight:700;color:var(--muted);font-size:.93rem}
+.rec{display:block;white-space:pre-wrap;font-family:var(--mono);font-size:.84rem;background:var(--card2);border:1px solid var(--rule2);border-radius:8px;padding:8px 10px;margin:8px 0;overflow-x:auto}
+details.note summary{list-style-position:inside}
+.row.dup{background:var(--biz-t);border-color:var(--biz)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-pol" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-pol" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-tech" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-tech" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-drv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-drv" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="ah-prob" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-prob" d="M0,0 L10,5 L0,10 z"/></marker>
+</defs></svg>
+<div class="shell">
+<aside class="side" id="side" aria-label="Module contents">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="1" y="1" width="46" height="46" rx="12" fill="var(--ink)"/><circle cx="15" cy="16" r="5" fill="var(--biz)"/><circle cx="33" cy="16" r="5" fill="var(--tech)"/><circle cx="24" cy="33" r="5" fill="var(--drv)"/><path d="M15 16 L33 16 L24 33 Z" fill="none" stroke="var(--bg)" stroke-width="2.5"/></svg>
+    <div><b>Enterprise Semantic Intelligence</b><span>StackRoute, an NIIT venture</span></div>
+  </div>
+  <nav><ol class="toc" id="toc">
+    <li><a href="#intro"><span class="n">5.0</span><span>From facts to passages</span></a></li>
+    <li><a href="#five"><span class="n">5.1</span><span>Five different things</span></a></li>
+    <li><a href="#ingest"><span class="n">5.2</span><span>Enterprise ingestion</span></a></li>
+    <li><a href="#models"><span class="n">5.3</span><span>Choosing an embedding model</span></a></li>
+    <li><a href="#hybrid"><span class="n">5.4</span><span>Hybrid retrieval in one engine</span></a></li>
+    <li><a href="#arch"><span class="n">5.5</span><span>Retrieval architectures</span></a></li>
+    <li><a href="#eval"><span class="n">5.6</span><span>Evaluation</span></a></li>
+    <li><a href="#case"><span class="n">5.7</span><span>Case study: bank policy search</span></a></li>
+    <li><a href="#handson"><span class="n">5.8</span><span>Hands-on: build and measure</span></a></li>
+    <li><a href="#recap"><span class="n">5.9</span><span>Recap and checkpoint quiz</span></a></li>
+    <li><a href="#refs"><span class="n">Ref</span><span>References</span></a></li>
+    <li><a href="#glossary"><span class="n">A-Z</span><span>Glossary</span></a></li>
+  </ol></nav>
+  <div class="legend">
+    <div>Colour code used in the architecture diagrams</div>
+    <span><i class="sw" style="background:var(--biz-t);border-color:var(--biz)"></i>Business authority</span>
+    <span><i class="sw" style="background:var(--tech-t);border-color:var(--tech)"></i>Technical authority</span>
+    <span><i class="sw" style="background:var(--drv-t);border-color:var(--drv)"></i>Derived from other assets</span>
+    <span><i class="sw" style="background:var(--prob-t);border-color:var(--prob)"></i>Probabilistic</span>
+    <span><i class="sw" style="background:var(--pol-t);border-color:var(--pol)"></i>Policy, access and risk</span>
+    <span><i class="sw" style="background:var(--ink);border-color:var(--ink)"></i>The assistant</span>
+  </div>
+</aside>
+<div class="main">
+<header class="top"><div class="wrap">
+  <button class="ib" id="menuBtn" aria-controls="side" aria-expanded="false">Contents</button>
+  <div class="where" id="where">Module 5: Semantic retrieval over enterprise content</div>
+  <button class="ib" id="themeBtn" aria-label="Switch between light and dark theme">Theme</button>
+</div><div class="bar" id="bar"></div></header>
+
+<div class="wrap">
+<section class="hero" aria-labelledby="title">
+  <div class="line">Enterprise Semantic Intelligence, Module 5 of 8, 4 hours</div>
+  <h1 id="title">Semantic retrieval over enterprise content</h1>
+  <p class="sub">Modules 3 and 4 answered questions from tables and from a graph. Most of what an enterprise knows about its own rules is written in documents: policies, procedures, tariffs. This module builds the component that finds the right passage in them, for the person who is allowed to read it, in the version that is in force, and measures how often it succeeds.</p>
+  <div class="pills">
+    <span class="pill">Case study: bank product-policy search for contact-centre staff</span>
+    <span class="pill">Lab tools: PostgreSQL with pgvector in Docker, Python 3.13, OpenAI embeddings, a local reranker</span>
+    <span class="pill">Hands-on: six exercises in section 5.8</span>
+  </div>
+  <figure class="fig" style="margin-top:30px">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 300" role="img" aria-label="Policy documents are parsed into chunks, enriched with glossary terms and entitlement tags, embedded and stored in one PostgreSQL database that holds text, a full-text index, vectors and tags. A question is searched two ways, by vector distance and by full-text match, the two lists are fused, a reranker reorders the top candidates and five passages are returned. A gold set of 60 questions measures the result.">
+      <rect x="20" y="30" width="170" height="120" rx="16" class="usr"/>
+      <text x="36" y="62" class="t">Documents</text>
+      <text x="36" y="88" class="tm">policies, tables,</text>
+      <text x="36" y="110" class="tm">versions,</text>
+      <text x="36" y="132" class="tm">audiences</text>
+      <path d="M190 90 H226" class="ln" marker-end="url(#ah)"/>
+      <rect x="230" y="30" width="190" height="120" rx="16" class="pol"/>
+      <text x="246" y="62" class="t">Ingest</text>
+      <text x="246" y="88" class="tm">parse and chunk</text>
+      <text x="246" y="110" class="tm">glossary terms</text>
+      <text x="246" y="132" class="tm">entitlement tags</text>
+      <path d="M420 90 H456" class="ln" marker-end="url(#ah)"/>
+      <rect x="460" y="30" width="210" height="120" rx="16" class="tech"/>
+      <text x="476" y="62" class="t">One PostgreSQL</text>
+      <text x="476" y="88" class="tm">text and metadata</text>
+      <text x="476" y="110" class="tm">full-text index</text>
+      <text x="476" y="132" class="tm">vectors (pgvector)</text>
+      <path d="M670 90 H706" class="ln" marker-end="url(#ah)"/>
+      <rect x="710" y="30" width="190" height="120" rx="16" class="drv"/>
+      <text x="726" y="62" class="t">Retrieve</text>
+      <text x="726" y="88" class="tm">vector + full-text</text>
+      <text x="726" y="110" class="tm">rank fusion</text>
+      <text x="726" y="132" class="tm">reranker</text>
+      <path d="M900 90 H936" class="ln" marker-end="url(#ah)"/>
+      <rect x="940" y="30" width="140" height="120" rx="16" class="bx2"/>
+      <text x="956" y="62" class="t">Evidence</text>
+      <text x="956" y="88" class="tm">5 passages</text>
+      <text x="956" y="110" class="tm">permitted,</text>
+      <text x="956" y="132" class="tm">current</text>
+      <rect x="460" y="200" width="440" height="70" rx="16" class="biz"/>
+      <text x="476" y="230" class="t">Evaluate</text>
+      <text x="476" y="254" class="tm">60-question gold set, intervals, failure analysis</text>
+      <path d="M1010 150 V235 H904" class="ln dash" marker-end="url(#ah)"/>
+      <path d="M460 235 H325 V154" class="ln dash" marker-end="url(#ah)"/>
+      <text x="216" y="240" class="lab">changes go back</text>
+      <text x="216" y="258" class="lab">into the pipeline</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.1.</b> The module in one picture. The upper row is built in labs 1 to 3. The lower box is labs 4 to 6, where measurement decides which part of the upper row to change.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="intro" aria-labelledby="intro-h">
+  <div class="sec-head"><span class="sec-num">5.0</span><h2 id="intro-h">From facts to passages</h2></div>
+  <p class="lede">A contact-centre agent has a customer on the line who wants to close a fixed deposit early. The penalty is in a policy document, in a paragraph that calls it "premature withdrawal". The agent types "penalty for breaking an FD".</p>
+  <div class="prose">
+    <p>Nothing in Modules 3 and 4 answers this. The penalty is one sentence in a document, and the question uses none of that sentence's words. The reference architecture of Module 1 gives the job to the retrieval component, which returns passages as evidence for a person or for an answering model.</p>
+    <p>Retrieval over enterprise content differs from retrieval over a public benchmark in four ways, and each has a section here. Documents have versions, and an answer from a superseded version is wrong. Documents have audiences, and a passage shown to the wrong role is a breach. Much of the content is in tables. And the organization has a glossary (Module 2) that says which words mean the same thing, which a general-purpose model does not know.</p>
+    <p>The lab bank, Lakemont Bank, is fictional. Its products, charges, forms and policies are invented for this module and are no real bank's terms.</p>
+  </div>
+  <h3>Learning outcomes</h3>
+  <div class="prose">
+    <p>After this module you should be able to:</p>
+    <ol>
+      <li><a href="#five">distinguish</a> similarity, relevance, evidence sufficiency, factual correctness and faithfulness, and say which component each one tests;</li>
+      <li><a href="#ingest">design</a> an ingestion pipeline that handles tables, enriches chunks with glossary terms, keeps versions straight, re-indexes incrementally, removes deleted content and inherits access control;</li>
+      <li><a href="#models">choose</a> an embedding model and a dimension by measuring on your own questions, and estimate what the choice costs to embed, store and change;</li>
+      <li><a href="#hybrid">implement</a> hybrid retrieval with a reranker in one PostgreSQL engine and explain what full-text search and vector search each miss;</li>
+      <li><a href="#arch">select</a> among six retrieval architectures from the failure each one fixes and the cost it adds;</li>
+      <li><a href="#eval">evaluate</a> retrieval with recall, precision, MRR, nDCG and evidence sufficiency, report a confidence interval, and state what a 60-question set can and cannot show;</li>
+      <li><a href="#handson">diagnose</a> the ten worst queries of a system, change two architecture choices in response and record the decision.</li>
+    </ol>
+  </div>
+  <h3>Plan for the four hours</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Minutes</th><th>Section</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>0 to 20</td><td style="font-weight:400">5.0, 5.1</td><td style="font-weight:400">The problem and five things that are often called "accuracy"</td></tr>
+      <tr><td>20 to 40</td><td style="font-weight:400">5.2</td><td style="font-weight:400">Enterprise ingestion</td></tr>
+      <tr><td>40 to 65</td><td style="font-weight:400">5.8, labs 1 and 2</td><td style="font-weight:400">Enrich chunks, build the index, apply a re-issued and a withdrawn document</td></tr>
+      <tr><td>65 to 95</td><td style="font-weight:400">5.3, 5.4</td><td style="font-weight:400">Embedding model choice; hybrid retrieval in one engine</td></tr>
+      <tr><td>95 to 110</td><td style="font-weight:400">5.8, lab 3</td><td style="font-weight:400">Write the hybrid query and add the reranker</td></tr>
+      <tr><td>110 to 120</td><td style="font-weight:400"></td><td style="font-weight:400">Break</td></tr>
+      <tr><td>120 to 155</td><td style="font-weight:400">5.5, 5.6</td><td style="font-weight:400">Retrieval architectures; evaluation</td></tr>
+      <tr><td>155 to 175</td><td style="font-weight:400">5.8, lab 4</td><td style="font-weight:400">Metrics and a confidence interval on the gold set</td></tr>
+      <tr><td>175 to 187</td><td style="font-weight:400">5.7</td><td style="font-weight:400">Case study</td></tr>
+      <tr><td>187 to 222</td><td style="font-weight:400">5.8, labs 5 and 6</td><td style="font-weight:400">Failure analysis, two changes, decision record</td></tr>
+      <tr><td>222 to 240</td><td style="font-weight:400">5.9</td><td style="font-weight:400">Review of the decision records, recap and quiz</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Setup (starting the container, creating the Python environment, downloading two small models) takes about 10 minutes on a good connection and is best done before the session. The setup steps are at the start of section 5.8.</p>
+  </div>
+</section>
+
+<section class="sec" id="five" aria-labelledby="five-h">
+  <div class="sec-head"><span class="sec-num">5.1</span><h2 id="five-h">Five different things</h2></div>
+  <p class="lede">"Is the search accurate?" can mean five things. They are measured at different points, by different methods, and a system can pass one while failing the next.</p>
+  <div class="prose">
+    <p>Take the question "What is the late payment charge on a Gold Credit Card when 15,000 rupees is due?" and follow it through a system that retrieves passages and then writes an answer from them.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Property</th><th>Question it answers</th><th>Property of</th><th>Example of failing it</th><th>How it is measured</th></tr></thead>
+    <tbody>
+      <tr><td><button class="kw" data-k="similarity">Similarity</button></td><td style="font-weight:400">Is this passage's vector close to the question's vector?</td><td style="font-weight:400">A passage and a question, under one embedding model</td><td style="font-weight:400">Nothing fails. It is a number, such as a cosine distance of 0.21.</td><td style="font-weight:400">Computed by the engine</td></tr>
+      <tr><td><button class="kw" data-k="relevance">Relevance</button></td><td style="font-weight:400">Is this passage about what was asked?</td><td style="font-weight:400">A passage and a question, judged by a person</td><td style="font-weight:400">The late payment table of the Classic card is the most similar passage. It is about another product.</td><td style="font-weight:400">Human judgement recorded in a gold set; recall, precision, nDCG</td></tr>
+      <tr><td><button class="kw" data-k="sufficiency">Evidence sufficiency</button></td><td style="font-weight:400">Do the returned passages, together, contain everything needed to answer?</td><td style="font-weight:400">The whole returned set and a question</td><td style="font-weight:400">The Gold card's paragraph that says a charge applies is returned. The table with the amount is in the next chunk, which is not.</td><td style="font-weight:400">Evidence phrases in a gold set, or a judge model</td></tr>
+      <tr><td>Factual correctness</td><td style="font-weight:400">Is the answer true?</td><td style="font-weight:400">The answer and the world</td><td style="font-weight:400">The answer says INR 750. That was the charge in version 3 of the policy. Version 4 says INR 900.</td><td style="font-weight:400">Comparison with a reference answer</td></tr>
+      <tr><td><button class="kw" data-k="faithfulness">Faithfulness</button></td><td style="font-weight:400">Does the answer say only what the returned passages support?</td><td style="font-weight:400">The answer and the returned passages</td><td style="font-weight:400">The passages give the charge. The answer adds "and it is waived for first-time defaulters", which no passage says.</td><td style="font-weight:400">Claim-by-claim check against the passages</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Similarity is cheap and is all that a vector index computes. Relevance is what users want and can only be established by people, which is why a gold set exists. A set of relevant passages can still be insufficient, as in the table example.</p>
+    <p>An answer can be faithful to its passages and false, when the passages are out of date: the version 3 answer above quotes its source exactly. And an answer can be true without being faithful, when the model answered from what it learned in training and the passages happened not to contradict it. That last case passes a correctness check today and fails on the day the policy changes.</p>
+    <p>The first three belong to retrieval and are this module's subject. Correctness and faithfulness belong to the answering step and return in Module 6, where an assistant writes answers from metrics, graph facts and passages. The reason to separate them now is diagnostic. When an answer is wrong, the first question is whether sufficient evidence was retrieved. If it was, the fault is in generation. If it was not, no prompt will fix it.</p>
+    <p>Answer relevance is a sixth term you will meet, in the Ragas framework and elsewhere: whether the answer addresses the question that was asked, regardless of truth. An answer that correctly states the annual fee is irrelevant to a question about the late payment charge.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="A question leads to candidate passages ranked by similarity, then to a returned set judged for relevance and evidence sufficiency, then to an answer judged for faithfulness against the returned set and for factual correctness against the current policy.">
+      <rect x="20" y="40" width="150" height="80" rx="16" class="usr"/>
+      <text x="36" y="72" class="t">Question</text>
+      <text x="36" y="98" class="tm">from an agent</text>
+      <path d="M170 80 H216" class="ln" marker-end="url(#ah)"/>
+      <rect x="220" y="40" width="190" height="80" rx="16" class="tech"/>
+      <text x="236" y="72" class="t">Candidates</text>
+      <text x="236" y="98" class="tm">ranked by a score</text>
+      <path d="M410 80 H456" class="ln" marker-end="url(#ah)"/>
+      <rect x="460" y="40" width="190" height="80" rx="16" class="drv"/>
+      <text x="476" y="72" class="t">Returned set</text>
+      <text x="476" y="98" class="tm">five passages</text>
+      <path d="M650 80 H696" class="ln" marker-end="url(#ah)"/>
+      <rect x="700" y="40" width="160" height="80" rx="16" class="pol"/>
+      <text x="716" y="72" class="t">Answer</text>
+      <text x="716" y="98" class="tm">written from them</text>
+      <rect x="910" y="40" width="170" height="80" rx="16" class="biz"/>
+      <text x="926" y="72" class="t">Current policy</text>
+      <text x="926" y="98" class="tm">what is true today</text>
+      <text x="315" y="150" text-anchor="middle" class="lab ink-tech">1 similarity</text>
+      <text x="555" y="150" text-anchor="middle" class="lab ink-drv">2 relevance of each passage</text>
+      <text x="555" y="172" text-anchor="middle" class="lab ink-drv">3 sufficiency of the set</text>
+      <path d="M780 120 V190 H555 V180" class="ln dash" marker-end="url(#ah)"/>
+      <text x="668" y="212" text-anchor="middle" class="lab ink-pol">5 faithfulness: answer against the returned set</text>
+      <path d="M860 80 H906" class="ln dash" marker-end="url(#ah)"/>
+      <text x="884" y="150" text-anchor="middle" class="lab ink-biz">4 correctness:</text>
+      <text x="884" y="172" text-anchor="middle" class="lab ink-biz">answer against the policy</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.2.</b> Where each property is tested. Properties 1 to 3 are tested before any answer is written, so they can be measured without an answering model.</figcaption>
+  </figure>
+  <div class="sim" id="sim-five">
+    <div class="sim-h"><span class="try">Try it</span><h4>Which property failed?</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-five"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="ingest" aria-labelledby="ingest-h">
+  <div class="sec-head"><span class="sec-num">5.2</span><h2 id="ingest-h">Enterprise ingestion</h2></div>
+  <p class="lede">Retrieval can only return what ingestion stored. Seven decisions are made before the first question is asked, and most retrieval failures in the lab trace back to one of them.</p>
+  <h3>Parsing and chunking</h3>
+  <div class="prose">
+    <p>Parsing turns a file into text with its structure kept: title, headings, paragraphs, lists, tables. A <button class="kw" data-k="chunk">chunk</button> is the unit that is embedded, indexed and returned. Its size is a trade. A small chunk gives a precise vector, because it is about one thing, and may leave out the sentence that makes it intelligible. A large chunk carries its context and has a vector that averages several topics. The lab's pipeline makes one chunk per paragraph and keeps, on every chunk, the whole section it came from, so that the choice can be changed at query time (section 5.5).</p>
+    <p>Where the text comes from matters more than the chunking rule. The lab's documents are Markdown with a metadata header, which parses reliably. PDF, scanned forms and slide decks need a layout-aware parser, and its errors (columns read across, headers repeated on every page, tables flattened into a run of numbers) reach the index unnoticed unless a sample of parsed output is read by a person.</p>
+  </div>
+  <h3>Tables and structured content</h3>
+  <div class="prose">
+    <p>A fee schedule is a table, and the answer to "what is the charge when 12,000 is due" is one cell of it. Embedded as raw Markdown, a table row such as <code>| 5,001 to 20,000 | 750 |</code> has no meaning without the header row, and a table split across two chunks loses the header for the second half. The lab's pipeline keeps a table as one chunk and writes each row with its column names.</p>
+  </div>
+  <div class="code"><div class="hd"><span>The late payment table of the Classic card, as the pipeline stores it</span><button class="copy">Copy</button></div><pre>Table of late payment charge by total amount due.
+Total amount due (INR): up to 500; Charge (INR): nil.
+Total amount due (INR): 501 to 5,000; Charge (INR): 400.
+Total amount due (INR): 5,001 to 20,000; Charge (INR): 750.
+Total amount due (INR): above 20,000; Charge (INR): 950.</pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Way to index a table</th><th>Works when</th><th>Fails when</th></tr></thead>
+    <tbody>
+      <tr><td>Rows written out with column names, one chunk per table (the lab)</td><td style="font-weight:400">The table fits in a chunk and questions ask for a cell or a row</td><td style="font-weight:400">The table has hundreds of rows, or the question needs arithmetic across rows</td></tr>
+      <tr><td>One chunk per row, each with the caption and column names</td><td style="font-weight:400">Long tables where each row is a separate fact, such as a branch list</td><td style="font-weight:400">The answer needs neighbouring rows, such as "which slab does 12,000 fall in"</td></tr>
+      <tr><td>A written summary of the table, embedded, with the table returned as the passage</td><td style="font-weight:400">Wide tables whose cells are meaningless as text</td><td style="font-weight:400">Someone has to write or generate the summary and keep it in step with the table</td></tr>
+      <tr><td>Load the table into the warehouse and answer it with the metrics layer of Module 3</td><td style="font-weight:400">The content is data that happens to be published in a document, such as rates by date</td><td style="font-weight:400">The table is a handful of rows inside prose</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>A range lookup shows the limit of retrieval. Neither search method knows that 12,000 lies between 5,001 and 20,000. Retrieval can return the table, and the reading of it is left to the person or the answering model.</p>
+  </div>
+  <h3>Metadata enrichment with glossary terms</h3>
+  <div class="prose">
+    <p>Each chunk is stored with metadata: the document it came from, its version and effective date, its section, whether it is a table, who may read it, and the glossary terms it mentions. The glossary is the one from Module 2. It records that "premature withdrawal" is the preferred term and that staff and customers also say "breaking a deposit" and "early closure". The lab tags each chunk with the terms it mentions and adds their synonyms to the chunk's full-text index, so that a question using a synonym matches a paragraph that uses the preferred term.</p>
+    <p>Three things follow from the tags. Full-text search finds the paragraph by any of its names. The term identifiers can filter or group results. And the link runs both ways: when the glossary owner changes a definition, the chunks that mention the term can be listed for review.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Field on a chunk</th><th>Example</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td><code>chunk_key</code></td><td style="font-weight:400">CC-GOLD:late:1</td><td style="font-weight:400">A stable identity across versions, so that an unchanged paragraph is not embedded again</td></tr>
+      <tr><td><code>doc_id</code>, <code>version</code></td><td style="font-weight:400">CC-GOLD, 4</td><td style="font-weight:400">Citing the source; proving that no superseded text is served</td></tr>
+      <tr><td><code>section</code>, <code>kind</code></td><td style="font-weight:400">late, table</td><td style="font-weight:400">Returning the parent section; evaluating at section level</td></tr>
+      <tr><td><code>glossary_terms</code></td><td style="font-weight:400">G06 (late payment charge)</td><td style="font-weight:400">Synonym matching, filtering, impact analysis when a term changes</td></tr>
+      <tr><td><code>allowed_roles</code></td><td style="font-weight:400">agent, team_lead, ...</td><td style="font-weight:400">The entitlement filter inside every query</td></tr>
+      <tr><td><code>content_hash</code></td><td style="font-weight:400">a 16-character digest</td><td style="font-weight:400">Deciding whether the chunk must be embedded again</td></tr>
+      <tr><td><code>embedding</code>, <code>tsv</code></td><td style="font-weight:400">a vector; a full-text document</td><td style="font-weight:400">The two searches of section 5.4</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Document versions</h3>
+  <div class="prose">
+    <p>A policy is re-issued, and for a period both versions exist: the old one in people's bookmarks and possibly in the index. If both are indexed, the two tables are almost identical text with almost identical vectors, and nothing in similarity prefers the current one.</p>
+    <p>There are three workable designs. Keep only the current version in the search index and archive the others elsewhere, which the lab does. Keep all versions, flag one as current, and filter on the flag in every query. Or keep all versions with their validity periods and filter on a date, which is needed when staff must answer "what was the charge in March" and repeats the as-of pattern of Module 4. What does not work is to index every version and leave the choice to ranking.</p>
+  </div>
+  <h3>Incremental indexing and deletions</h3>
+  <div class="prose">
+    <p>Rebuilding the index for every change costs an embedding call per chunk and, with an approximate index, a rebuild. <button class="kw" data-k="incremental">Incremental indexing</button> embeds only what changed. The lab computes a hash for each chunk from everything that affects retrieval: its search text, its glossary synonyms, its entitlement tags and the name of the embedding model. On a refresh, a chunk whose key and hash are unchanged keeps its vector. A changed or new chunk is embedded. A chunk that the new file no longer produces is deleted. Version 4 of the Gold card policy changes two of nine chunks, so the refresh makes two embedding calls.</p>
+    <p>Deletion needs its own path, because a document that is withdrawn sends no new file. The lab reads a list of withdrawn document identifiers and removes their rows. Until it does, the withdrawn festive deposit offer is returned for two gold questions, with a rate the bank no longer pays. A source system that can only say "these are the documents that exist now" is handled by comparing that list with the index and deleting the difference. Where regulation requires proof of removal, a <button class="kw" data-k="tombstone">tombstone</button> row records what was removed and when.</p>
+    <p>The hash includes the model name because vectors from two models cannot be compared. A change of embedding model, or of what is put in front of each chunk before embedding, changes every hash, and the next refresh embeds the whole corpus. Lab 6 shows this when you switch on contextual headers.</p>
+  </div>
+  <div class="sim" id="sim-incr">
+    <div class="sim-h"><span class="try">Try it</span><h4>What does a refresh have to embed?</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">The index holds the lab corpus: 127 chunks from 23 current documents. Choose an event.</p>
+      <div class="ctrls" id="in-c" role="group" aria-label="Choose an event"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Work the refresh does</p><div id="in-out"></div></div>
+        <div class="out"><p class="lbl">Why</p><div id="in-note"></div></div>
+      </div>
+    </div>
+  </div>
+  <h3>Access-control inheritance</h3>
+  <div class="prose">
+    <p>Each source document has an audience. The fraud playbook is for fraud analysts and team leads, and it says, among other things, that a caller must not be told a fraud hold has been placed. A chunk cut from it inherits its audience as an <button class="kw" data-k="entitlement">entitlement tag</button>, and every query filters on the tag inside the database. The roles in that filter come from the server, which looks them up for the signed-in user. A role sent by the browser or typed into a request is never trusted. In the lab a script passes the role, because there is no login.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Where the filter is applied</th><th>What happens</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Inside the query, as a WHERE condition on both searches (the lab)</td><td style="font-weight:400">A chunk the asker may not read is never a candidate. The asker gets the best five permitted chunks.</td><td style="font-weight:400">Use this</td></tr>
+      <tr><td>After retrieval, by dropping forbidden results from the top five</td><td style="font-weight:400">The asker gets fewer than five results, sometimes none, and the gaps reveal that something was withheld. Forbidden text has already left the database and may be logged.</td><td style="font-weight:400">Avoid</td></tr>
+      <tr><td>In the prompt, by asking the model not to use restricted passages</td><td style="font-weight:400">The restricted text is in the model's input. An instruction is not a control.</td><td style="font-weight:400">Never</td></tr>
+      <tr><td>One index per audience</td><td style="font-weight:400">Strong separation. Documents with several audiences are stored several times, and every new audience is a new index to build and refresh.</td><td style="font-weight:400">For hard boundaries such as legal entities</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Three rules make inheritance safe. Fail closed: a document with no audience is refused at ingestion, because a filter cannot exclude a row that has no tag. Propagate changes: when a document's audience is narrowed at the source, its chunks must be retagged at once, so the audience is part of the content hash. And test it: the gold set contains questions asked by a role that may not read the answer, and the expected result is that no restricted chunk comes back. The OWASP Top 10 for LLM Applications lists this class of fault as LLM08:2025, vector and embedding weaknesses, and recommends permission-aware vector stores.</p>
+    <p>With an approximate vector index a filter has a cost. pgvector applies the WHERE condition after the index scan, so a condition that keeps 10 percent of rows leaves about 4 of the 40 candidates the index returns by default. Since version 0.8.0, iterative index scans continue the scan until enough rows pass the filter. Section 5.4 returns to this.</p>
+  </div>
+  <div class="sim" id="sim-acl">
+    <div class="sim-h"><span class="try">Try it</span><h4>Filter in the query or after it</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">The question is "Which hold code do I place for a suspected account takeover?". Six chunks are shown in order of score. Choose who is asking and where the filter is applied. The system returns three results.</p>
+      <div class="ctrls" id="ac-role" role="group" aria-label="Choose the asker's role"></div>
+      <div class="ctrls" id="ac-mode" role="group" aria-label="Choose where the filter is applied"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Chunks</p><div id="ac-out"></div></div>
+        <div class="out"><p class="lbl">What the asker receives</p><div id="ac-note"></div></div>
+      </div>
+    </div>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 230" role="img" aria-label="The ingestion pipeline: a file is parsed into sections and chunks; each chunk is enriched with glossary terms and with the roles inherited from the document; a content hash is compared with the index; changed chunks are embedded and written, unchanged chunks are kept, and chunks of withdrawn documents are deleted.">
+      <rect x="20" y="40" width="150" height="100" rx="16" class="usr"/>
+      <text x="36" y="72" class="t">File</text>
+      <text x="36" y="98" class="tm">header: version,</text>
+      <text x="36" y="120" class="tm">audience</text>
+      <path d="M170 90 H196" class="ln" marker-end="url(#ah)"/>
+      <rect x="200" y="40" width="170" height="100" rx="16" class="bx2"/>
+      <text x="216" y="72" class="t">Parse</text>
+      <text x="216" y="98" class="tm">sections, chunks,</text>
+      <text x="216" y="120" class="tm">tables as rows</text>
+      <path d="M370 90 H396" class="ln" marker-end="url(#ah)"/>
+      <rect x="400" y="40" width="190" height="100" rx="16" class="biz"/>
+      <text x="416" y="72" class="t">Enrich</text>
+      <text x="416" y="98" class="tm">glossary terms</text>
+      <text x="416" y="120" class="tm">roles from the file</text>
+      <path d="M590 90 H616" class="ln" marker-end="url(#ah)"/>
+      <rect x="620" y="40" width="170" height="100" rx="16" class="pol"/>
+      <text x="636" y="72" class="t">Compare</text>
+      <text x="636" y="98" class="tm">content hash</text>
+      <text x="636" y="120" class="tm">against the index</text>
+      <path d="M790 70 H846" class="ln" marker-end="url(#ah)"/>
+      <path d="M790 110 H846" class="ln" marker-end="url(#ah)"/>
+      <rect x="850" y="40" width="230" height="100" rx="16" class="tech"/>
+      <text x="866" y="72" class="t">Index</text>
+      <text x="866" y="98" class="tm">changed: embed, write</text>
+      <text x="866" y="120" class="tm">same: keep the vector</text>
+      <rect x="620" y="170" width="170" height="44" rx="12" class="prob"/>
+      <text x="636" y="198" class="tm">withdrawn list</text>
+      <path d="M790 192 H965 V144" class="ln dash" marker-end="url(#ah)"/>
+      <text x="880" y="212" text-anchor="middle" class="lab">delete rows</text>
+      <text x="495" y="198" text-anchor="middle" class="lab ink-biz">lab 1</text>
+      <text x="705" y="26" text-anchor="middle" class="lab ink-pol">lab 2</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.3.</b> The ingestion pipeline of the lab. Parsing is provided. You write the enrichment in lab 1 and the comparison and deletion in lab 2.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="models" aria-labelledby="models-h">
+  <div class="sec-head"><span class="sec-num">5.3</span><h2 id="models-h">Choosing an embedding model</h2></div>
+  <p class="lede">An <button class="kw" data-k="embedding">embedding</button> model turns a text into a vector so that texts with similar meaning are close together. The choice fixes the dimension of every vector you store, the price of every refresh, and where your text is sent.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Family</th><th>Current models</th><th>Dimensions</th><th>Input limit</th><th>How it is run</th><th>Query and document handling</th></tr></thead>
+    <tbody>
+      <tr><td>OpenAI</td><td style="font-weight:400">text-embedding-3-small, text-embedding-3-large</td><td style="font-weight:400">1,536 and 3,072 by default; shorter with the <code>dimensions</code> parameter</td><td style="font-weight:400">8,192 tokens</td><td style="font-weight:400">API</td><td style="font-weight:400">Same call for both</td></tr>
+      <tr><td>Cohere</td><td style="font-weight:400">embed-v5.0-pro, embed-v5.0-fast (released 30 September 2026)</td><td style="font-weight:400">256 to 2,048</td><td style="font-weight:400">128,000 tokens</td><td style="font-weight:400">API</td><td style="font-weight:400"><code>input_type</code> of search_document or search_query</td></tr>
+      <tr><td>Voyage AI</td><td style="font-weight:400">voyage-4-large, voyage-4, voyage-4-lite; domain models for finance, law and code</td><td style="font-weight:400">1,024 by default; 256, 512 or 2,048</td><td style="font-weight:400">32,000 tokens</td><td style="font-weight:400">API; voyage-4-nano has open weights</td><td style="font-weight:400"><code>input_type</code> of query or document</td></tr>
+      <tr><td>BGE (BAAI)</td><td style="font-weight:400">bge-small-en-v1.5 (the lab's local model), bge-m3</td><td style="font-weight:400">384; 1,024</td><td style="font-weight:400">512 tokens; 8,192 for bge-m3</td><td style="font-weight:400">Open weights, on your own hardware</td><td style="font-weight:400">v1.5 models take a short instruction before a query; bge-m3 needs none and also produces sparse and multi-vector output</td></tr>
+      <tr><td>E5 (Microsoft)</td><td style="font-weight:400">multilingual-e5-large and smaller sizes</td><td style="font-weight:400">1,024 for large</td><td style="font-weight:400">512 tokens</td><td style="font-weight:400">Open weights, on your own hardware</td><td style="font-weight:400">Each input starts with "query: " or "passage: "</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The table was checked against each vendor's documentation or model card on 18 November 2026 (references 3 to 7). Model line-ups in this field change within months, so read the documentation again before a decision.</p>
+    <p>Four questions decide the choice, in this order.</p>
+    <p>Where may the text go? A hosted API receives every chunk and every question. If policy documents may not leave the bank's environment, the candidates are open-weight models on the bank's own hardware or a hosted model inside the bank's cloud tenancy.</p>
+    <p>Which model retrieves best on your questions? Public leaderboards rank models on public datasets. Your corpus has parallel products, internal codes and house vocabulary. The only reliable comparison is to index your corpus with each candidate and run your gold set, which is what the lab's adapter is for: the scripts take their vectors from OpenAI's model or from a local one, depending on whether <code>OPENAI_API_KEY</code> is set, with <code>EMBED_PROVIDER</code> to override it.</p>
+    <p>What does the dimension cost? pgvector stores a vector in 4 bytes per dimension plus 8, so a 1,536-dimension vector takes about 6 KB and ten million of them take about 61 GB before any index. Its HNSW and IVFFlat indexes accept the <code>vector</code> type up to 2,000 dimensions and the half-precision <code>halfvec</code> type up to 4,000, so a 3,072-dimension vector must be shortened or stored as halfvec to be indexed. Models trained with <button class="kw" data-k="matryoshka">Matryoshka</button> representation learning let you keep the first part of the vector: OpenAI's guide states that text-embedding-3-large shortened to 256 dimensions still scores above the older ada-002 at 1,536 on the MTEB benchmark.</p>
+    <p>What does a change cost? The price of embedding is small. OpenAI's guide lists 62,500 pages per dollar for text-embedding-3-small and 9,615 for text-embedding-3-large, which at about 800 tokens a page is USD 0.02 and USD 0.13 per million tokens. The expensive event is a change of model, because every vector must be recomputed and the index rebuilt while the old one keeps serving. Budget for that at the start, since the model you choose will be superseded.</p>
+    <p>Two practical rules. Embed queries and documents the way the model card says: a model trained with prefixes or an <code>input_type</code> loses quality without them, and the loss is silent. And record the model name and dimension with the index, as the lab does in its content hash and its <code>index_runs</code> table.</p>
+  </div>
+  <div class="sim" id="sim-cost">
+    <div class="sim-h"><span class="try">Try it</span><h4>Embedding cost and vector storage</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">Choose a corpus size and a model. A chunk is taken as 300 tokens. Prices are derived from the pages per dollar in OpenAI's embeddings guide. A local model has no price per token and has a hardware cost that is not shown.</p>
+      <div class="ctrls" id="co-n" role="group" aria-label="Choose the number of chunks"></div>
+      <div class="ctrls" id="co-m" role="group" aria-label="Choose a model and dimension"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Numbers</p><div id="co-out"></div></div>
+        <div class="out"><p class="lbl">Reading</p><div id="co-note"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="hybrid" aria-labelledby="hybrid-h">
+  <div class="sec-head"><span class="sec-num">5.4</span><h2 id="hybrid-h">Hybrid retrieval in one engine</h2></div>
+  <p class="lede">Vector search and full-text search fail on different questions. Running both and fusing the two rankings is called <button class="kw" data-k="hybrid">hybrid retrieval</button>, and PostgreSQL with the pgvector extension can do it in one statement.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Question from the lab's gold set</th><th>Vector search</th><th>Full-text search</th></tr></thead>
+    <tbody>
+      <tr><td>"What is Form 15CB needed for?"</td><td style="font-weight:400">Misses. The answering section is not in its top five. A form number is a rare token that an embedding model has seen little of, and the question has no other content.</td><td style="font-weight:400">Finds it. The token matches one chunk.</td></tr>
+      <tr><td>"How long before an untouched savings account is treated as inoperative?"</td><td style="font-weight:400">Finds it. The policy says "no customer-initiated transaction for 24 months", and the model places "untouched" close to that.</td><td style="font-weight:400">Misses. "Savings" and "account" occur in dozens of chunks, and the ranking gives the one rare word, "inoperative", no extra weight.</td></tr>
+      <tr><td>"How much is the bounce charge on a home loan EMI?"</td><td style="font-weight:400">Finds the instalment paragraphs of both loan products, the home loan second.</td><td style="font-weight:400">Finds it fourth, through "home", "loan", "EMI" and the glossary synonym for EMI return charge.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Across the lab's eight questions that ask for a code or a form number, full-text search found the answering section in its top five every time and vector search six times. Across the eight questions whose vocabulary differs from the policy's, vector search found seven and full-text search five. Eight questions are few, and the direction matches what the two methods are built to do.</p>
+  </div>
+  <h3>Full-text search in PostgreSQL</h3>
+  <div class="prose">
+    <p><button class="kw" data-k="fts">Full-text search</button> stores each chunk as a <code>tsvector</code>: its words reduced to stems, without stop words, with positions. "Charges" and "charged" both become <code>charg</code>. A question becomes a <code>tsquery</code>, and the <code>@@</code> operator tests the match. A GIN index makes the test fast.</p>
+    <p>Two properties of the built-in functions shape the lab's query. First, <code>plainto_tsquery</code> joins the words of its input with AND. A question of twelve words almost never finds a paragraph containing all of them, so the lab turns the ANDs into ORs and lets ranking sort the candidates.</p>
+    <p>Second, <code>ts_rank</code> and <code>ts_rank_cd</code> score a document from how often and how close together the query words appear in that document. They use no statistics about the collection, so a word that appears in every policy counts as much as a word that appears in one. This is weaker than the BM25 ranking of a search engine, which weights rare words more. The PostgreSQL documentation calls its two ranking functions examples and invites you to write your own. Extensions and dedicated engines provide BM25. Fusion and the reranker compensate for part of the difference.</p>
+  </div>
+  <div class="code"><div class="hd"><span>The full-text search of the lab (lab03_hybrid.py)</span><button class="copy">Copy</button></div><pre>WITH q AS (SELECT to_tsquery('english',
+             replace(plainto_tsquery('english', %(qtext)s)::text, ' &amp; ', ' | ')) AS t)
+SELECT chunk_key, row_number() OVER (ORDER BY ts_rank_cd(tsv, q.t) DESC, chunk_key) AS rank
+FROM chunks, q
+WHERE tsv @@ q.t
+  AND allowed_roles &amp;&amp; %(roles)s::text[]                               <span class="c-c">-- entitlement filter</span>
+  AND (%(docs)s::text[] IS NULL OR doc_id = ANY(%(docs)s::text[]))       <span class="c-c">-- optional document filter</span>
+ORDER BY ts_rank_cd(tsv, q.t) DESC, chunk_key
+LIMIT %(n)s</pre></div>
+  <h3>Vector search with pgvector</h3>
+  <div class="prose">
+    <p>pgvector adds a <code>vector</code> column type and distance operators. <code>&lt;=&gt;</code> is cosine distance, <code>&lt;-&gt;</code> Euclidean distance and <code>&lt;#&gt;</code> negative inner product. Ordering by the operator and taking the first rows is a nearest-neighbour search. Without an index the search is exact: PostgreSQL computes the distance to every row. That is the right choice for the lab's 127 chunks and stays practical into the tens of thousands.</p>
+    <p>Beyond that an approximate index is used. <button class="kw" data-k="hnsw">HNSW</button> builds a layered graph of neighbours and searches it greedily. Its build parameters are <code>m</code> (connections per node, 16 by default) and <code>ef_construction</code> (64), and the query parameter <code>hnsw.ef_search</code> (40) sets how many candidates a search keeps. A higher value finds more of the true neighbours and takes longer.</p>
+    <p>IVFFlat, the other index type, clusters the vectors and searches the nearest clusters: it builds faster, uses less memory, and has lower recall at the same speed. An approximate index adds a second kind of miss, on top of the model's: the right chunk is close to the question and the index does not reach it. The optional script <code>hnsw_demo.py</code> measures this on the lab corpus.</p>
+  </div>
+  <div class="code"><div class="hd"><span>The vector search of the lab, and the index statement for a large table</span><button class="copy">Copy</button></div><pre>SELECT chunk_key, row_number() OVER (ORDER BY embedding &lt;=&gt; %(qvec)s::vector) AS rank
+FROM chunks
+WHERE allowed_roles &amp;&amp; %(roles)s::text[]
+  AND (%(docs)s::text[] IS NULL OR doc_id = ANY(%(docs)s::text[]))
+ORDER BY embedding &lt;=&gt; %(qvec)s::vector
+LIMIT %(n)s;
+
+<span class="c-c">-- not created in the lab; hnsw_demo.py creates it, measures it and drops it</span>
+CREATE INDEX chunks_hnsw ON chunks USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+SET hnsw.ef_search = 100;
+SET hnsw.iterative_scan = strict_order;   <span class="c-c">-- keep scanning until enough rows pass the WHERE filter (pgvector 0.8.0 and later)</span></pre></div>
+  <h3>Fusing two rankings</h3>
+  <div class="prose">
+    <p>The two searches return scores on unrelated scales: a cosine distance between 0 and 2, and a cover-density rank with no upper bound. Adding them is meaningless. <button class="kw" data-k="rrf">Reciprocal rank fusion</button> uses only positions. Each chunk scores 1 / (k + rank) in each list it appears in, and the scores are summed. Cormack, Clarke and Buettcher introduced it in 2009 with k = 60, and that value is still the common default. A chunk ranked first by one search and absent from the other scores 1/61. A chunk ranked fifth by both scores 2/65, which is higher. Agreement between the methods is rewarded over a single high rank.</p>
+    <p>The constant k controls how much the top positions dominate. With k = 1, first place (1/2) is worth one and a half times second place (1/3). With k = 60 the first ten places are worth nearly the same, and appearing in both lists decides the order.</p>
+  </div>
+  <div class="sim" id="sim-rrf">
+    <div class="sim-h"><span class="try">Try it</span><h4>Reciprocal rank fusion on three lab questions</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">The ranks are from the lab index with the local embedding model. Choose a question and a value of k. Chunks of the section that answers the question are marked.</p>
+      <div class="ctrls" id="rr-q" role="group" aria-label="Choose a question"></div>
+      <div class="ctrls" id="rr-k" role="group" aria-label="Choose the constant k"></div>
+      <div class="out"><p class="lbl" id="rr-lbl">Fused order</p><div id="rr-out"></div></div>
+    </div>
+  </div>
+  <h3>The reranker</h3>
+  <div class="prose">
+    <p>An embedding model is a <button class="kw" data-k="biencoder">bi-encoder</button>: it reads the question and the passage separately and compares two vectors. That is what makes search over millions of passages possible, and it is also a limit, because everything about a passage has to fit in one vector computed before any question was known. A <button class="kw" data-k="crossenc">cross-encoder</button> reads the question and one passage together and outputs a relevance score. It can attend to the exact words that matter for this question. It cannot be precomputed, so it is applied only to the top candidates of the fused list: 20 in the lab.</p>
+    <p>The lab's reranker is a small open model, ms-marco-MiniLM-L-6-v2, run on the laptop's CPU. Hosted rerankers from Cohere and Voyage, and larger open models such as bge-reranker-v2-m3, are the alternatives. The cost is latency. In the run recorded for this page, hybrid search took about 25 ms at the median and hybrid search with reranking about 870 ms, on a CPU.</p>
+    <p>The second cost is less obvious. A reranker judges the text it is given. In the baseline run, reranking raised nDCG@5 from 0.762 to 0.811 and lowered evidence sufficiency from 0.891 to 0.836: many chunks do not name their product, and the reranker preferred the same paragraph of a sibling product. With the document title and heading in front of each chunk (section 5.5), reranking raised both, nDCG@5 from 0.863 to 0.954 and sufficiency from 0.945 to 0.964. Each of these differences is a handful of questions out of 55, so treat the direction as a finding to check on your own corpus. Lab 5 shows the individual questions.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 260" role="img" aria-label="One question goes to two searches inside PostgreSQL, a vector search and a full-text search, each filtered by the asker's roles. Each returns its top 40 chunks. Reciprocal rank fusion merges them. The top 20 of the fused list go to a cross-encoder reranker, and the top 5 are returned.">
+      <rect x="20" y="90" width="150" height="80" rx="16" class="usr"/>
+      <text x="36" y="122" class="t">Question</text>
+      <text x="36" y="148" class="tm">and the roles</text>
+      <path d="M170 115 L226 70" class="ln" marker-end="url(#ah)"/>
+      <path d="M170 145 L226 190" class="ln" marker-end="url(#ah)"/>
+      <rect x="230" y="20" width="250" height="90" rx="16" class="tech"/>
+      <text x="246" y="52" class="t">Vector search</text>
+      <text x="246" y="78" class="tm">embedding &lt;=&gt; question</text>
+      <text x="246" y="98" class="ts">role filter, top 40</text>
+      <rect x="230" y="150" width="250" height="90" rx="16" class="tech"/>
+      <text x="246" y="182" class="t">Full-text search</text>
+      <text x="246" y="208" class="tm">tsv @@ query, ts_rank_cd</text>
+      <text x="246" y="228" class="ts">role filter, top 40</text>
+      <path d="M480 65 L546 115" class="ln" marker-end="url(#ah)"/>
+      <path d="M480 195 L546 145" class="ln" marker-end="url(#ah)"/>
+      <rect x="550" y="90" width="170" height="80" rx="16" class="drv"/>
+      <text x="566" y="122" class="t">Fusion</text>
+      <text x="566" y="148" class="tm">sum of 1/(60+rank)</text>
+      <path d="M720 130 H766" class="ln" marker-end="url(#ah)"/>
+      <rect x="770" y="90" width="160" height="80" rx="16" class="pol"/>
+      <text x="786" y="122" class="t">Reranker</text>
+      <text x="786" y="148" class="tm">top 20, in Python</text>
+      <path d="M930 130 H976" class="ln" marker-end="url(#ah)"/>
+      <rect x="980" y="90" width="100" height="80" rx="16" class="bx2"/>
+      <text x="996" y="122" class="t">Top 5</text>
+      <text x="996" y="148" class="tm">evidence</text>
+      <text x="475" y="254" text-anchor="middle" class="lab ink-tech">one SQL statement in one PostgreSQL (lab 3)</text>
+      <path d="M222 244 H728" class="ln dash"/>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.4.</b> The retrieval path of the lab. Everything up to and including fusion is one SQL statement. The reranker runs in the Python process.</figcaption>
+  </figure>
+  <h3>What one engine buys, and where it stops</h3>
+  <div class="prose">
+    <p>Keeping text, metadata, full-text index and vectors in one PostgreSQL has four concrete advantages. A refresh is one transaction, so the vector and the text of a chunk cannot disagree. The entitlement filter is one WHERE condition that both searches share. Results join to any other table, such as the documents table that the lab uses to find product names. And the bank already knows how to back up, secure and audit PostgreSQL.</p>
+    <p>It stops being enough when full-text ranking quality matters more than the lab shows (a search engine with BM25, phrase boosts and analyzers per language), when the vector count reaches hundreds of millions, or when query volume needs the search tier scaled separately from the database. Those are reasons to add a search engine or a dedicated vector database, and each adds a second copy of the content that must be kept in step, including its deletions and its entitlements.</p>
+  </div>
+</section>
+
+<section class="sec" id="arch" aria-labelledby="arch-h">
+  <div class="sec-head"><span class="sec-num">5.5</span><h2 id="arch-h">Retrieval architectures</h2></div>
+  <p class="lede">Six additions to the basic pipeline are in common use. Each fixes one kind of failure and has a cost, so the choice starts from the failures you measured.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Architecture</th><th>What it changes</th><th>Failure it fixes</th><th>Cost and risk</th><th>In the lab</th></tr></thead>
+    <tbody>
+      <tr><td>Metadata-aware</td><td style="font-weight:400">Reads a product, date or document type from the question and filters or boosts on the matching metadata</td><td style="font-weight:400">The right paragraph of the wrong product outranks the right one</td><td style="font-weight:400">A wrong or over-narrow filter removes the answer completely</td><td style="font-weight:400"><code>metadata_filter</code></td></tr>
+      <tr><td><button class="kw" data-k="decomposition">Query decomposition</button></td><td style="font-weight:400">Splits a question with several parts into sub-questions, retrieves for each and merges</td><td style="font-weight:400">A comparison or two-part question returns evidence for one part only</td><td style="font-weight:400">More searches per question; sub-questions can lose the subject of the original</td><td style="font-weight:400"><code>decompose</code> (by rule, without a model)</td></tr>
+      <tr><td><button class="kw" data-k="multiquery">Multi-query</button></td><td style="font-weight:400">Searches with several wordings of the question and fuses the results</td><td style="font-weight:400">The question's vocabulary differs from the documents'</td><td style="font-weight:400">More searches; rewordings generated by a model can drift from the question</td><td style="font-weight:400"><code>glossary_expansion</code> (rewording from the glossary)</td></tr>
+      <tr><td><button class="kw" data-k="contextual">Contextual</button></td><td style="font-weight:400">Puts context in front of each chunk before it is embedded and indexed: the document title and heading, or a sentence written by a model</td><td style="font-weight:400">A chunk that says "the account" or "this charge" cannot be told from the same paragraph in another document</td><td style="font-weight:400">Every chunk is embedded again; with a model-written context, one model call per chunk at indexing</td><td style="font-weight:400"><code>contextual_headers</code></td></tr>
+      <tr><td><button class="kw" data-k="parentchild">Parent-child</button></td><td style="font-weight:400">Searches small chunks and returns the larger unit they belong to</td><td style="font-weight:400">The matching chunk is found and the fact is in the next paragraph or the table beside it</td><td style="font-weight:400">More text returned per question, which is more tokens for the answering model and more irrelevant text</td><td style="font-weight:400"><code>parent_child</code></td></tr>
+      <tr><td>Graph-assisted</td><td style="font-weight:400">Uses a knowledge graph to find related entities, then retrieves the passages linked to them, or retrieves summaries of graph communities</td><td style="font-weight:400">The answer depends on a connection that no single passage states, or on a theme across the whole corpus</td><td style="font-weight:400">A graph has to exist and be kept current; building one from documents with a model is costly</td><td style="font-weight:400">Not in this lab. Module 6 combines the graph of Module 4 with retrieval.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Anthropic and Microsoft have published measurements for two of the six. Anthropic reported in 2024 that prepending a model-written context of 50 to 100 tokens to each chunk reduced the share of questions whose relevant chunk was missing from the top 20 by 35 percent, by 49 percent when the contextualised text was also indexed for BM25, and by 67 percent with a reranker added.</p>
+    <p>The lab uses the cheapest form of the idea, the document title and section heading, which needs no model. Microsoft's GraphRAG paper (Edge and others, 2024) builds a graph from the documents themselves and answers corpus-wide questions from community summaries, which passage retrieval cannot do at all.</p>
+    <p>The architectures act at three points. Contextual chunks are an index-time choice, and changing it re-embeds the corpus. Metadata filters, decomposition and multi-query act on the question before the search. Parent-child acts on the results after ranking. A change at query time can be switched per question type and rolled back in minutes. An index-time change cannot.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 210" role="img" aria-label="Where each architecture acts. At index time: contextual chunks. On the question before the search: metadata-aware filtering, query decomposition and multi-query. On the results after ranking: parent-child. Beside the pipeline: graph-assisted retrieval, which draws on a knowledge graph.">
+      <rect x="20" y="30" width="230" height="110" rx="16" class="pol"/>
+      <text x="36" y="62" class="t">Index time</text>
+      <text x="36" y="90" class="tm">contextual chunks</text>
+      <text x="36" y="124" class="ts">re-embeds the corpus</text>
+      <path d="M250 85 H296" class="ln" marker-end="url(#ah)"/>
+      <rect x="300" y="30" width="270" height="110" rx="16" class="tech"/>
+      <text x="316" y="62" class="t">Before the search</text>
+      <text x="316" y="88" class="tm">metadata-aware filter</text>
+      <text x="316" y="108" class="tm">query decomposition</text>
+      <text x="316" y="128" class="tm">multi-query</text>
+      <path d="M570 85 H616" class="ln" marker-end="url(#ah)"/>
+      <rect x="620" y="30" width="200" height="110" rx="16" class="drv"/>
+      <text x="636" y="62" class="t">After ranking</text>
+      <text x="636" y="90" class="tm">parent-child</text>
+      <text x="636" y="124" class="ts">more text returned</text>
+      <rect x="870" y="30" width="210" height="110" rx="16" class="biz"/>
+      <text x="886" y="62" class="t">Beside it</text>
+      <text x="886" y="90" class="tm">graph-assisted</text>
+      <text x="886" y="124" class="ts">needs a knowledge graph</text>
+      <path d="M870 85 H824" class="ln dash" marker-end="url(#ah)"/>
+      <text x="435" y="180" text-anchor="middle" class="lab">query-time choices can differ by question type and be rolled back at once</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.5.</b> Where each architecture acts in the pipeline.</figcaption>
+  </figure>
+  <div class="sim" id="sim-arch">
+    <div class="sim-h"><span class="try">Try it</span><h4>Match the failure to the change</h4></div>
+    <div class="sim-b"><div class="drill" id="dr-arch"></div></div>
+  </div>
+</section>
+
+<section class="sec" id="eval" aria-labelledby="eval-h">
+  <div class="sec-head"><span class="sec-num">5.6</span><h2 id="eval-h">Evaluation</h2></div>
+  <p class="lede">A retrieval system is a set of choices, and the only way to compare two sets is to run the same questions through both and count. This section defines what is counted, how the questions are built, and how much a count over 60 questions can be trusted.</p>
+  <h3>Metrics</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Metric</th><th>Definition</th><th>Reads as</th><th>Blind to</th></tr></thead>
+    <tbody>
+      <tr><td><button class="kw" data-k="recallk">Recall@k</button></td><td style="font-weight:400">Relevant items in the first k results, divided by all relevant items</td><td style="font-weight:400">Did we find what there was to find?</td><td style="font-weight:400">Order within the first k; how much irrelevant text came with it</td></tr>
+      <tr><td>Precision@k</td><td style="font-weight:400">Relevant items in the first k, divided by the number of items returned. The lab counts the distinct sections among its five chunks.</td><td style="font-weight:400">How much of what we returned was useful?</td><td style="font-weight:400">Missed items. When a question has one relevant section, precision stays low however good the ranking is.</td></tr>
+      <tr><td><button class="kw" data-k="mrr">MRR</button></td><td style="font-weight:400">Mean over questions of 1 / (position of the first result that answers the question)</td><td style="font-weight:400">How far down does a reader go before the first answer?</td><td style="font-weight:400">Everything after the first relevant result</td></tr>
+      <tr><td><button class="kw" data-k="ndcg">nDCG@k</button></td><td style="font-weight:400">Sum of (2^grade - 1) / log2(position + 1) over the first k, divided by the same sum for the ideal order</td><td style="font-weight:400">Are the best results at the top? Uses graded relevance.</td><td style="font-weight:400">Whether the set is enough to answer</td></tr>
+      <tr><td>Evidence sufficiency</td><td style="font-weight:400">1 if the returned passages contain every fact needed for the answer, else 0</td><td style="font-weight:400">Could a careful reader answer from this alone?</td><td style="font-weight:400">Rank, and how much else was returned</td></tr>
+      <tr><td>Answer relevance</td><td style="font-weight:400">Whether the written answer addresses the question asked</td><td style="font-weight:400">A property of the answer, measured in Module 6</td><td style="font-weight:400">Truth and grounding</td></tr>
+      <tr><td>Latency</td><td style="font-weight:400">Time from question to results, reported as the median (p50) and the 95th percentile (p95)</td><td style="font-weight:400">What the agent waits for with a customer on the line</td><td style="font-weight:400">Quality</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The lab judges relevance at the level of a section of a document, with two grades: 2 when the section answers the question and 1 when it is related and does not answer it. Judging at section level means the gold set stays valid when the chunking changes. Evidence sufficiency is checked with short phrases recorded for each question, such as "5,001 to 20,000" and "900", which must all appear in the returned text from the right document. The check is strict and cheap. Its weakness is that a phrase can be present in a passage that a reader would still find confusing.</p>
+    <p>High recall with low sufficiency means the right sections are found through the wrong chunks, which points at chunking or parent-child. High sufficiency with low nDCG means the evidence is there and badly ordered, which matters when a person reads the list and matters less when a model reads all five. Report several metrics and say which one the decision rests on. For an assistant that answers from the top five, that is evidence sufficiency.</p>
+  </div>
+  <div class="sim" id="sim-metrics">
+    <div class="sim-h"><span class="try">Try it</span><h4>Grade five results and watch the metrics</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">A question has three relevant sections in the corpus: two that answer it (grade 2) and one related (grade 1). Select each result to cycle its grade through 0, 1 and 2.</p>
+      <div class="ctrls" id="me-c" role="group" aria-label="Grades of the five results"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Metrics at k = 5</p><div id="me-out"></div></div>
+        <div class="out"><p class="lbl">Reading</p><div id="me-note"></div></div>
+      </div>
+    </div>
+  </div>
+  <h3>Building a gold set</h3>
+  <div class="prose">
+    <p>A <button class="kw" data-k="goldset">gold set</button> is a list of questions with the passages that answer them, judged by people who know the content. Five rules decide whether it measures what users experience.</p>
+    <ol>
+      <li>Take questions from where they are asked: search logs, call notes, the questions new agents ask their team lead. A question written by someone looking at the passage borrows its words, and full-text search then looks better than it is.</li>
+      <li>Cover the kinds of question deliberately. The lab's set has eight categories, including exact identifiers, vocabulary mismatches, table lookups, two-part questions, version-sensitive questions and questions the asker is not entitled to have answered.</li>
+      <li>Include questions with no valid answer. Five of the lab's 60 have none: two ask about a withdrawn offer and three are asked by a role that may not read the answer. The correct result is that nothing forbidden or withdrawn is returned.</li>
+      <li>Record the asker's role, the relevant sections with grades, and the evidence phrases. Have a second person judge a sample and discuss the disagreements. They are usually ambiguities in the question.</li>
+      <li>Version the set with the corpus. When version 4 of the Gold card policy took effect, three answers changed. A gold set that still expects INR 750 punishes the system for being right.</li>
+    </ol>
+  </div>
+  <h3>What 60 questions can and cannot tell you</h3>
+  <div class="prose">
+    <p>A metric over 60 questions is an estimate from a sample, and another 60 questions would give another number. A <button class="kw" data-k="bootstrap">bootstrap</button> confidence interval expresses this: resample the per-question results with replacement 2,000 times, compute the mean each time, and report the range that holds the middle 95 percent of those means. In the baseline run for this page, recall@5 was 0.909 with an interval of 0.827 to 0.973, and evidence sufficiency 0.836 with 0.745 to 0.927, over 55 answerable questions. The intervals are about 15 and 18 points wide.</p>
+    <p>The course's evaluation plan sets an acceptance threshold for retrieval of recall@5 at 0.85 or higher on this gold set. The baseline's 0.909 passes. Its interval starts at 0.827, below the threshold, so a second set of 55 questions could plausibly fail. A threshold should be read against the interval, and a result this close to it is a reason to enlarge the set before signing off.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>A 60-question set can</th><th>A 60-question set cannot</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:400">Show a large difference between two systems, when the same questions are run through both and the interval of the paired difference excludes zero</td><td style="font-weight:400">Separate two systems that differ by 3 or 4 points. The interval of the difference will include zero.</td></tr>
+      <tr><td style="font-weight:400">Catch a regression before release, as a fixed test that runs on every change</td><td style="font-weight:400">Give a rate for a category. With 3 to 8 questions in a category, one question moves the rate by 12 to 33 points.</td></tr>
+      <tr><td style="font-weight:400">Show which kinds of question fail, as material for failure analysis</td><td style="font-weight:400">Represent what agents ask, unless it was sampled from what they ask. A set written by the project team measures the team's idea of the questions.</td></tr>
+      <tr><td style="font-weight:400">Show that a leak or a stale answer occurs, when one of its questions triggers it</td><td style="font-weight:400">Show that leaks do not occur. Zero leaks on three probing questions is weak evidence. Entitlement needs its own tests over every restricted document and role.</td></tr>
+      <tr><td style="font-weight:400">Support a decision between architectures today</td><td style="font-weight:400">Stay valid as you tune against it. After many rounds of changes chosen to fix these 60, the score on them overstates the score on new questions. Keep a second set that is never used for tuning.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>The comparison between two configurations is tighter than either number alone, because both ran on the same questions. Lab 6 computes the difference per question and bootstraps that, which removes the variation that easy and hard questions contribute to both runs.</p>
+  </div>
+  <div class="sim" id="sim-ci">
+    <div class="sim-h"><span class="try">Try it</span><h4>How wide is the interval?</h4></div>
+    <div class="sim-b">
+      <p style="margin-top:0">Choose the number of questions and the observed success rate. The interval is the Wilson 95 percent interval for a proportion, which is close to what the bootstrap gives for a yes-or-no metric such as evidence sufficiency.</p>
+      <div class="ctrls" id="ci-n" role="group" aria-label="Choose the number of questions"></div>
+      <div class="ctrls" id="ci-p" role="group" aria-label="Choose the observed rate"></div>
+      <div class="g2" style="align-items:start">
+        <div class="out"><p class="lbl">Interval</p><div id="ci-out"></div></div>
+        <div class="out"><p class="lbl">Reading</p><div id="ci-note"></div></div>
+      </div>
+    </div>
+  </div>
+  <h3>Failure analysis</h3>
+  <div class="prose">
+    <p>A metric says how often retrieval fails. Failure analysis says why, by reading the worst questions one at a time and locating the stage at which the evidence was lost. The lab's script prints, for each of the ten worst questions, the best rank of an answering chunk in the vector list, in the full-text list, in the fused list and after reranking.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Stage</th><th>What the trace shows</th><th>Usual causes</th><th>Changes to consider</th></tr></thead>
+    <tbody>
+      <tr><td>Ingestion</td><td style="font-weight:400">The answering text is not in the index, is a superseded version, or carries the wrong tags</td><td style="font-weight:400">Parser dropped it; refresh not run; audience wrong at source</td><td style="font-weight:400">Fix the pipeline. No retrieval change helps.</td></tr>
+      <tr><td>Candidates</td><td style="font-weight:400">No answering chunk in either list, or only far down</td><td style="font-weight:400">Vocabulary mismatch; a chunk that does not name its subject</td><td style="font-weight:400">Glossary enrichment, multi-query, contextual chunks, a better embedding model</td></tr>
+      <tr><td>Fusion</td><td style="font-weight:400">One list has it near the top, the other does not have it, and it falls below the cut for reranking</td><td style="font-weight:400">One method is blind to this kind of question</td><td style="font-weight:400">Rerank more candidates; weight the lists</td></tr>
+      <tr><td>Reranking</td><td style="font-weight:400">It reaches the reranker and comes out below rank 5, or below a sibling product's paragraph</td><td style="font-weight:400">The chunk text alone does not say which product it is about</td><td style="font-weight:400">Contextual chunks, metadata filter</td></tr>
+      <tr><td>Chunking</td><td style="font-weight:400">The right section is returned through a chunk that lacks the fact</td><td style="font-weight:400">Fact and its introduction are in different chunks; a table beside its paragraph</td><td style="font-weight:400">Parent-child, larger chunks</td></tr>
+      <tr><td>The question or the label</td><td style="font-weight:400">The system's result is defensible</td><td style="font-weight:400">Ambiguous question; gold label out of date or wrong</td><td style="font-weight:400">Fix the gold set, and record that you did</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 200" role="img" aria-label="The evaluation loop: the gold set is run through the system, metrics are computed with intervals, the worst questions are analysed by stage, one or two changes are made, and the same gold set is run again and compared as a paired difference. A held-out set is used only for the final check.">
+      <rect x="20" y="40" width="160" height="90" rx="16" class="biz"/>
+      <text x="36" y="72" class="t">Gold set</text>
+      <text x="36" y="98" class="tm">60 questions,</text>
+      <text x="36" y="118" class="tm">roles, evidence</text>
+      <path d="M180 85 H216" class="ln" marker-end="url(#ah)"/>
+      <rect x="220" y="40" width="160" height="90" rx="16" class="tech"/>
+      <text x="236" y="72" class="t">Run</text>
+      <text x="236" y="98" class="tm">every question,</text>
+      <text x="236" y="118" class="tm">keep the trace</text>
+      <path d="M380 85 H416" class="ln" marker-end="url(#ah)"/>
+      <rect x="420" y="40" width="180" height="90" rx="16" class="drv"/>
+      <text x="436" y="72" class="t">Metrics</text>
+      <text x="436" y="98" class="tm">means with 95</text>
+      <text x="436" y="118" class="tm">percent intervals</text>
+      <path d="M600 85 H636" class="ln" marker-end="url(#ah)"/>
+      <rect x="640" y="40" width="190" height="90" rx="16" class="prob"/>
+      <text x="656" y="72" class="t">Failure analysis</text>
+      <text x="656" y="98" class="tm">ten worst, by stage</text>
+      <path d="M830 85 H866" class="ln" marker-end="url(#ah)"/>
+      <rect x="870" y="40" width="210" height="90" rx="16" class="pol"/>
+      <text x="886" y="72" class="t">Change two things</text>
+      <text x="886" y="98" class="tm">record the decision</text>
+      <path d="M975 130 V170 H300 V134" class="ln dash" marker-end="url(#ah)"/>
+      <text x="640" y="190" text-anchor="middle" class="lab">run again on the same questions and compare the paired difference</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.6.</b> The evaluation loop of labs 4 to 6.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="case" aria-labelledby="case-h">
+  <div class="sec-head"><span class="sec-num">5.7</span><h2 id="case-h">Case study: bank product-policy search for contact-centre staff</h2></div>
+  <p class="lede">A fictional teaching case. Lakemont Bank, its staff, its incidents and its policies are invented. The measurements quoted are real: they come from running the lab's corpus and gold set for this page.</p>
+  <h3>The situation</h3>
+  <div class="prose">
+    <p>Lakemont Bank's contact centre answers questions about savings accounts, deposits, cards and loans. The rules are in 23 policy and process documents that the product teams re-issue several times a year. Agents searched them through a document portal with keyword search, and when the search failed they asked a team lead, with the customer on hold. A pilot replaced the portal's search with vector search over the documents, split into fixed-size pieces. Agents liked it for a month. Then three things happened.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Incident</th><th>What the agent saw</th><th>Cause found</th><th>Property that failed (5.1)</th></tr></thead>
+    <tbody>
+      <tr><td>A wrong charge quoted</td><td style="font-weight:400">Three weeks after version 4 of the Gold card policy took effect, an agent quoted a late payment charge of INR 750. The customer was charged INR 900 and complained.</td><td style="font-weight:400">Version 4 had been added to the index beside version 3. Both tables were returned for some wordings of the question, with version 3 first.</td><td style="font-weight:400">Factual correctness, caused by ingestion. The result was relevant and similar.</td></tr>
+      <tr><td>A restricted passage shown</td><td style="font-weight:400">An agent searching for "hold on account" was shown a paragraph of the fraud playbook and told a caller that a fraud hold had been placed, which the playbook forbids.</td><td style="font-weight:400">The playbook had been uploaded without an audience. The pilot filtered results in the user interface, and a document with no audience was treated as open to all.</td><td style="font-weight:400">None of the five. It is an access-control failure, which no relevance metric detects.</td></tr>
+      <tr><td>Tables not trusted</td><td style="font-weight:400">Fee tables came back as rows of numbers without headings. Agents went back to asking team leads about any charge.</td><td style="font-weight:400">Tables were split by character count, and the lower rows lost their header.</td><td style="font-weight:400">Evidence sufficiency</td></tr>
+    </tbody>
+  </table></div>
+  <h3>What the architecture team decided</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Decision</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>One PostgreSQL engine holds text, metadata, full-text index and vectors</td><td style="font-weight:400">A refresh is one transaction and the entitlement filter is one condition. The corpus is hundreds of chunks, far below the size at which a separate search tier pays for itself.</td></tr>
+      <tr><td>Only the current version of a document is in the search index; withdrawn documents are deleted on the day</td><td style="font-weight:400">Agents answer about today. Past versions stay in the document management system for complaints handling.</td></tr>
+      <tr><td>A document with no audience is refused at ingestion, and the filter runs inside the query</td><td style="font-weight:400">The second incident needed both faults. Either control alone would have prevented it.</td></tr>
+      <tr><td>Tables are kept whole, with each row written with its column names</td><td style="font-weight:400">The third incident. Fee tables at the bank have at most six rows.</td></tr>
+      <tr><td>Chunks carry glossary terms, and their synonyms are indexed for full-text search</td><td style="font-weight:400">Agents say "foreclosure", "bounce charge" and "chargeback". The policies say "prepayment", "EMI return charge" and "transaction dispute". The glossary from the data governance programme already records these.</td></tr>
+      <tr><td>Hybrid retrieval with a reranker; passages are shown to the agent with document, version and effective date</td><td style="font-weight:400">Charge codes and form numbers need exact matching, and paraphrased questions need vectors. No answer-writing model is used yet: the agent reads the passage. That step is Module 6.</td></tr>
+      <tr><td>A gold set of 60 questions written by the project team, run on every change</td><td style="font-weight:400">The pilot had no measurement. Its problems were found by customers.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>What the measurement showed</h3>
+  <div class="prose">
+    <p>With those decisions in place the baseline, on the 55 questions that have an answer the asker may read, returned sufficient evidence in the top five for 0.836 of them, with a 95 percent interval of 0.745 to 0.927. Nine questions failed. Reading them one at a time showed three patterns. Paragraphs such as "No closure charge applies at any time" never name their product, so the same paragraph of a sibling product outranked the right one. Several right sections were found through the introductory paragraph while the table with the amount was left out. And questions naming two products returned evidence for one.</p>
+    <p>The team switched on contextual headers and parent-child retrieval. Evidence sufficiency rose to 0.982, a paired difference of +0.145 with a 95 percent interval of +0.055 to +0.236. The price was a re-embedding of every chunk, which costs little at this size, and about 274 words returned per question in place of 230, which will matter when an answering model reads them.</p>
+    <p>The metadata filter was tried and rejected for now: it fixed several of the same failures and removed the answer for a question about a process that applies to a product. The decision record states that the interval on 55 questions is wide, that the project team wrote the questions with the policies in view, and that the comparison will be repeated when 200 logged questions have been judged.</p>
+  </div>
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 1100 220" role="img" aria-label="The case architecture. Product teams issue and withdraw policies in a document management system. An ingestion job refuses documents without an audience and refreshes one PostgreSQL index incrementally. Agents and team leads ask questions through the service desktop, whose server looks up the signed-in user's roles for every query. Results show the passage with its document, version and effective date. A gold set runs on every change.">
+      <rect x="20" y="30" width="200" height="110" rx="16" class="usr"/>
+      <text x="36" y="62" class="t">Product teams</text>
+      <text x="36" y="88" class="tm">issue, re-issue and</text>
+      <text x="36" y="110" class="tm">withdraw policies</text>
+      <path d="M220 85 H256" class="ln" marker-end="url(#ah)"/>
+      <rect x="260" y="30" width="210" height="110" rx="16" class="pol"/>
+      <text x="276" y="62" class="t">Ingestion job</text>
+      <text x="276" y="88" class="tm">refuses no-audience</text>
+      <text x="276" y="110" class="tm">refreshes by hash</text>
+      <path d="M470 85 H506" class="ln" marker-end="url(#ah)"/>
+      <rect x="510" y="30" width="210" height="110" rx="16" class="tech"/>
+      <text x="526" y="62" class="t">PostgreSQL</text>
+      <text x="526" y="88" class="tm">current versions only</text>
+      <text x="526" y="110" class="tm">role filter in the query</text>
+      <path d="M756 85 H724" class="ln" marker-end="url(#ah)"/>
+      <rect x="760" y="30" width="320" height="110" rx="16" class="bx2"/>
+      <text x="776" y="62" class="t">Service desktop</text>
+      <text x="776" y="88" class="tm">roles from the login</text>
+      <text x="776" y="110" class="tm">shows passage, version, date</text>
+      <rect x="510" y="166" width="210" height="40" rx="12" class="biz"/>
+      <text x="526" y="192" class="tm">gold set on every change</text>
+      <path d="M615 166 V144" class="ln dash" marker-end="url(#ah)"/>
+    </svg>
+    </div>
+    <figcaption><b>Figure 5.7.</b> The architecture the case arrives at. It is the lab's, with a user interface in front.</figcaption>
+  </figure>
+  <h3>Questions for discussion</h3>
+  <div class="prose">
+    <ol>
+      <li>The second incident needed two faults. Which control would you test first, and how would you test it without a relevance judgement?</li>
+      <li>Complaints handlers need to know what the late payment charge was on a past date. Which of the three version designs in section 5.2 serves them, and what changes in the query?</li>
+      <li>The metadata filter was rejected because of one question in 55. Is that enough evidence? What would you need to see to adopt it for a subset of questions?</li>
+      <li>The bank's information security team will not allow policy text to be sent to a hosted embedding API. What changes in the architecture, and what would you measure before agreeing that quality is unaffected?</li>
+    </ol>
+  </div>
+</section>
+
+<section class="sec" id="handson" aria-labelledby="handson-h">
+  <div class="sec-head"><span class="sec-num">5.8</span><h2 id="handson-h">Hands-on: build the retrieval and measure it</h2></div>
+  <p class="lede">Six exercises, done in pairs, on a real PostgreSQL with pgvector. You enrich the chunks, refresh the index, write the hybrid query, evaluate against 60 questions, analyse the ten worst and change two architecture choices. The parsing pipeline is provided.</p>
+  <div class="prose">
+    <p>You need Docker, running, for PostgreSQL, which is the only container in the lab. You need Python 3.10 or later (the lab was run on 3.13) with pip and internet access, for four packages and two small models. And you need VS Code or another editor. An OpenAI API key is optional: with a key in the terminal the lab embeds with <code>text-embedding-3-small</code>, and without one it uses the open model <code>BAAI/bge-small-en-v1.5</code> on your own machine. The reranker always runs on your machine.</p>
+    <p>Software versions run for this page: the Docker image <code>pgvector/pgvector:pg17</code> (PostgreSQL 17.12 with pgvector 0.8.7), <code>psycopg</code> 3.3.9, <code>fastembed</code> 0.9.1, <code>openai</code> 3.53.0 and Python 3.13.</p>
+  </div>
+  <div class="note warn">
+    <h5><span class="ic">!</span>What was tested for this page</h5>
+    <p>Run, on Linux with PostgreSQL in Docker and the local embedding model: setup, all six exercises in starter form (to confirm that each unfinished TODO is reported) and in worked form, every check, the optional index demonstration and the reset. Every block of terminal output on this page is copied from those runs.</p>
+    <p>Not run against OpenAI's service: no API key was available where the page was built. The OpenAI code path (batching, the request, reading the response and the token count) was run against a local stand-in server that returns responses in the format of OpenAI's API reference. To confirm the real service, run <code>python confirm_openai.py</code> once with your key. It makes two calls that cost a fraction of a US cent and prints what it checks.</p>
+    <p>With OpenAI embeddings the chunk counts, the checks and the entitlement results are the same as on this page. Ranks, metric values and the list of failing questions will differ, because a different model places the chunks differently.</p>
+    <p>Not run: the lab on Windows or macOS. The commands for those systems follow the Python and Docker documentation. Timings on this page are from a CPU without a GPU and will differ on your machine.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Exercise</th><th>File you edit</th><th>What you write</th><th>Check</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td>Setup</td><td style="font-weight:400">Terminal</td><td style="font-weight:400">Container, Python environment, models</td><td style="font-weight:400"><code>python setup_lab.py</code></td><td>10 min, before the session</td></tr>
+      <tr><td>1. Enrich and index</td><td style="font-weight:400"><code>lab01_enrich.py</code></td><td style="font-weight:400">Glossary tagging and entitlement inheritance</td><td style="font-weight:400"><code>python check.py 1</code></td><td>13 min</td></tr>
+      <tr><td>2. Refresh</td><td style="font-weight:400"><code>lab02_refresh.py</code></td><td style="font-weight:400">The refresh plan and the withdrawal</td><td style="font-weight:400"><code>python check.py 2</code></td><td>12 min</td></tr>
+      <tr><td>3. Hybrid query</td><td style="font-weight:400"><code>lab03_hybrid.py</code></td><td style="font-weight:400">One SQL statement with reciprocal rank fusion</td><td style="font-weight:400"><code>python check.py 3</code></td><td>15 min</td></tr>
+      <tr><td>4. Evaluate</td><td style="font-weight:400"><code>lab04_evaluate.py</code></td><td style="font-weight:400">Recall, nDCG and a bootstrap interval</td><td style="font-weight:400"><code>python check.py 4</code></td><td>20 min</td></tr>
+      <tr><td>5. Failure analysis</td><td style="font-weight:400"><code>failure_analysis.md</code></td><td style="font-weight:400">Stage, cause and change for the ten worst questions</td><td style="font-weight:400"><code>python check.py 5</code></td><td>17 min</td></tr>
+      <tr><td>6. Two changes</td><td style="font-weight:400"><code>retrieval_config.json</code>, <code>adr/retrieval-architecture-decision.md</code></td><td style="font-weight:400">Two options switched on, measured, and a decision record</td><td style="font-weight:400"><code>python check.py 6</code></td><td>18 min</td></tr>
+      <tr><td>Optional</td><td style="font-weight:400"><code>hnsw_demo.py</code>, <code>confirm_openai.py</code></td><td style="font-weight:400">Nothing. Read the output.</td><td style="font-weight:400"></td><td>Self-study, 10 min</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Each exercise file marks what you write with a <code># TODO</code> comment that states the task and gives a hint, above a line that raises <code>NotImplementedError</code>. Replace that line with your code. A worked version of every file is in the <code>solutions</code> folder. If an exercise is unfinished, the later ones still run: they use the worked version and print a note saying so.</p>
+  </div>
+
+  <h3>Setup</h3>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Open the lab folder</h4><p>Unzip <code>module-05-lab.zip</code>, or use the <code>module-05-lab</code> folder you were given. In VS Code choose File, Open Folder and open <code>module-05-lab</code>. Open a terminal with Terminal, New Terminal. Every command below is typed in that terminal, in that folder.</p></div></li>
+    <li><span class="k">2</span><div><h4>Start PostgreSQL</h4><p>Run <code>docker compose up -d</code>. The first start downloads the image (about 650 MB on disk). Then run <code>docker compose ps</code> and wait until the status of <code>esi-pg</code> shows <code>healthy</code>. The database listens on port 5435 of your machine, so a PostgreSQL you already have on 5432 is not disturbed. User, password and database are <code>lab</code>, <code>lab</code> and <code>policy</code>.</p></div></li>
+    <li><span class="k">3</span><div><h4>Create a Python environment and install the packages</h4><p>The packages go into a folder named <code>.venv</code> inside the lab folder and nowhere else. Use the block for your system. The install downloads about 70 MB.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>Windows PowerShell</span><button class="copy">Copy</button></div><pre>python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt</pre></div>
+  <div class="code"><div class="hd"><span>macOS or Linux</span><button class="copy">Copy</button></div><pre>python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt</pre></div>
+  <div class="prose">
+    <p>The prompt now starts with <code>(.venv)</code>. If you open a new terminal later, run the activate line again. If PowerShell refuses to run the activate script, run <code>Set-ExecutionPolicy -Scope Process RemoteSigned</code> and try again. On macOS or Linux, type <code>python3</code> wherever this page says <code>python</code> if <code>python</code> is not found after activation.</p>
+  </div>
+  <ol class="steps" start="4">
+    <li><span class="k">4</span><div><h4>Choose the embedding model</h4><p>To use OpenAI, put your key into the terminal's environment with one of the lines below. To use the local model, do nothing. To get the numbers printed on this page while a key is set, also set <code>EMBED_PROVIDER</code> to <code>local</code>. The key is read from the environment only. Do not write it into any file in the lab folder.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>Setting the key for this terminal</span><button class="copy">Copy</button></div><pre><span class="c-c"># Windows PowerShell</span>
+$env:OPENAI_API_KEY = "sk-..."
+<span class="c-c"># macOS or Linux</span>
+export OPENAI_API_KEY="sk-..."
+
+<span class="c-c"># optional: force the local model even though a key is set</span>
+$env:EMBED_PROVIDER = "local"        <span class="c-c"># PowerShell</span>
+export EMBED_PROVIDER=local          <span class="c-c"># macOS or Linux</span></pre></div>
+  <ol class="steps" start="5">
+    <li><span class="k">5</span><div><h4>Run the setup check</h4><p>Run <code>python setup_lab.py</code>. It checks the packages, the database and the models, and downloads the reranker (and the local embedding model, if used) into the folder <code>.models</code>, about 150 MB for both. Every line should start with <code>ok</code>.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python setup_lab.py</span><button class="copy">Copy</button></div><pre>1. Python and packages
+  ok    Python 3.13.18
+  ok    psycopg 3.3.9
+  ok    openai 3.53.0
+  ok    fastembed 0.9.1
+  ok    numpy 2.5.5
+2. Docker and PostgreSQL
+  ok    docker command found
+  ok    PostgreSQL 17.12 on port 5435, pgvector 0.8.7
+3. Models
+        embeddings: local:BAAI/bge-small-en-v1.5 (384 dimensions)   (no OPENAI_API_KEY in this terminal, so the local model is used)
+  ok    embedding call returned 384 numbers
+  ok    local reranker loaded (scores 9.7 and -11.4)
+4. Lab files
+  ok    24 policy documents in corpus/, 60 questions in the gold set
+
+Ready. Start with: python lab01_enrich.py</pre></div>
+  <div class="prose">
+    <p>With a key set, the embeddings line reads <code>embeddings: openai:text-embedding-3-small (1536 dimensions)</code>. If you set a key, run <code>python confirm_openai.py</code> now. Every line should start with <code>ok</code>, and the dimensions line should read 1536.</p>
+    <p>The lab folder contains <code>corpus</code> (24 policy files), <code>incoming</code> (a re-issued policy and a list of withdrawn documents), <code>glossary.csv</code> (18 terms with synonyms), <code>gold/gold_set.jsonl</code> (60 questions) and the scripts. Open <code>corpus/CC-GOLD.md</code> and <code>pipeline.py</code> and read them before lab 1: the header of the file is where the version and the audience come from, and <code>pipeline.py</code> is the provided parser.</p>
+  </div>
+
+  <h3>Lab 1: glossary terms and entitlement tags on every chunk</h3>
+  <div class="prose">
+    <p>The pipeline produces chunks with text and position. You add the two enrichments of section 5.2, and the script then builds the index.</p>
+  </div>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Write <code>glossary_terms_in</code></h4><p>Open <code>lab01_enrich.py</code>. The function receives a chunk's heading and text and the glossary rows. Return the sorted identifiers of the terms that the text mentions, by preferred term or by any synonym. Match whole words and ignore case: use <code>re.search(r"\b" + re.escape(name) + r"\b", text, re.I)</code>.</p></div></li>
+    <li><span class="k">2</span><div><h4>Write <code>allowed_roles_for</code></h4><p>Return the document's audience as a sorted list without repeats. If the audience is missing or empty, raise <code>ValueError</code>. Returning an empty list or a default role would index a chunk that the filter cannot protect.</p></div></li>
+    <li><span class="k">3</span><div><h4>Build the index</h4><p>Run <code>python lab01_enrich.py</code>. It creates the tables, parses the 24 files, enriches and embeds 130 chunks and prints a summary. With the local model this takes about 20 seconds on a CPU. With OpenAI it should take a few seconds, which was not timed against the service, and it prints the tokens billed.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python lab01_enrich.py</span><button class="copy">Copy</button></div><pre>Embedding model: local:BAAI/bge-small-en-v1.5 (384 dimensions)
+  lab 1 full index of corpus/: embedded 130 chunks, kept 0 unchanged, deleted 0, 0 API tokens (USD 0.000000), 18.2 s
+
+  24 documents, 130 chunks, 36 chunks carry at least one glossary term
+
+  Chunks by entitlement tag:
+  allowed_roles                                         chunks
+  ----------------------------------------------------  ------
+  agent, collections_officer, fraud_analyst, team_lead  121   
+  team_lead                                             3     
+  fraud_analyst, team_lead                              3     
+  collections_officer, team_lead                        3     
+
+  Three enriched chunks:
+  chunk_key           glossary_terms  text                                                                     
+  ------------------  --------------  -------------------------------------------------------------------------
+  CC-CLASSIC:late:1   G06             Table of late payment charge by total amount due. Total amount due (IN...
+  FD-STD:premature:0  G03             A deposit can be withdrawn before maturity on a request made with Form...
+  PL-STD:bounce:0     G05             When an instalment is returned unpaid by the customer's bank, an EMI r...
+
+Next: python check.py 1</pre></div>
+  <ol class="steps" start="4">
+    <li><span class="k">4</span><div><h4>Check, then look at the rows</h4><p>Run <code>python check.py 1</code>: all 11 checks should pass. Then open a SQL prompt with <code>docker exec -it esi-pg psql -U lab -d policy</code> and run the query below. It shows how the glossary reached the full-text index: the chunk says "Prepayment", and the stored synonyms let a search for "foreclosure" find it. Leave the prompt with <code>\q</code>.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>In psql</span><button class="copy">Copy</button></div><pre>SELECT chunk_key, glossary_terms, fts_extra, allowed_roles
+FROM chunks WHERE chunk_key = 'PL-STD:prepayment:0';
+
+SELECT chunk_key FROM chunks
+WHERE tsv @@ plainto_tsquery('english', 'foreclosure') ORDER BY 1;</pre></div>
+  <div class="code"><div class="hd"><span>Result</span><button class="copy">Copy</button></div><pre>      chunk_key      | glossary_terms |                                           fts_extra                                            |                    allowed_roles                    
+---------------------+----------------+------------------------------------------------------------------------------------------------+-----------------------------------------------------
+ PL-STD:prepayment:0 | {G04}          | prepayment foreclosure foreclose pre-closure of loan early repayment paying off the loan early | {agent,collections_officer,fraud_analyst,team_lead}
+(1 row)
+
+      chunk_key      
+---------------------
+ HL-STD:prepayment:0
+ PL-STD:prepayment:0
+ PL-STD:prepayment:1
+ PL-STD:prepayment:2
+(4 rows)</pre></div>
+
+  <h3>Lab 2: one re-issued and one withdrawn document</h3>
+  <div class="prose">
+    <p>The folder <code>incoming</code> holds version 4 of the Gold Credit Card policy, which changes the late payment table and the credit limit section, and <code>withdrawn.txt</code>, which names the festive deposit offer. Before you start, ask the index a version question: run <code>python lab04_evaluate.py hybrid_rerank</code> and read the line that begins "5 questions have no permitted, current answer". Two questions return results from the withdrawn offer. The run takes about a minute. Ignore its closing line about check 4 for now.</p>
+  </div>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Write <code>plan_changes</code></h4><p>Open <code>lab02_refresh.py</code>. Given the hashes in the index and the hashes of the new chunks, return three sorted lists: keys to embed (new, or hash changed), keys unchanged, keys to delete (in the index, no longer produced).</p></div></li>
+    <li><span class="k">2</span><div><h4>Write <code>withdraw</code></h4><p>Count the chunks of the withdrawn documents, delete the documents and return the count. The chunks table references documents with <code>ON DELETE CASCADE</code>, so one <code>DELETE FROM documents WHERE doc_id = ANY(%s)</code> removes both.</p></div></li>
+    <li><span class="k">3</span><div><h4>Run the refresh once</h4><p>Run <code>python lab02_refresh.py</code>, then <code>python check.py 2</code>. The refresh embeds 2 chunks and keeps 7. If you run it a second time it embeds 0, which is correct, and the check that expects "2 embedded, 7 kept" then fails: rebuild with <code>python lab01_enrich.py</code> and run lab 2 once.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python lab02_refresh.py</span><button class="copy">Copy</button></div><pre>Before: CC-GOLD in the index as (version, chunks) = [(3, 9)]
+  lab 2 refresh from incoming/: embedded 2 chunks, kept 7 unchanged, deleted 0, 0 API tokens (USD 0.000000), 0.8 s
+  withdrawn ['PROMO-FESTIVE']: 3 chunks removed
+After:  CC-GOLD in the index as (version, chunks) = [(4, 9)]
+
+  The late payment table now reads:
+    Table of late payment charge by total amount due.
+    Total amount due (INR): up to 500; Charge (INR): nil.
+    Total amount due (INR): 501 to 5,000; Charge (INR): 500.
+    Total amount due (INR): 5,001 to 20,000; Charge (INR): 900.
+    Total amount due (INR): 20,001 to 50,000; Charge (INR): 1,200.
+    Total amount due (INR): above 50,000; Charge (INR): 1,300.
+
+  Index runs so far:
+  run  note                          embedded  kept  deleted  tokens
+  ---  ----------------------------  --------  ----  -------  ------
+  1    lab 1 full index of corpus/   130       0     0        0     
+  2    lab 2 refresh from incoming/  2         7     0        0     
+
+Next: python check.py 2</pre></div>
+  <div class="prose">
+    <p>Read the table of index runs. The full index embedded 130 chunks and the refresh embedded 2. With OpenAI the token column shows the same ratio in what was billed. The index now holds 127 chunks of 23 documents.</p>
+  </div>
+
+  <h3>Lab 3: hybrid retrieval in one statement, with a reranker</h3>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Read the two provided statements</h4><p>Open <code>lab03_hybrid.py</code>. <code>VECTOR_SQL</code> and <code>FTS_SQL</code> are the statements of section 5.4. Each returns <code>chunk_key</code> and <code>rank</code>, and both use the same filter on roles and documents.</p></div></li>
+    <li><span class="k">2</span><div><h4>Write <code>hybrid_sql</code></h4><p>Return one statement with a <code>WITH</code> list of three parts: the query <code>q</code> from the full-text statement, <code>v</code> for the vector search and <code>f</code> for the full-text search. Then select from <code>v UNION ALL f</code>, group by <code>chunk_key</code>, compute <code>sum(1.0 / (%(rrf_k)s + rank)) AS score</code>, order by score descending and then by <code>chunk_key</code>, so that ties come out in the same order for everyone, and limit to <code>%(n)s</code>. Both branches keep the filter.</p></div></li>
+    <li><span class="k">3</span><div><h4>Run and check</h4><p>Run <code>python lab03_hybrid.py</code>. It prints, for five questions, the rank of the answering section under each method. Then run <code>python check.py 3</code>, which compares your scores with fusion computed in Python and tests that an agent cannot reach a restricted chunk through either branch.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python lab03_hybrid.py</span><button class="copy">Copy</button></div><pre>Rank of the section that holds the answer under each method (- means not in the top 5):
+
+  question                                                       asked by       vector  fts  hybrid  hybrid_rerank
+  -------------------------------------------------------------  -------------  ------  ---  ------  -------------
+  What does CHG-104 cost?                                        agent          1       1    1       1            
+  How much is the bounce charge on a home loan EMI?              agent          2       4    2       1            
+  Within how many days is a claim on a dead customer's accou...  agent          1       5    1       1            
+  Which hold code do I place for a suspected account takeove...  fraud_analyst  2       1    1       1            
+  Which hold code do I place for a suspected account takeove...  agent          -       -    -       -            
+
+  The last row is the same question from a role that may not read the fraud playbook: no method may return it.
+
+Top 5 for: How much is the bounce charge on a home loan EMI?
+  #  chunk                rerank score  text                                                                               
+  -  -------------------  ------------  -----------------------------------------------------------------------------------
+  1  HL-STD:bounce:0      1.39          An EMI return charge of INR 500 is applied for each returned instalment. Penal i...
+  2  PL-STD:bounce:0      0.97          When an instalment is returned unpaid by the customer's bank, an EMI return char...
+  3  HL-STD:rates:0       -2.42         Floating-rate loans are linked to the repo rate and are currently priced between...
+  4  PL-STD:rates:0       -2.84         The rate is fixed for the life of the loan, between 10.75 and 16.50 percent a ye...
+  5  HL-STD:prepayment:0  -3.13         No charge is levied on prepayment of a floating-rate loan taken by an individual...
+
+Next: python check.py 3</pre></div>
+  <div class="prose">
+    <p>Three things to read in the output. The charge code is found by every method here because the table chunk contains the code and little else competes. The bounce charge question shows the reranker moving the home loan paragraph above the personal loan one. And the last two rows are one question from two roles: the fraud analyst gets the playbook, and the agent gets nothing from it under any method.</p>
+  </div>
+  <details class="note"><summary style="font-weight:700;cursor:pointer">Optional: what an approximate index changes (hnsw_demo.py)</summary>
+    <p>Run <code>python hnsw_demo.py</code>. It shows the plan of the exact search (a sequential scan and a sort), builds an HNSW index, shows the plan again (an index scan), measures how many of the true ten nearest chunks the index returns at three values of <code>hnsw.ef_search</code>, and removes the index.</p>
+    <div class="code"><div class="hd"><span>python hnsw_demo.py</span><button class="copy">Copy</button></div><pre>Exact search, the plan PostgreSQL uses now:
+      Limit (actual rows=10 loops=1)
+        -&gt;  Sort (actual rows=10 loops=1)
+              Sort Key: ((embedding &lt;=&gt; '[-0.0284524,-0.0335792,-0 ... (the question vector)
+              Sort Method: top-N heapsort  Memory: 26kB
+              -&gt;  Seq Scan on chunks (actual rows=127 loops=1)
+
+With an HNSW index (m = 16, ef_construction = 64):
+      Limit (actual rows=10 loops=1)
+        -&gt;  Index Scan using chunks_hnsw on chunks (actual rows=10 loops=1)
+              Order By: (embedding &lt;=&gt; '[-0.0284524,-0.0335792,-0. ... (the question vector)
+
+Share of the true 10 nearest chunks that the index returned, over the 60 gold questions:
+
+  hnsw.ef_search  recall of the index  questions with fewer than 10 rows
+  --------------  -------------------  ---------------------------------
+  10              0.993                0                                
+  40              0.995                0                                
+  200             0.995                0                                
+
+The index has been removed, so that the later labs give the same numbers for everyone.</pre></div>
+    <p>At <code>hnsw.ef_search</code> of 40 and 200 the index returns the same ten chunks as the exact scan for 57 of the 60 questions. For the other 3, the tenth and eleventh nearest chunks are the same paragraph in two policies, at the same distance, and each search returns one of them. That tie accounts for the 0.995. At a setting of 10 one true neighbour is missed as well.</p>
+    <p>The graph is built by inserting vectors one at a time, so your numbers can differ in the third decimal. On millions of vectors the recall of the index falls further at low settings, which is the trade the parameter controls. At the lab's size the exact scan needs no index, which is why the lab does not keep one.</p>
+  </details>
+
+  <h3>Lab 4: metrics with a confidence interval</h3>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Write <code>recall_at_k</code> and <code>ndcg_at_k</code></h4><p>Open <code>lab04_evaluate.py</code>. Both receive the retrieved section identifiers in rank order and a dictionary of relevant sections with grades. Recall counts grade 2 sections only and raises <code>ValueError</code> when there are none. nDCG uses the gain 2^grade - 1 and the discount log2(position + 1), as in section 5.6.</p></div></li>
+    <li><span class="k">2</span><div><h4>Write <code>bootstrap_ci</code></h4><p>With <code>random.Random(seed)</code>, draw <code>len(values)</code> values with replacement 2,000 times, sort the 2,000 means and return the values at positions 50 and 1,949. The fixed seed gives everyone the same interval.</p></div></li>
+    <li><span class="k">3</span><div><h4>Run the evaluation</h4><p>Run <code>python check.py 4</code> for the functions, then <code>python lab04_evaluate.py</code>. It runs the 60 questions through four methods, which takes about two minutes on a CPU because of the reranker.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python lab04_evaluate.py</span><button class="copy">Copy</button></div><pre>Embedding model: local:BAAI/bge-small-en-v1.5 (384 dimensions)    k = 5    options on: none (baseline)
+
+55 answerable questions. Mean and 95 percent bootstrap interval:
+
+  method         recall@5              nDCG@5                evidence sufficiency  MRR    precision@5  latency p50 / p95 ms  words returned  leaks
+  -------------  --------------------  --------------------  --------------------  -----  -----------  --------------------  --------------  -----
+  vector         0.845 [0.755, 0.936]  0.741 [0.648, 0.830]  0.800 [0.691, 0.909]  0.707  0.215        20 / 25               221             0    
+  fts            0.755 [0.636, 0.864]  0.602 [0.499, 0.705]  0.727 [0.600, 0.836]  0.549  0.188        25 / 35               253             0    
+  hybrid         0.918 [0.836, 0.982]  0.762 [0.678, 0.844]  0.891 [0.800, 0.964]  0.705  0.229        25 / 36               237             0    
+  hybrid_rerank  0.909 [0.827, 0.973]  0.811 [0.726, 0.887]  0.836 [0.745, 0.927]  0.779  0.226        870 / 1165            230             0    
+
+By category, hybrid_rerank (n is small: use these to choose what to read in lab 5):
+
+  category     n   recall  sufficiency
+  -----------  --  ------  -----------
+  context      5   0.80    0.60       
+  entitlement  3   1.00    1.00       
+  identifier   8   1.00    1.00       
+  lookup       15  0.93    0.93       
+  multipart    5   0.80    0.60       
+  table        8   1.00    1.00       
+  version      3   1.00    0.67       
+  vocabulary   8   0.75    0.62       
+
+5 questions have no permitted, current answer. Results from a withdrawn document: none. Results the asker may not read: 0.
+
+Per-question results saved to results/last_eval.json
+Next: python check.py 4</pre></div>
+  <div class="prose">
+    <p>Read the table with the intervals in mind. Hybrid search has higher recall than either single method, and the recall intervals of all four methods overlap, so on 55 questions the ordering of the methods by recall is suggestive and no more. Lab 6 compares two runs properly, as a paired difference. The reranker raises nDCG and MRR, which measure order, lowers evidence sufficiency from 0.891 to 0.836, and multiplies latency by about 35 on a CPU. Lab 5 shows why sufficiency fell: the reranker reads chunks that do not name their product.</p>
+    <p>Precision@5 is low for every method because most questions have one relevant section and five results are returned. The category table has between 3 and 15 questions per row: use it to choose what to read in lab 5 and do not quote its rates. The line that begins "5 questions" is the safety check on the questions that have no valid answer.</p>
+  </div>
+
+  <h3>Lab 5: failure analysis on the ten worst questions</h3>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Print the facts</h4><p>Check that every option in <code>retrieval_config.json</code> is <code>false</code>, then run <code>python lab05_failures.py</code>. For each of the ten worst questions it prints what was needed, what was returned and the best rank of an answering chunk at each stage.</p></div></li>
+    <li><span class="k">2</span><div><h4>Classify each question</h4><p>Open <code>failure_analysis.md</code> and fill in one row per question: the stage that lost the evidence (the file lists the five words to use), the cause in one sentence, and the option in <code>retrieval_config.json</code> that you expect to fix it. Reason with the stage table of section 5.6 and answer with the five words in the file. The table's ingestion and gold-label stages do not occur in these ten. Open the answering chunk in <code>corpus</code> when the ranks alone do not explain the failure.</p></div></li>
+    <li><span class="k">3</span><div><h4>Choose two changes</h4><p>Under "The two changes I will make", name two options, the questions each should fix, and one question that either could make worse. Run <code>python check.py 5</code>.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python lab05_failures.py (first four of ten questions)</span><button class="copy">Copy</button></div><pre>hybrid_rerank: 9 of 55 answerable questions lack sufficient evidence in the top 5. The ten worst:
+
+Q11 [lookup] What is the maximum term of a Lakemont Home Loan?
+    needs: HL-STD:eligibility    evidence: ['30 years']
+    recall 0.00   nDCG 0.00   sufficient no
+    best rank of an answering chunk: vector 9, full-text 1, fused top 40 3, after reranking - (top 20 of the fused list are reranked)
+    returned: SAV-BASIC:eligibility:0, SAV-PREMIER:eligibility:0, FD-SENIOR:rates:0, CC-GOLD:eligibility:0, CC-CLASSIC:eligibility:0
+
+Q27 [vocabulary] Customer says there is a chargeback pending. How long until it is closed?
+    needs: DISPUTE:timeline    evidence: ['within 90 days']
+    recall 0.00   nDCG 0.00   sufficient no
+    best rank of an answering chunk: vector 1, full-text 23, fused top 40 3, after reranking - (top 20 of the fused list are reranked)
+    returned: SAV-PLUS:closure:0, SAV-BASIC:closure:0, DISPUTE:liability:0, SAV-BASIC:dormancy:0, SAV-PLUS:dormancy:0
+
+Q28 [vocabulary] What is the forex markup on the Platinum card?
+    needs: CC-PLATINUM:rewards    evidence: ['1.99 percent']
+    recall 0.00   nDCG 0.00   sufficient no
+    best rank of an answering chunk: vector 5, full-text 8, fused top 40 8, after reranking - (top 20 of the fused list are reranked)
+    returned: CC-PLATINUM:eligibility:0, CC-CLASSIC:rewards:0, SAV-PREMIER:card:0, DEBIT-LIMITS:limits:0, CC-GOLD:rewards:0
+
+Q57 [context] Does the Premier Savings account charge anything for closing?
+    needs: SAV-PREMIER:closure    evidence: ['No closure charge applies']
+    recall 0.00   nDCG 0.00   sufficient no
+    best rank of an answering chunk: vector 2, full-text -, fused top 40 23, after reranking - (top 20 of the fused list are reranked)
+    returned: SAV-PREMIER:eligibility:0, SAV-PLUS:closure:0, SAV-BASIC:closure:0, SAV-BASIC:eligibility:0, SAV-PLUS:eligibility:0</pre></div>
+  <div class="prose">
+    <p>How to read the first entry. The full-text search ranks the answering chunk first and the vector search ninth, fusion puts it third, and it does not survive reranking. The chunk reads "Salaried and self-employed individuals ... for a term of up to 30 years" and never says "home loan", so the reranker prefers eligibility paragraphs of other products. The stage is reranking, the cause is a chunk that does not name its subject, and the candidate changes are contextual headers or a metadata filter. A worked table for all ten is in <code>solutions/failure_analysis.md</code>.</p>
+  </div>
+
+  <h3>Lab 6: change two architecture choices and record the decision</h3>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Switch on two options</h4><p>Edit <code>retrieval_config.json</code> and set exactly two of <code>contextual_headers</code>, <code>parent_child</code>, <code>glossary_expansion</code>, <code>metadata_filter</code> and <code>decompose</code> to <code>true</code>. Leave the four numbers as they are.</p></div></li>
+    <li><span class="k">2</span><div><h4>Measure against the baseline</h4><p>Run <code>python lab06_changes.py</code>. It evaluates the baseline, applies your configuration, evaluates again on the same questions and prints the paired difference with its interval, the cost side, and the questions that gained or lost sufficient evidence. If you chose <code>contextual_headers</code>, watch it embed every chunk again. Allow three minutes on a CPU.</p></div></li>
+    <li><span class="k">3</span><div><h4>Write the decision record</h4><p>Fill in <code>adr/retrieval-architecture-decision.md</code>: the decision, the evidence with the differences and intervals copied from the output, the cost and trade-offs, what the gold set cannot tell you, and when to revisit. Run <code>python check.py 6</code>. Bring the record to the review at the end of the session. A worked record and its configuration are in <code>solutions/retrieval-architecture-decision.md</code> and <code>solutions/retrieval_config.json</code>.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>python lab06_changes.py with contextual_headers and parent_child switched on</span><button class="copy">Copy</button></div><pre>Baseline (all options off):
+Changed (contextual_headers, parent_child):
+  Index-time option contextual_headers=True: the search text of every chunk changes, so every chunk is embedded again.
+  re-embed with contextual_headers=True: embedded 127 chunks, kept 0 unchanged, deleted 0, 0 API tokens (USD 0.000000), 18.3 s
+
+55 answerable questions, hybrid_rerank:
+
+  metric                baseline  changed  difference and 95 percent interval  reading    
+  --------------------  --------  -------  ----------------------------------  -----------
+  recall@5              0.909     0.982    +0.073 [+0.018, +0.145]             improvement
+  nDCG@5                0.811     0.954    +0.142 [+0.073, +0.220]             improvement
+  evidence sufficiency  0.836     0.982    +0.145 [+0.055, +0.236]             improvement
+
+  cost side                    baseline    changed   
+  ---------------------------  ----------  ----------
+  latency p50 / p95 ms         803 / 1144  921 / 1223
+  words returned per question  230         274       
+  leaks                        0           0         
+
+Questions that gained sufficient evidence: Q11, Q25, Q28, Q40, Q51, Q54, Q57, Q58
+Questions that lost it: none
+
+The index is left as the changed configuration built it. Record the decision in adr/retrieval-architecture-decision.md, then: python check.py 6</pre></div>
+  <div class="prose">
+    <p>The table below gives the result of each single option and of four pairs in the run for this page, so that pairs who chose differently can compare. Evidence sufficiency is over the 55 answerable questions, and the baseline is 0.836.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Options switched on</th><th>Recall@5</th><th>nDCG@5</th><th>Evidence sufficiency</th><th>Words returned</th><th>Questions still failing</th></tr></thead>
+    <tbody>
+      <tr><td>None (baseline)</td><td style="font-weight:400">0.909</td><td style="font-weight:400">0.811</td><td style="font-weight:400">0.836</td><td style="font-weight:400">230</td><td style="font-weight:400">Q11, Q25, Q27, Q28, Q40, Q51, Q54, Q57, Q58</td></tr>
+      <tr><td><code>contextual_headers</code></td><td style="font-weight:400">0.982</td><td style="font-weight:400">0.954</td><td style="font-weight:400">0.964</td><td style="font-weight:400">220</td><td style="font-weight:400">Q25, Q27</td></tr>
+      <tr><td><code>parent_child</code></td><td style="font-weight:400">0.909</td><td style="font-weight:400">0.811</td><td style="font-weight:400">0.891</td><td style="font-weight:400">284</td><td style="font-weight:400">Q11, Q27, Q28, Q51, Q54, Q57</td></tr>
+      <tr><td><code>glossary_expansion</code></td><td style="font-weight:400">0.945</td><td style="font-weight:400">0.841</td><td style="font-weight:400">0.891</td><td style="font-weight:400">229</td><td style="font-weight:400">Q11, Q40, Q51, Q54, Q57, Q58</td></tr>
+      <tr><td><code>metadata_filter</code></td><td style="font-weight:400">0.964</td><td style="font-weight:400">0.890</td><td style="font-weight:400">0.945</td><td style="font-weight:400">223</td><td style="font-weight:400">Q25, Q27, Q38</td></tr>
+      <tr><td><code>decompose</code></td><td style="font-weight:400">0.927</td><td style="font-weight:400">0.831</td><td style="font-weight:400">0.873</td><td style="font-weight:400">228</td><td style="font-weight:400">Q11, Q25, Q27, Q28, Q40, Q57, Q58</td></tr>
+      <tr><td><code>contextual_headers</code>, <code>parent_child</code></td><td style="font-weight:400">0.982</td><td style="font-weight:400">0.954</td><td style="font-weight:400">0.982</td><td style="font-weight:400">274</td><td style="font-weight:400">Q27</td></tr>
+      <tr><td><code>contextual_headers</code>, <code>glossary_expansion</code></td><td style="font-weight:400">1.000</td><td style="font-weight:400">0.987</td><td style="font-weight:400">1.000</td><td style="font-weight:400">219</td><td style="font-weight:400">none</td></tr>
+      <tr><td><code>parent_child</code>, <code>metadata_filter</code></td><td style="font-weight:400">0.964</td><td style="font-weight:400">0.890</td><td style="font-weight:400">0.964</td><td style="font-weight:400">275</td><td style="font-weight:400">Q27, Q38</td></tr>
+      <tr><td><code>glossary_expansion</code>, <code>metadata_filter</code></td><td style="font-weight:400">0.982</td><td style="font-weight:400">0.918</td><td style="font-weight:400">0.982</td><td style="font-weight:400">222</td><td style="font-weight:400">Q38</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p>Four readings. Contextual headers alone repair seven of the nine failures, because most of them come from chunks that do not name their product. The metadata filter repairs most of the same questions at no indexing cost and removes the answer to Q38, which asks about a process that applies to a product. Parent-child repairs the three chunking failures and returns about a fifth more text.</p>
+    <p>One pair reaches 55 of 55. Before reading that as solved, note that the glossary and the vocabulary questions were written by the same people, that the options were chosen by looking at these 55 questions, and that a 95 percent interval for 55 successes out of 55 still reaches down to about 0.93.</p>
+    <p>None of this transfers to another corpus as a rule. Contextual headers win here because the lab bank's products share one policy template, which is common in banks and insurers and absent in, for example, a collection of engineering reports.</p>
+  </div>
+
+  <h3>If something goes wrong</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>What you see</th><th>Cause</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td>"Cannot reach PostgreSQL" from any script</td><td style="font-weight:400">The container is not running or not ready yet</td><td style="font-weight:400"><code>docker compose up -d</code>, then <code>docker compose ps</code> until the status is healthy. <code>docker compose logs postgres</code> shows why it stopped.</td></tr>
+      <tr><td><code>docker compose up</code> reports that port 5435 is already allocated</td><td style="font-weight:400">Another program uses the port</td><td style="font-weight:400">In <code>docker-compose.yml</code> change <code>"5435:5432"</code> to <code>"5436:5432"</code>, start again, and set the variable <code>LAB_DSN</code> to <code>host=localhost port=5436 dbname=policy user=lab password=lab</code> in the terminal</td></tr>
+      <tr><td><code>ModuleNotFoundError: No module named 'psycopg'</code> (or fastembed, openai)</td><td style="font-weight:400">The virtual environment is not active in this terminal</td><td style="font-weight:400">Run the activate line of setup step 3 again. The prompt should start with <code>(.venv)</code>.</td></tr>
+      <tr><td>The model download fails or hangs</td><td style="font-weight:400">No route to huggingface.co, often a corporate proxy</td><td style="font-weight:400">Ask the facilitator for the <code>.models</code> folder and copy it into the lab folder. The scripts then load the models from disk.</td></tr>
+      <tr><td>"The index holds vectors of 384 dimensions and the embedding model in this terminal produces 1536" (or the reverse)</td><td style="font-weight:400">The key was set or removed after the index was built</td><td style="font-weight:400"><code>python lab01_enrich.py</code> then <code>python lab02_refresh.py</code>, in the terminal you will keep using</td></tr>
+      <tr><td>An <code>AuthenticationError</code> or <code>RateLimitError</code> from openai</td><td style="font-weight:400">The key is wrong, has no credit, or the account's rate limit was reached</td><td style="font-weight:400">Check the key. To continue without it, set <code>EMBED_PROVIDER</code> to <code>local</code> and rebuild the index as in the row above.</td></tr>
+      <tr><td>"NOTE: lab03_hybrid.hybrid_sql is not written yet, using solutions/lab03_hybrid.py"</td><td style="font-weight:400">A later lab needs a function you have not finished</td><td style="font-weight:400">Nothing is wrong. The later lab runs on the worked version. Finish the earlier TODO when you can.</td></tr>
+      <tr><td>A syntax error from PostgreSQL in lab 3</td><td style="font-weight:400">Usually a missing comma between the parts of the WITH list, or <code>q</code> defined after it is used</td><td style="font-weight:400">Print your statement and compare its shape with step 2 of lab 3. <code>solutions/lab03_hybrid.py</code> has the worked statement.</td></tr>
+      <tr><td>Check 2 says the last refresh embedded 0 chunks</td><td style="font-weight:400">The refresh was run twice</td><td style="font-weight:400"><code>python lab01_enrich.py</code>, then <code>python lab02_refresh.py</code> once</td></tr>
+      <tr><td>After lab 6, lab 4 or lab 5 no longer gives the baseline numbers</td><td style="font-weight:400">The index still carries the contextual headers, or options are still switched on</td><td style="font-weight:400">Set all five options to <code>false</code> and run <code>python lab06_changes.py</code>, which rebuilds the baseline index, or run <code>python lab01_enrich.py</code> and <code>python lab02_refresh.py</code></td></tr>
+      <tr><td>Your metric values differ from this page</td><td style="font-weight:400">You are using OpenAI embeddings, or a different CPU gives slightly different reranker scores</td><td style="font-weight:400">Expected with OpenAI. With the local model, values should agree to within about 0.01. The model's output varies in its last digits with the machine and with how the chunks were batched, which can swap two close results. The checks do not depend on the values.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Reset</h3>
+  <div class="prose">
+    <p>To do the lab again from the start, run <code>python reset.py</code> in the lab folder and type <code>yes</code> when it asks. It saves the files you changed into a new folder named <code>my_work_</code> with the date and time, restores every lab file to its original state, deletes the files in <code>results</code>, and removes the container with its data volume, so the index is gone. It keeps the downloaded image, the <code>.venv</code> folder and the <code>.models</code> folder. Then start again with <code>docker compose up -d</code> and <code>python setup_lab.py</code>. To stop the container without losing the index, use <code>docker compose stop</code>, and <code>docker compose start</code> to resume.</p>
+  </div>
+  <div class="note lab">
+    <h5><span class="ic">i</span>What to bring to the review</h5>
+    <p>Your <code>failure_analysis.md</code> and your decision record. The review compares the pairs' choices: which two options, what difference with what interval, and what each pair wrote under "What the gold set cannot tell us".</p>
+  </div>
+</section>
+
+<section class="sec" id="recap" aria-labelledby="recap-h">
+  <div class="sec-head"><span class="sec-num">5.9</span><h2 id="recap-h">Recap and checkpoint quiz</h2></div>
+  <p class="lede">The table summarises the module. The quiz has ten scenario questions and, together with the review of the decision records from lab 6, is the formative check for Module 5.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Idea</th><th>Summary</th></tr></thead>
+    <tbody>
+      <tr><td>Five different things</td><td>Similarity is a number from the engine. Relevance is a person's judgement of one passage. Evidence sufficiency is a property of the returned set. Factual correctness compares the answer with the world, and faithfulness compares it with the passages. Retrieval owns the first three.</td></tr>
+      <tr><td>Ingestion</td><td>Keep tables whole with column names on every row. Tag chunks with glossary terms and index the synonyms. Keep one current version in the search index. Refresh by content hash, delete withdrawn documents, and make every chunk inherit its document's audience, refusing documents that have none.</td></tr>
+      <tr><td>Embedding models</td><td>Decide where text may go, then measure candidates on your own gold set. Dimension sets storage and index limits: pgvector indexes the vector type to 2,000 dimensions and halfvec to 4,000. A change of model re-embeds everything.</td></tr>
+      <tr><td>Hybrid retrieval</td><td>Full-text search finds exact tokens and vector search finds paraphrases. Reciprocal rank fusion combines positions, never scores. A cross-encoder reranks the top candidates at a cost in latency. One PostgreSQL holds all of it in one transaction with one entitlement filter.</td></tr>
+      <tr><td>Architectures</td><td>Metadata-aware, decomposition and multi-query act on the question. Contextual chunks act at index time. Parent-child acts on results. Graph-assisted retrieval needs a graph. Each fixes one measured failure and has a cost.</td></tr>
+      <tr><td>Evaluation</td><td>Judge relevance at section level, record evidence phrases and the asker's role, and include questions with no valid answer. Report intervals. Sixty questions separate large differences and catch regressions. They do not resolve small differences, rate categories or prove the absence of leaks.</td></tr>
+      <tr><td>Failure analysis</td><td>For each failed question find the stage that lost the evidence: ingestion, candidates, fusion, reranking, chunking, or the gold label. Change what that stage needs, run the same questions again and compare the paired difference.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Checkpoint quiz</h3>
+  <div class="prose"><p>Select an answer to see whether it is correct and why.</p></div>
+  <div class="quiz" id="quiz"></div>
+  <p class="pill" id="quiz-score" style="margin-top:16px">Score: 0 of 0 answered</p>
+  <div class="note lab" style="margin-top:2.2rem">
+    <h5><span class="ic">6</span>Module 6: one assistant over metrics, graph and documents</h5>
+    <p>Module 6 puts an answering model on top of the three components built so far. The course design has an assistant route each question to the metrics layer of Module 3, the knowledge graph of Module 4 or the retrieval of this module, and write an answer that cites its evidence. Faithfulness, factual correctness and answer relevance, which this module defined and set aside, are measured there. Keep your lab folder: the index and the gold set are used again.</p>
+  </div>
+</section>
+
+<section class="sec" id="refs" aria-labelledby="refs-h">
+  <div class="sec-head"><span class="sec-num">Ref</span><h2 id="refs-h">References</h2></div>
+  <p class="lede">Sources for the claims in this module, checked on 18 November 2026.</p>
+  <ol class="refs">
+    <li>pgvector contributors. "pgvector: open-source vector similarity search for Postgres", README for version 0.8.7, read 18 November 2026. <a href="https://github.com/pgvector/pgvector">github.com/pgvector/pgvector</a>. The source for distance operators, HNSW and IVFFlat parameters and defaults, the 2,000 and 4,000 dimension limits for indexes, storage per vector, filtering after the index scan, iterative index scans from 0.8.0, and the hybrid search section that points to reciprocal rank fusion and cross-encoders.</li>
+    <li>PostgreSQL Global Development Group. "PostgreSQL 17 Documentation, 12.3 Controlling Text Search", read 18 November 2026. <a href="https://www.postgresql.org/docs/17/textsearch-controls.html">postgresql.org/docs/17/textsearch-controls.html</a>. The source for to_tsvector, plainto_tsquery joining words with AND, and the ranking functions ts_rank and ts_rank_cd.</li>
+    <li>OpenAI. "Vector embeddings" guide, read 18 November 2026. <a href="https://developers.openai.com/api/docs/guides/embeddings">developers.openai.com/api/docs/guides/embeddings</a>. Model names, default dimensions, the dimensions parameter, the 8,192-token input limit and pages per dollar, from which the prices per million tokens are derived.</li>
+    <li>Cohere. "Announcing Cohere's Embed 5 Models", release notes, 30 September 2026. <a href="https://docs.cohere.com/changelog/embed-v5">docs.cohere.com/changelog/embed-v5</a>. See also "Introduction to Embeddings at Cohere", <a href="https://docs.cohere.com/docs/embeddings">docs.cohere.com/docs/embeddings</a>, for the input_type parameter.</li>
+    <li>Voyage AI. "Text Embeddings", documentation read 18 November 2026. <a href="https://docs.voyageai.com/docs/embeddings">docs.voyageai.com/docs/embeddings</a>. The voyage-4 family, dimensions, context length and input_type.</li>
+    <li>Chen, J., Xiao, S., Zhang, P., Luo, K., Lian, D. and Liu, Z. "BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation". 2024. <a href="https://arxiv.org/abs/2402.03216">arxiv.org/abs/2402.03216</a>. The 384 dimensions of bge-small-en-v1.5 were read from the vectors the lab produced.</li>
+    <li>Wang, L. and others. Model card of multilingual-e5-large, read 18 November 2026. <a href="https://huggingface.co/intfloat/multilingual-e5-large">huggingface.co/intfloat/multilingual-e5-large</a>. Embedding size 1,024, the 512-token limit and the "query: " and "passage: " prefixes.</li>
+    <li>Kusupati, A. and others. "Matryoshka Representation Learning". NeurIPS 2022. <a href="https://arxiv.org/abs/2205.13147">arxiv.org/abs/2205.13147</a>. The training method that lets a vector be shortened.</li>
+    <li>Cormack, G. V., Clarke, C. L. A. and Buettcher, S. "Reciprocal rank fusion outperforms Condorcet and individual rank learning methods". SIGIR 2009, pages 758 to 759. <a href="https://doi.org/10.1145/1571941.1572114">doi.org/10.1145/1571941.1572114</a>. The formula and k = 60.</li>
+    <li>Malkov, Y. A. and Yashunin, D. A. The paper that introduced Hierarchical Navigable Small World graphs for approximate nearest-neighbour search. IEEE TPAMI 42(4), 2020. <a href="https://arxiv.org/abs/1603.09320">arxiv.org/abs/1603.09320</a>.</li>
+    <li>Anthropic. "Introducing Contextual Retrieval". September 2024. <a href="https://www.anthropic.com/engineering/contextual-retrieval">anthropic.com/engineering/contextual-retrieval</a>. The 35, 49 and 67 percent reductions in failed retrievals quoted in section 5.5 are the vendor's own measurements on its datasets.</li>
+    <li>Edge, D. and others. "From Local to Global: A Graph RAG Approach to Query-Focused Summarization". Microsoft Research, 2024. <a href="https://arxiv.org/abs/2404.16130">arxiv.org/abs/2404.16130</a>.</li>
+    <li>Es, S., James, J., Espinosa-Anke, L. and Schockaert, S. "Ragas: Automated Evaluation of Retrieval Augmented Generation". 2023. <a href="https://arxiv.org/abs/2309.15217">arxiv.org/abs/2309.15217</a>. Definitions of faithfulness, answer relevance and context relevance.</li>
+    <li>Jarvelin, K. and Kekalainen, J. "Cumulated gain-based evaluation of IR techniques". ACM Transactions on Information Systems 20(4), 2002, pages 422 to 446. <a href="https://doi.org/10.1145/582415.582418">doi.org/10.1145/582415.582418</a>. The source of nDCG. The gain 2^grade - 1 used in the lab is the variant of Burges, C. and others, "Learning to rank using gradient descent", ICML 2005.</li>
+    <li>Efron, B. "Bootstrap methods: another look at the jackknife". Annals of Statistics 7(1), 1979, pages 1 to 26. The resampling method behind the lab's intervals. Wilson, E. B. "Probable inference, the law of succession, and statistical inference". Journal of the American Statistical Association 22(158), 1927, pages 209 to 212, for the interval in the simulation of section 5.6.</li>
+    <li>OWASP Gen AI Security Project. "LLM08:2025 Vector and Embedding Weaknesses", in the OWASP Top 10 for LLM Applications 2025. <a href="https://genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses/">genai.owasp.org/llmrisk/llm082025-vector-and-embedding-weaknesses</a>. Access control and data leakage in shared vector stores.</li>
+    <li>Qdrant. "FastEmbed" documentation, 2026. <a href="https://qdrant.github.io/fastembed/">qdrant.github.io/fastembed</a>. The library that runs the lab's local embedding model and cross-encoder. Version 0.9.1 was run for this page.</li>
+  </ol>
+</section>
+
+<section class="sec" id="glossary" aria-labelledby="glossary-h">
+  <div class="sec-head"><span class="sec-num">A-Z</span><h2 id="glossary-h">Glossary</h2></div>
+  <p class="lede">Definitions of the underlined terms used on this page.</p>
+  <div class="gloss" id="gloss"></div>
+</section>
+
+<footer>
+  <p>Enterprise Semantic Intelligence, Module 5. Prepared by Shayantan Dey for StackRoute and RPS Consulting, NIIT's enterprise capability arm. November 2026.</p>
+  <p>Tool versions, product names and vendor features change. Where this page differs from a vendor's current documentation, that documentation takes precedence.</p>
+</footer>
+</div>
+</div>
+</div>
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function press(group,btn){$$("[aria-pressed]",group).forEach(b=>b.setAttribute("aria-pressed",b===btn?"true":"false"));}
+function chips(box,labels,onPick,first){labels.forEach((t,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=t;b.setAttribute("aria-pressed",i===first?"true":"false");b.addEventListener("click",()=>{press(box,b);onPick(i);});box.appendChild(b);});}
+
+
+/* ---------- drill engine: a list of items, each with options, a key and an explanation ---------- */
+function drill(id,opts,items){
+  const root=document.getElementById(id);if(!root)return;let right=0,done=0;
+  if(!opts)root.classList.add("own");
+  const score=document.createElement("p");score.className="score";
+  const upd=()=>{score.textContent=right+" correct of "+done+" answered, "+items.length+" in total";};
+  items.forEach((it,n)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(n+1)+". "+it[0]+"</p><div class='opts'></div><div class='why'></div>";
+    const box=d.querySelector(".opts");(it[3]||opts).forEach((o,oi)=>{const b=document.createElement("button");b.type="button";b.textContent=o;
+      b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");done++;
+        if(oi===it[1]){right++;b.classList.add("right");}else{b.classList.add("wrong");box.children[it[1]].classList.add("right");}
+        d.querySelector(".why").innerHTML="<b>"+(oi===it[1]?"Correct. ":"The keyed answer is \""+esc((it[3]||opts)[it[1]])+"\". ")+"</b>"+esc(it[2]);upd();});
+      box.appendChild(b);});
+    root.appendChild(d);});
+  root.appendChild(score);upd();
+}
+
+/* ---------- theme ---------- */
+const saved=store("esi-theme");
+if(saved==="dark"||saved==="light")document.documentElement.setAttribute("data-theme",saved);
+else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.setAttribute("data-theme","dark");
+$("#themeBtn").addEventListener("click",()=>{const next=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);store("esi-theme",next);});
+
+/* ---------- menu ---------- */
+const side=$("#side"),menuBtn=$("#menuBtn");
+menuBtn.addEventListener("click",()=>{const o=side.classList.toggle("open");menuBtn.setAttribute("aria-expanded",String(o));});
+$$("#toc a").forEach(a=>a.addEventListener("click",()=>{side.classList.remove("open");menuBtn.setAttribute("aria-expanded","false");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){side.classList.remove("open");hideTip();}});
+
+/* ---------- scrollspy and progress ---------- */
+const links=$$("#toc a");
+const targets=links.map(a=>document.getElementById(a.getAttribute("href").slice(1)));
+function onScroll(){
+  const h=document.documentElement,max=h.scrollHeight-h.clientHeight;
+  $("#bar").style.width=(max>0?h.scrollTop/max*100:0)+"%";
+  let cur=0;targets.forEach((t,i)=>{if(t&&t.getBoundingClientRect().top<=110)cur=i;});
+  links.forEach((a,i)=>{a.classList.toggle("active",i===cur);a.classList.toggle("done",i<cur&&!a.parentElement.classList.contains("sub"));});
+  const a=links[cur],sp=a.querySelectorAll("span");
+  $("#where").textContent=(sp[0].textContent?sp[0].textContent+" ":"")+sp[1].textContent;
+}
+window.addEventListener("scroll",onScroll,{passive:true});onScroll();
+
+/* ---------- glossary ---------- */
+const G={
+ "similarity":["Similarity","A number computed from two vectors, such as cosine similarity, that says how close a passage is to a question under one embedding model. It is not a judgement of usefulness."],
+ "relevance":["Relevance","A person's judgement that a passage is about what the question asks. Gold sets record it, sometimes in grades."],
+ "sufficiency":["Evidence sufficiency","Whether the returned passages, taken together, contain every fact needed to answer the question. A property of the whole returned set."],
+ "faithfulness":["Faithfulness","Whether every claim in an answer is supported by the passages it was written from. An answer can be faithful and false when the passages are out of date."],
+ "chunk":["Chunk","The unit of text that is embedded, indexed and returned: a paragraph, a table or a fixed-size piece of a document."],
+ "embedding":["Embedding","A vector of a few hundred to a few thousand numbers that a model computes from a text, placed so that texts with similar meaning are close together."],
+ "incremental":["Incremental indexing","Refreshing an index by embedding only the chunks that are new or changed, recognised by comparing a hash of each chunk with the one stored."],
+ "tombstone":["Tombstone","A record that a document or chunk was deleted and when, kept after the content itself is gone."],
+ "entitlement":["Entitlement tag","The list of roles allowed to read a chunk, inherited from its source document and tested inside every query."],
+ "matryoshka":["Matryoshka representation","A way of training an embedding model so that the first part of each vector is itself a usable, shorter embedding."],
+ "hybrid":["Hybrid retrieval","Running a vector search and a keyword search for the same question and combining the two result lists."],
+ "fts":["Full-text search","Keyword search over text reduced to word stems. In PostgreSQL a document is a tsvector, a query is a tsquery and @@ tests the match."],
+ "hnsw":["HNSW","Hierarchical Navigable Small World, an approximate nearest-neighbour index that searches a layered graph of vectors. It trades a small loss of recall for speed."],
+ "rrf":["Reciprocal rank fusion","A way of merging ranked lists: each item scores 1 / (k + rank) in each list and the scores are added. It uses positions only, with k usually 60."],
+ "biencoder":["Bi-encoder","A model that encodes the question and the passage separately into vectors, which are then compared. Embedding models are bi-encoders."],
+ "crossenc":["Cross-encoder","A model that reads a question and one passage together and outputs a relevance score. It is more accurate than comparing two vectors and too slow to apply to a whole corpus, so it reranks the top candidates."],
+ "decomposition":["Query decomposition","Splitting a question that has several parts into sub-questions, retrieving for each and merging the results."],
+ "multiquery":["Multi-query","Searching with several wordings of one question and fusing the results, to bridge a difference in vocabulary between the question and the documents."],
+ "contextual":["Contextual chunk","A chunk with context placed in front of it before embedding and indexing, such as its document title and heading or a model-written sentence, so that it names its own subject."],
+ "parentchild":["Parent-child retrieval","Searching over small chunks and returning the larger unit, such as the section, that each matched chunk belongs to."],
+ "recallk":["Recall at k","The share of all relevant items that appear in the first k results."],
+ "mrr":["MRR","Mean reciprocal rank: the average over questions of 1 divided by the position of the first relevant result."],
+ "ndcg":["nDCG","Normalised discounted cumulative gain: a ranking score that credits higher grades of relevance more, discounts results by position and divides by the score of the ideal order."],
+ "goldset":["Gold set","A fixed list of questions with the passages that answer them, judged by people, against which a retrieval system is measured."],
+ "bootstrap":["Bootstrap confidence interval","A range for a metric obtained by resampling the per-question results with replacement many times and taking the middle 95 percent of the resampled means."]
+};
+const tip=document.createElement("div");tip.className="tip";tip.id="kw-tip";tip.setAttribute("role","tooltip");document.body.appendChild(tip);
+let tipFor=null;
+function showTip(el){const d=G[el.dataset.k];if(!d)return;tip.innerHTML="<b>"+esc(d[0])+"</b>"+esc(d[1]);tip.classList.add("show");tipFor=el;el.setAttribute("aria-describedby","kw-tip");
+  const r=el.getBoundingClientRect(),tw=Math.min(340,window.innerWidth-24);tip.style.maxWidth=tw+"px";
+  let left=r.left+window.scrollX+r.width/2-tw/2;left=Math.max(12+window.scrollX,Math.min(left,window.scrollX+window.innerWidth-tw-12));tip.style.left=left+"px";
+  let top=r.bottom+window.scrollY+8;if(r.bottom+tip.offsetHeight+16>window.innerHeight)top=r.top+window.scrollY-tip.offsetHeight-8;tip.style.top=top+"px";}
+function hideTip(){tip.classList.remove("show");if(tipFor)tipFor.removeAttribute("aria-describedby");tipFor=null;}
+$$(".kw").forEach(el=>{el.type="button";el.addEventListener("mouseenter",()=>showTip(el));el.addEventListener("mouseleave",hideTip);el.addEventListener("focus",()=>showTip(el));el.addEventListener("blur",hideTip);el.addEventListener("click",e=>{e.preventDefault();if(tipFor===el)hideTip();else showTip(el);});});
+Object.keys(G).sort((a,b)=>G[a][0].localeCompare(G[b][0])).forEach(k=>{const d=document.createElement("div");d.innerHTML="<b>"+esc(G[k][0])+"</b><p>"+esc(G[k][1])+"</p>";$("#gloss").appendChild(d);});
+
+/* ---------- copy ---------- */
+document.addEventListener("click",e=>{const b=e.target.closest(".copy");if(!b)return;const txt=b.closest(".code").querySelector("pre").textContent;
+  const done=()=>{const o=b.textContent;b.textContent="Copied";setTimeout(()=>{b.textContent=o;},1400);};
+  try{navigator.clipboard.writeText(txt).then(done,done);}catch(err){done();}});
+
+/* ---------- drill: five things ---------- */
+drill("dr-five",["Similarity","Relevance","Evidence sufficiency","Factual correctness","Faithfulness"],[
+ ["The top result for a question about the Gold card's late payment charge is the Classic card's late payment table. No chunk has a smaller cosine distance to the question. Which property does this result fail?",1,"Similarity is as high as it gets. The passage is about another product, so it is not relevant. Similarity is computed by the engine and relevance is judged by a person."],
+ ["Five passages are returned for \"Can a Tax Saver Deposit be withdrawn early, and can a loan be taken against it?\". All five concern early withdrawal, and each is relevant to the question. None mentions loans. Which property fails?",2,"Every passage is relevant and the set still cannot answer the second half of the question. Sufficiency is a property of the whole returned set."],
+ ["The answer says the charge is INR 750 and cites its passage, which says exactly that. The passage is from version 3 of the policy. Version 4, in force today, says INR 900. Which property fails?",3,"The answer is faithful to what was retrieved and false today. The fault lies in ingestion, which left a superseded version in the index."],
+ ["The passages state the EMI return charge. The answer gives the charge correctly and adds that it is refunded after three on-time instalments, which no passage says. Which property fails?",4,"The added sentence has no support in the returned passages. It may even be true. Faithfulness asks only whether the passages support each claim."],
+ ["After a change of embedding model, the average cosine similarity between each question and its top result rises from 0.71 to 0.78. Which property has been shown to improve?",0,"Only similarity. Similarity values from two models are on different scales and say nothing about whether the top result is the right passage. A gold set is needed to show that."],
+ ["The answer states correctly that premature withdrawal carries a penalty of one percentage point. The five retrieved passages were all about loans against deposits, so retrieval has already failed. Which property of the answer fails?",1,"The answer is correct, and the passages do not support it: the model answered from what it learned elsewhere. This passes a correctness check until the day the penalty changes.",["Factual correctness","Faithfulness"]]
+]);
+
+/* ---------- sim: incremental refresh ---------- */
+(function(){
+  const E=[
+   ["A policy of 9 chunks is re-issued; 2 paragraphs changed",2,7,0,"The chunk keys are stable across versions, so the 7 unchanged paragraphs are recognised by their hashes and keep their vectors. This is lab 2: version 4 of the Gold card policy."],
+   ["A document of 3 chunks is withdrawn",0,0,3,"Nothing is embedded. The rows are deleted, and from that moment no query can return them. Without this step the withdrawn offer keeps being returned."],
+   ["Nothing changed; the nightly refresh runs",0,127,0,"Every hash matches. A refresh that is free when nothing changed can run often, which keeps the index close to the sources."],
+   ["A document's audience is narrowed (9 chunks)",9,0,0,"The entitlement tags are part of the lab's hash, so the 9 chunks are written again at once. The lab also embeds them again, which is wasteful: the text did not change. A finer design keeps one hash for the vector and another for the tags."],
+   ["The glossary gains a synonym for a term found in 4 chunks",4,5,0,"Four chunks get a new full-text entry. The count of 5 kept assumes the four are in one 9-chunk document. In practice the glossary change touches chunks across many documents, which is why the refresh must consider all of them."],
+   ["The embedding model is replaced",127,0,0,"The model name is in the hash, so every chunk changes. Vectors from two models cannot be mixed in one search. At production scale this is a planned migration with both indexes live for a while."],
+   ["Contextual headers are switched on",127,0,0,"The text that is embedded changes for every chunk. This is the index-time option of lab 6, and the reason an index-time change costs more than a query-time one."]];
+  chips($("#in-c"),E.map(e=>e[0]),i=>{const e=E[i];
+    $("#in-out").innerHTML="<div class='rows'><div><b>"+e[1]+"</b> chunks embedded</div><div><b>"+e[2]+"</b> chunks of the affected documents kept as they are</div><div><b>"+e[3]+"</b> chunks deleted</div></div>";
+    $("#in-note").innerHTML="<p>"+e[4]+"</p>";},-1);
+  $("#in-out").textContent="Choose an event.";
+})();
+
+/* ---------- sim: entitlement filter ---------- */
+(function(){
+  const C=[["FRAUD-PLAYBOOK:action","Place hold code HLD-21 on the account ...",1],["FRAUD-PLAYBOOK:indicators","Treat a call as a suspected account takeover when ...",1],["FRAUD-PLAYBOOK:release","Only a fraud analyst releases HLD-21 ...",1],
+           ["KYC-UPDATE:overdue","Three reminders are sent ... debits from the account are restricted.",0],["UPI-LIMITS:newdevice","For the first 24 hours after UPI is registered on a new phone ...",0],["DISPUTE:liability","When the customer reports an unauthorised transaction ...",0]];
+  let role=-1,mode=-1;
+  function draw(){
+    if(role<0||mode<0){$("#ac-out").textContent="Choose a role and a filter position.";$("#ac-note").textContent="";return;}
+    const may=c=>role===1||c[2]===0;
+    let shown,scanned;
+    if(mode===0){shown=C.filter(may).slice(0,3);scanned=C.filter(may);}
+    else{scanned=C.slice(0,3);shown=scanned.filter(may);}
+    $("#ac-out").innerHTML="<div class='rows'>"+C.map((c,i)=>{const s=shown.includes(c),left=mode===1&&i<3&&!may(c);
+      return "<div"+(s?"":" style='opacity:.55'")+"><b>"+(i+1)+". "+c[0]+"</b> <span style='opacity:.8'>"+(c[2]?"fraud_analyst, team_lead":"all roles")+"</span>"+(s?" : returned":left?" : fetched from the database, then dropped":"")+"</div>";}).join("")+"</div>";
+    let v,t;
+    if(role===1){v="ok";t="A fraud analyst may read every chunk and receives the three playbook chunks either way.";}
+    else if(mode===0){v="ok";t="The agent receives three permitted chunks. None answers the question, which is correct: the agent is not entitled to the answer. No restricted row left the database.";}
+    else{v="no";t="The three best chunks are fetched and all three are dropped, so the agent receives nothing. The empty result tells the agent that restricted material exists, and the restricted text has already reached the application, where it may be logged or cached.";}
+    $("#ac-note").innerHTML="<p class='verdict "+v+"'>"+shown.length+" of 3 results</p><p>"+t+"</p>";
+  }
+  chips($("#ac-role"),["Asked by an agent","Asked by a fraud analyst"],i=>{role=i;draw();},-1);
+  chips($("#ac-mode"),["Filter inside the query","Filter after the top 3 are fetched"],i=>{mode=i;draw();},-1);
+  draw();
+})();
+
+/* ---------- sim: cost and storage ---------- */
+(function(){
+  const N=[100000,1000000,10000000],M=[["text-embedding-3-small",1536,0.02],["text-embedding-3-large",3072,0.13],["text-embedding-3-large shortened to 1,024",1024,0.13],["bge-small-en-v1.5, local",384,null]];
+  let n=-1,m=-1;
+  const gb=b=>b>=1e9?(b/1e9).toFixed(1)+" GB":(b/1e6).toFixed(0)+" MB";
+  function draw(){
+    if(n<0||m<0){$("#co-out").textContent="Choose a size and a model.";$("#co-note").textContent="";return;}
+    const d=M[m][1],tok=N[n]*300,cost=M[m][2]===null?null:tok/1e6*M[m][2],bytes=N[n]*(4*d+8),half=N[n]*(2*d+8);
+    $("#co-out").innerHTML="<div class='rows'><div>Tokens to embed once: <b>"+(tok/1e6).toLocaleString("en-US")+" million</b></div><div>Embedding cost, one pass: <b>"+(cost===null?"no API charge":"USD "+cost.toLocaleString("en-US",{maximumFractionDigits:2}))+"</b></div><div>Vector storage (4 bytes x "+d.toLocaleString("en-US")+" + 8, per chunk): <b>"+gb(bytes)+"</b></div><div>As half precision (halfvec): <b>"+gb(half)+"</b></div></div>";
+    let t=d>2000?"At "+d.toLocaleString("en-US")+" dimensions the vector type cannot have an HNSW or IVFFlat index in pgvector, whose limit is 2,000. Store it as halfvec (limit 4,000) or shorten it with the dimensions parameter.":"At "+d.toLocaleString("en-US")+" dimensions the vector type can be indexed directly.";
+    t+=cost===null?" The local model sends no text outside and has no price per token. It needs a machine to run on, and it embeds more slowly than an API unless that machine has a GPU.":" One pass is cheap. The same amount is paid again each time the model or the text in front of each chunk changes, and the index is rebuilt each time.";
+    if(n===2)t+=" At ten million chunks an exact scan is too slow, and the memory needed for the index becomes the main cost.";
+    $("#co-note").innerHTML="<p>"+t+"</p>";
+  }
+  chips($("#co-n"),["100,000 chunks","1 million chunks","10 million chunks"],i=>{n=i;draw();},-1);
+  chips($("#co-m"),M.map(x=>x[0]),i=>{m=i;draw();},-1);
+  draw();
+})();
+
+/* ---------- sim: reciprocal rank fusion ---------- */
+(function(){
+  const QS=[["What does CHG-104 cost?",[["CC-CLASSIC:fees:0",4,null,0],["CC-CLASSIC:grace:0",28,null,0],["CC-CLASSIC:lost:0",null,4,0],["CC-CLASSIC:rewards:0",40,null,0],["CC-GOLD:fees:0",6,null,0],["CC-GOLD:grace:0",30,null,0],["CC-GOLD:lost:0",null,5,0],["CC-PLATINUM:fees:0",5,null,0],["CC-PLATINUM:grace:0",29,null,0],["CC-PLATINUM:lost:0",null,6,0],["CC-PLATINUM:rewards:0",26,null,0],["CHEQUE:positivepay:0",20,null,0],["CHEQUE:returns:0",17,null,0],["COMPLAINTS:compensation:0",27,null,0],["DECEASED:nominee:0",18,null,0],["DECEASED:nonominee:0",22,null,0],["DISPUTE:credit:0",33,null,0],["DISPUTE:liability:1",31,null,0],["FD-SENIOR:premature:0",9,null,0],["FD-SENIOR:renewal:0",37,null,0],["FD-STD:tax:0",16,null,0],["FD-TAX:eligibility:0",35,null,0],["HL-STD:bounce:0",25,null,0],["HL-STD:prepayment:0",36,null,0],["HL-STD:rates:0",14,null,0],["LOCKER:access:0",null,7,0],["NRI:repatriation:0",38,null,0],["NRI:tax:0",34,null,0],["PL-STD:bounce:0",24,null,0],["PL-STD:prepayment:1",32,null,0],["PL-STD:rates:0",23,null,0],["SAV-BASIC:card:0",7,8,0],["SAV-BASIC:charges:0",1,1,1],["SAV-BASIC:charges:1",13,null,1],["SAV-BASIC:closure:0",19,null,0],["SAV-PLUS:card:0",8,9,0],["SAV-PLUS:charges:0",2,2,0],["SAV-PLUS:charges:1",11,null,0],["SAV-PLUS:closure:0",21,null,0],["SAV-PREMIER:card:0",15,10,0],["SAV-PREMIER:charges:0",3,3,0],["SAV-PREMIER:charges:1",12,null,0],["SAV-PREMIER:closure:0",10,null,0],["SAV-PREMIER:eligibility:0",39,null,0]],"An exact code. Both searches rank the answering table first here, so it leads at every k. The second chunk of the same section, a sentence about tax, is found by the vector search only and stays far down."],["Within how many days is a claim on a dead customer's acco...",[["CC-CLASSIC:eligibility:0",null,31,0],["CC-CLASSIC:grace:0",32,32,0],["CC-CLASSIC:late:2",21,33,0],["CC-CLASSIC:lost:0",16,34,0],["CC-GOLD:eligibility:0",null,35,0],["CC-GOLD:grace:0",30,36,0],["CC-GOLD:late:2",22,37,0],["CC-GOLD:lost:0",17,38,0],["CC-PLATINUM:eligibility:0",null,39,0],["CC-PLATINUM:grace:0",31,40,0],["CC-PLATINUM:late:2",20,null,0],["CC-PLATINUM:lost:0",18,null,0],["CHEQUE:positivepay:0",33,null,0],["CHEQUE:returns:0",null,1,0],["COMPLAINTS:levels:0",null,9,0],["COMPLAINTS:levels:1",10,10,0],["DEBIT-LIMITS:international:0",40,null,0],["DECEASED:nominee:0",34,null,0],["DECEASED:nonominee:0",12,null,0],["DECEASED:timeline:0",1,5,1],["DISPUTE:credit:0",5,11,0],["DISPUTE:liability:0",25,4,0],["DISPUTE:liability:1",26,2,0],["DISPUTE:raise:0",3,12,0],["DISPUTE:timeline:0",2,13,0],["FD-SENIOR:eligibility:0",38,null,0],["FD-STD:premature:0",23,null,0],["FD-STD:rates:0",null,14,0],["FD-STD:renewal:0",null,15,0],["FD-TAX:premature:0",11,null,0],["KYC-UPDATE:frequency:0",null,6,0],["KYC-UPDATE:method:0",9,16,0],["KYC-UPDATE:overdue:0",8,7,0],["NRI:repatriation:0",null,17,0],["NRI:status:0",24,3,0],["NRI:tax:0",null,18,0],["NRI:types:0",null,19,0],["PL-STD:bounce:0",39,null,0],["PL-STD:documents:0",36,null,0],["SAV-BASIC:balance:0",null,20,0],["SAV-BASIC:balance:1",19,null,0],["SAV-BASIC:closure:0",7,21,0],["SAV-BASIC:dormancy:0",14,22,0],["SAV-BASIC:eligibility:0",null,23,0],["SAV-PLUS:balance:0",null,24,0],["SAV-PLUS:balance:1",29,null,0],["SAV-PLUS:closure:0",6,25,0],["SAV-PLUS:dormancy:0",13,26,0],["SAV-PLUS:eligibility:0",null,27,0],["SAV-PREMIER:balance:0",null,28,0],["SAV-PREMIER:balance:1",27,null,0],["SAV-PREMIER:closure:0",28,null,0],["SAV-PREMIER:dormancy:0",15,29,0],["SAV-PREMIER:eligibility:0",null,30,0],["UPI-LIMITS:failed:0",4,8,0],["UPI-LIMITS:limits:0",37,null,0],["UPI-LIMITS:newdevice:0",35,null,0]],"A paraphrase. The policy says deceased. Vector search ranks the answer first and full-text search fifth, through the glossary synonym, and fusion keeps it first."],["Does the Premier Savings account charge anything for clos...",[["CC-CLASSIC:fees:0",27,null,0],["CC-CLASSIC:grace:0",9,20,0],["CC-CLASSIC:late:0",null,21,0],["CC-CLASSIC:late:1",null,7,0],["CC-CLASSIC:limit:0",38,null,0],["CC-GOLD:fees:0",32,null,0],["CC-GOLD:grace:0",10,22,0],["CC-GOLD:late:0",null,23,0],["CC-GOLD:late:1",null,4,0],["CC-GOLD:limit:0",31,null,0],["CC-GOLD:lost:0",40,null,0],["CC-PLATINUM:fees:0",28,null,0],["CC-PLATINUM:grace:0",8,24,0],["CC-PLATINUM:late:0",null,25,0],["CC-PLATINUM:late:1",null,5,0],["CC-PLATINUM:limit:0",39,null,0],["CHEQUE:returns:0",null,8,0],["CHEQUE:stop:0",18,26,0],["COMPLAINTS:compensation:0",14,30,0],["DISPUTE:liability:1",15,6,0],["FD-STD:eligibility:0",3,31,0],["FD-STD:loan:0",26,32,0],["FD-STD:premature:0",19,null,0],["FD-STD:rates:1",33,null,0],["FD-STD:renewal:0",24,33,0],["FD-TAX:eligibility:0",22,null,0],["FD-TAX:premature:0",23,null,0],["FD-TAX:renewal:0",6,34,0],["HL-STD:bounce:0",null,12,0],["HL-STD:prepayment:0",13,35,0],["KYC-UPDATE:overdue:0",29,null,0],["NRI:repatriation:0",null,27,0],["NRI:status:0",null,28,0],["NRI:tax:0",null,36,0],["NRI:types:0",null,13,0],["PL-STD:bounce:0",37,14,0],["PL-STD:prepayment:1",20,15,0],["PL-STD:rates:0",21,null,0],["SAV-BASIC:balance:1",null,9,0],["SAV-BASIC:card:0",17,null,0],["SAV-BASIC:charges:0",null,1,0],["SAV-BASIC:charges:1",null,37,0],["SAV-BASIC:closure:0",4,16,0],["SAV-BASIC:dormancy:0",36,38,0],["SAV-BASIC:eligibility:0",12,17,0],["SAV-BASIC:interest:0",30,null,0],["SAV-PLUS:balance:1",null,10,0],["SAV-PLUS:card:0",16,null,0],["SAV-PLUS:charges:0",null,2,0],["SAV-PLUS:charges:1",null,39,0],["SAV-PLUS:closure:0",5,18,0],["SAV-PLUS:dormancy:0",35,40,0],["SAV-PLUS:eligibility:0",11,29,0],["SAV-PLUS:interest:0",25,null,0],["SAV-PREMIER:balance:1",null,11,0],["SAV-PREMIER:card:0",7,null,0],["SAV-PREMIER:charges:0",null,3,0],["SAV-PREMIER:closure:0",2,null,1],["SAV-PREMIER:dormancy:0",34,null,0],["SAV-PREMIER:eligibility:0",1,19,0]],"The answering chunk reads \"No closure charge applies at any time.\" and names no product. Vector search ranks it second and full-text search does not have it in its first 40. With k = 60 it is 23rd, below the cut of 20 for reranking, behind chunks that both searches found. With k = 1 it is fourth."]];
+  let q=-1,k=60;
+  function draw(){
+    if(q<0){$("#rr-out").textContent="Choose a question.";return;}
+    const rows=QS[q][1].map(r=>({key:r[0],v:r[1],f:r[2],ans:r[3],s:(r[1]?1/(k+r[1]):0)+(r[2]?1/(k+r[2]):0)})).sort((a,b)=>b.s-a.s||(a.key<b.key?-1:1)).slice(0,6);
+    $("#rr-lbl").textContent="Fused order with k = "+k+" (first six)";
+    $("#rr-out").innerHTML="<div class='tbl'><table><thead><tr><th>Fused</th><th>Chunk</th><th>Vector rank</th><th>Full-text rank</th><th>Score</th></tr></thead><tbody>"+rows.map((r,i)=>"<tr><td>"+(i+1)+"</td><td style='font-weight:"+(r.ans?700:400)+"'>"+esc(r.key)+(r.ans?" (answering section)":"")+"</td><td style='font-weight:400'>"+(r.v||"not in top 40")+"</td><td style='font-weight:400'>"+(r.f||"not in top 40")+"</td><td style='font-weight:400'>"+r.s.toFixed(4)+"</td></tr>").join("")+"</tbody></table></div><p style='margin-top:8px'>"+esc(QS[q][2])+"</p>";
+  }
+  chips($("#rr-q"),QS.map(x=>x[0]),i=>{q=i;draw();},-1);
+  chips($("#rr-k"),["k = 1","k = 10","k = 60"],i=>{k=[1,10,60][i];draw();},2);
+  draw();
+})();
+
+/* ---------- drill: architectures ---------- */
+drill("dr-arch",null,[
+ ["\"Does the Premier Savings account charge anything for closing?\" The chunk \"No closure charge applies at any time.\" is in the index. It is ranked 23rd, below the closure paragraphs of the other two savings accounts, which mention a charge.",0,"The chunk never says which account it belongs to, so full-text search does not rank it in its first 40 and the reranker never sees it. Putting the document title and heading in front of the chunk before embedding fixes it at the source.",["Contextual chunks","Parent-child","Multi-query","Graph-assisted"]],
+ ["\"What is the late payment charge on a Gold card when 15,000 is due?\" The Gold card's paragraph \"A late payment charge is applied when ...\" is ranked first. The table with the amounts is the next chunk of the same section and is not in the top five.",1,"The right section was found through a chunk that lacks the fact. Returning the whole section for the matched chunk brings the table with it. The cost is more text per result.",["Multi-query","Parent-child","Query decomposition","A larger embedding model"]],
+ ["\"Compare the annual fee of the Classic and Platinum credit cards.\" Four of the five results are about the Platinum card and debit cards. The Classic card's fee paragraph is missing.",2,"One search cannot serve two subjects equally. Splitting the question into one sub-question per product, searching each and taking results in turn gives both parts a place.",["A larger embedding model","Parent-child","Query decomposition","Multi-query"]],
+ ["Agents ask about \"chargebacks\". The policy speaks only of \"transaction disputes\". The right section is found by the vector search and the reranker then prefers paragraphs containing \"closed\".",3,"The question and the documents use different words for one thing, and the glossary knows the mapping. Searching and reranking with a second wording in the documents' own terms fixes it.",["Parent-child","Metadata-aware filter","Query decomposition","Multi-query with glossary terms"]],
+ ["With a product filter switched on, \"What is the most a Basic savings customer can lose if they report an unauthorised transaction five days after the alert?\" returns only chunks of the Basic Savings policy. The answer is in the disputes process document.",0,"The filter read \"Basic savings\" as the document to search. The question is about a process that applies to that product, and the answer was filtered out before ranking began. A filter that can exclude the answer needs a fallback, or should boost the matching documents and leave the others in.",["The metadata filter caused this; soften it to a boost or add a fallback","Add parent-child","Add multi-query","Rerank more candidates"]],
+ ["\"Which of our policies are affected if the regulator changes the definition of a senior citizen?\" No single passage answers it. The answer is every section that depends on that definition.",2,"This is a question about connections across the corpus. Passage retrieval returns the five most similar chunks, never a complete set. A graph that links glossary terms to the sections that use them answers it, which is the impact analysis of Module 2 applied to documents.",["Multi-query","Parent-child","Graph-assisted","Contextual chunks"]]
+]);
+
+/* ---------- sim: metrics ---------- */
+(function(){
+  const g=[0,2,0,1,0],box=$("#me-c"),btn=[];
+  function draw(){
+    btn.forEach((b,i)=>{b.textContent="Result "+(i+1)+": grade "+g[i];b.setAttribute("aria-pressed",g[i]>0?"true":"false");});
+    const n2=g.filter(x=>x===2).length,n1=g.filter(x=>x===1).length;
+    if(n2>2||n1>1){$("#me-out").innerHTML="<p>The corpus holds two answering sections and one related section. Lower a grade.</p>";$("#me-note").textContent="";return;}
+    const rec=n2/2,prec=(n2+n1)/5,first=g.indexOf(2),mrr=first<0?0:1/(first+1);
+    const dcg=g.reduce((s,x,i)=>s+(Math.pow(2,x)-1)/Math.log2(i+2),0),ideal=3/1+3/Math.log2(3)+1/2,nd=dcg/ideal;
+    $("#me-out").innerHTML="<div class='rows'><div>Recall@5: <b>"+rec.toFixed(2)+"</b> ("+n2+" of 2 answering sections)</div><div>Precision@5: <b>"+prec.toFixed(2)+"</b> ("+(n2+n1)+" of 5 results relevant)</div><div>Reciprocal rank: <b>"+mrr.toFixed(2)+"</b>"+(first<0?"":" (first answer at position "+(first+1)+")")+"</div><div>nDCG@5: <b>"+nd.toFixed(2)+"</b> (DCG "+dcg.toFixed(2)+" of an ideal "+ideal.toFixed(2)+")</div></div>";
+    let t=n2===2&&g[0]===2&&g[1]===2?"Both answers lead the list. Precision cannot pass 0.60 here, because only three relevant sections exist.":n2===2?"Recall is complete. nDCG is below 1 because an answering section sits below a weaker result. Move the grades and watch nDCG change while recall stays at 1.":n2===1?"Half of the answering sections are found. If the question needs both, the evidence is insufficient whatever the other metrics say.":"No answering section is in the top five. A related section alone earns some nDCG and precision and no recall.";
+    $("#me-note").innerHTML="<p>"+t+"</p>";
+  }
+  g.forEach((x,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.addEventListener("click",()=>{g[i]=(g[i]+1)%3;draw();});box.appendChild(b);btn.push(b);});
+  draw();
+})();
+
+/* ---------- sim: interval width ---------- */
+(function(){
+  const N=[20,60,200,1000],P=[0.6,0.8,0.9];let n=1,p=1;
+  function draw(){
+    const z=1.96,nn=N[n],ph=P[p],den=1+z*z/nn,c=(ph+z*z/(2*nn))/den,h=z*Math.sqrt(ph*(1-ph)/nn+z*z/(4*nn*nn))/den,lo=c-h,hi=c+h;
+    $("#ci-out").innerHTML="<p class='big'>"+lo.toFixed(2)+" to "+hi.toFixed(2)+"</p><p>"+Math.round(ph*nn)+" successes in "+nn+" questions. The interval is "+Math.round((hi-lo)*100)+" points wide.</p>";
+    const T=["With this few questions the result is an anecdote. Two systems would have to differ by a wide margin to be told apart.","This is the size of the lab's set. A change that adds 10 points or more can be detected when both runs use the same questions. A change of 3 points cannot.","A set of this size supports decisions about moderate differences, and one category within it has about as many questions as the whole lab set.","A set this large resolves small differences. Building it means judging a thousand questions, which is weeks of an expert's time, so teams grow towards it from logged questions."];
+    $("#ci-note").innerHTML="<p>"+T[n]+"</p>";
+  }
+  chips($("#ci-n"),N.map(x=>x+" questions"),i=>{n=i;draw();},1);
+  chips($("#ci-p"),P.map(x=>"observed rate "+x.toFixed(2)),i=>{p=i;draw();},1);
+  draw();
+})();
+
+/* ---------- quiz ---------- */
+(function(){
+  const Q=[
+   ["A team reports that its assistant's answers are \"98 percent grounded\": nearly every claim is supported by a retrieved passage. An audit finds that one answer in six quotes a charge that changed last quarter. What explains both findings?",["The grounding metric is computed wrongly","Faithfulness measures the answer against the retrieved passages, and the passages include superseded versions; the fault is in ingestion","The embedding model is out of date","The reranker is reordering the passages"],1,"An answer can be faithful to stale evidence. Faithfulness and factual correctness are different properties, and here the gap between them is a missing version rule in the index."],
+   ["A fee schedule is indexed as raw Markdown, split every 500 characters. Questions about amounts in the lower half of the table fail. What is the most direct fix?",["A larger embedding model","A higher value of k","Keep the table as one chunk and write each row with its column names","Add a reranker"],2,"The lower rows lost their header when the table was split, so they are bare numbers. Writing each row with its column names makes every row intelligible, and keeping the table whole keeps neighbouring rows together."],
+   ["A document's audience is narrowed from all staff to team leads. Which statement about the index is correct?",["Nothing needs to change until the document's text changes","The chunks' entitlement tags must be updated at once, so the audience has to be part of what the refresh compares","The assistant's prompt should be told not to use the document","The document should be embedded with a different model"],1,"A chunk inherits its document's audience, and a change of audience with unchanged text is still a change the index must apply immediately. The lab puts the roles into the content hash for this reason."],
+   ["After registering on a new phone a customer is limited to INR 5,000 by UPI for 24 hours. An agent asks \"UPI limit after changing handset\". Full-text search ranks the right paragraph far down and vector search ranks it first. Why?",["Full-text search matches word stems, and the paragraph says \"new phone\" and \"new device\", never \"handset\"; the embedding model places those close together","The GIN index is corrupt","Vector search always beats full-text search","The question is too short for full-text search"],0,"Full-text search needs shared words, after stemming. A synonym in the glossary would give it one. The embedding model needs no shared words. The reverse case is an exact code such as CHG-104, where full-text search is the reliable one."],
+   ["Reciprocal rank fusion with k = 60 is used. Chunk A is ranked 1st by vector search and is absent from the full-text list. Chunk B is ranked 6th by both. Which is ranked higher after fusion, and why?",["A, because first place always wins","B, because 2/66 is larger than 1/61: agreement between the two lists outweighs one top rank","They tie","It depends on the cosine distance"],1,"1/61 is 0.0164 and 2/66 is 0.0303. Fusion uses positions only, never the scores, and with k = 60 the top positions are worth nearly the same, so appearing in both lists decides."],
+   ["A filter keeps 5 percent of rows, and the query uses an HNSW index with the default hnsw.ef_search of 40. The query asks for 10 rows and returns 2. What happened, and what addresses it in pgvector 0.8.0 and later?",["The index is broken and must be rebuilt","The filter is applied after the index returns its 40 candidates, of which about 2 pass; iterative index scans keep scanning until enough rows pass","The vectors have too many dimensions","The filter should be moved into the application"],1,"pgvector filters after the approximate scan. Iterative scans (hnsw.iterative_scan) continue the scan until the limit is met or a scan budget is reached. For very selective filters an exact scan over the filtered rows, or a partial index, is the alternative."],
+   ["Two configurations score 0.84 and 0.87 on evidence sufficiency over the same 55 questions. The paired bootstrap interval of the difference is -0.04 to +0.11. What should the decision record say?",["The second configuration is better by 3 points","The difference is not distinguishable from zero on this set; decide on cost, or collect more questions","The first configuration is better","The bootstrap is unreliable below 100 questions"],1,"An interval that includes zero means the data are consistent with no improvement and with a sizeable one. With nothing to separate them on quality, the cheaper or simpler configuration is the defensible choice until a larger set says otherwise."],
+   ["In a failure analysis, an answering chunk is ranked 2nd by vector search, is absent from the full-text list, is 23rd in the fused list, and only the top 20 are reranked. At which stage was it lost, and what change addresses that stage directly?",["Reranking; use a larger reranker","Fusion; rerank more candidates, or fix why full-text search does not see the chunk","Ingestion; re-index the document","Chunking; use larger chunks"],1,"One list had it near the top and fusion pushed it below the cut. Reranking a longer list addresses the stage. The underlying cause may be a chunk that does not name its subject, which contextual chunks address at the source."],
+   ["A team switches on parent-child retrieval. Evidence sufficiency rises by 6 points and the words returned per question rise from 230 to 285. Which statement belongs in the trade-off section of the decision record?",["There is no trade-off, since quality improved","More text per question means more tokens for the answering model on every call, higher latency and cost there, and more irrelevant text beside the evidence","Parent-child requires re-embedding the corpus","Parent-child weakens the entitlement filter"],1,"Parent-child acts after ranking and needs no re-embedding. Its cost is paid downstream, on every question, by whoever reads the results. The sections inherit the same entitlement tags as their chunks."],
+   ["The gold set's three questions asked by an agent about restricted documents all return no restricted chunk. A stakeholder asks whether this proves the assistant cannot leak restricted content. What is the accurate answer?",["Yes, the test passed","No. It shows no leak on three questions. Entitlement needs its own tests: every restricted document, every role, and the refresh path that retags chunks","Yes, provided the bootstrap interval is narrow","No, because agents can guess the content"],1,"A gold set can show that a leak occurs. It cannot show that none does. The control is the filter inside the query and the fail-closed rule at ingestion, and each is tested directly and exhaustively, which is cheap because it needs no relevance judgement."]
+  ];
+  const root=$("#quiz");let answered=0,right=0;
+  function score(){$("#quiz-score").textContent="Score: "+right+" of "+answered+" answered"+(answered===Q.length?(right>=7?". You are ready for Module 6.":". Revisit the sections you missed before Module 6."):"");}
+  Q.forEach((q,qi)=>{const d=document.createElement("div");d.className="q";d.innerHTML="<p>"+(qi+1)+". "+esc(q[0])+"</p><div class='opts'></div><div class='why'></div>";
+    const opts=d.querySelector(".opts");
+    const order=q[1].map((_,k)=>k);for(let k=order.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[order[k],order[j]]=[order[j],order[k]];}
+    order.forEach(oi=>{const o=q[1][oi];const b=document.createElement("button");b.type="button";b.textContent=o;if(oi===q[2])b.dataset.key="1";b.addEventListener("click",()=>{if(d.classList.contains("done"))return;d.classList.add("done");answered++;
+      if(oi===q[2]){right++;b.classList.add("right");}else{b.classList.add("wrong");opts.querySelector("[data-key]").classList.add("right");}
+      d.querySelector(".why").innerHTML="<b>"+(oi===q[2]?"Correct. ":"Not quite. ")+"</b>"+esc(q[3]);score();});opts.appendChild(b);});
+    root.appendChild(d);});
+  score();
+})();
+
+})();
+</script>
+</body>
+</html>
