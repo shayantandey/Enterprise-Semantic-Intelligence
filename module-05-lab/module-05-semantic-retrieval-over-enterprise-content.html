@@ -988,7 +988,7 @@ SET hnsw.iterative_scan = strict_order;   <span class="c-c">-- keep scanning unt
     <p>Run, on Linux with PostgreSQL in Docker and the local embedding model: setup, all six exercises in starter form (to confirm that each unfinished TODO is reported) and in worked form, every check, the optional index demonstration and the reset. Every block of terminal output on this page is copied from those runs.</p>
     <p>Not run against OpenAI's service: no API key was available where the page was built. The OpenAI code path (batching, the request, reading the response and the token count) was run against a local stand-in server that returns responses in the format of OpenAI's API reference. To confirm the real service, run <code>python confirm_openai.py</code> once with your key. It makes two calls that cost a fraction of a US cent and prints what it checks.</p>
     <p>With OpenAI embeddings the chunk counts, the checks and the entitlement results are the same as on this page. Ranks, metric values and the list of failing questions will differ, because a different model places the chunks differently.</p>
-    <p>Not run: the lab on Windows or macOS. The commands for those systems follow the Python and Docker documentation. Timings on this page are from a CPU without a GPU and will differ on your machine.</p>
+    <p>Not run by the author: the lab on Windows or macOS. The commands for those systems follow the Python and Docker documentation. A first run on Windows 11 by the course owner found one requirement that Linux does not have, the Microsoft Visual C++ runtime, which is now in the table of problems below. Timings on this page are from a CPU without a GPU and will differ on your machine.</p>
   </div>
   <div class="tbl"><table>
     <thead><tr><th>Exercise</th><th>File you edit</th><th>What you write</th><th>Check</th><th>Time</th></tr></thead>
@@ -1056,6 +1056,35 @@ Ready. Start with: python lab01_enrich.py</pre></div>
   <div class="prose">
     <p>With a key set, the embeddings line reads <code>embeddings: openai:text-embedding-3-small (1536 dimensions)</code>. If you set a key, run <code>python confirm_openai.py</code> now. Every line should start with <code>ok</code>, and the dimensions line should read 1536.</p>
     <p>The lab folder contains <code>corpus</code> (24 policy files), <code>incoming</code> (a re-issued policy and a list of withdrawn documents), <code>glossary.csv</code> (18 terms with synonyms), <code>gold/gold_set.jsonl</code> (60 questions) and the scripts. Open <code>corpus/CC-GOLD.md</code> and <code>pipeline.py</code> and read them before lab 1: the header of the file is where the version and the audience come from, and <code>pipeline.py</code> is the provided parser.</p>
+  </div>
+
+  <h3>Optional: browse the database in a web page</h3>
+  <div class="prose">
+    <p>The labs use a SQL prompt in the terminal when they look at rows. If you would like to see the database, its tables and their rows in a browser, run Adminer, a small web interface for databases, as one more container. It holds no data of its own and can be removed at any time. The tables appear after lab 1 has built the index: <code>documents</code>, <code>chunks</code> and <code>index_runs</code>.</p>
+  </div>
+  <ol class="steps">
+    <li><span class="k">1</span><div><h4>Start Adminer</h4><p>Run the command below in any terminal. The first run downloads an image of about 170 MB. Port 8080 of your machine must be free. If it is taken, change the first <code>8080</code> to another number, such as <code>8081</code>, and use that number in the address of step 2.</p></div></li>
+  </ol>
+  <div class="code"><div class="hd"><span>Start the web interface</span><button class="copy">Copy</button></div><pre>docker run -d --name adminer --add-host=host.docker.internal:host-gateway -p 8080:8080 adminer</pre></div>
+  <ol class="steps" start="2">
+    <li><span class="k">2</span><div><h4>Open it and log in</h4><p>Open <code>http://localhost:8080</code> in your browser. A login form appears with System set to MySQL or PostgreSQL and the word <code>db</code> already typed in the Server field. Choose PostgreSQL, replace <code>db</code> with the server value in the table below, fill in the other three fields and click Login. Leave "Permanent login" unticked. In the Server field, <code>localhost</code> does not work: inside the Adminer container that name means Adminer itself. <code>host.docker.internal</code> is the name by which a container reaches a port of your own machine.</p></div></li>
+  </ol>
+  <div class="tbl"><table>
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>System</td><td style="font-weight:400">PostgreSQL</td></tr>
+      <tr><td>Server</td><td style="font-weight:400"><code>host.docker.internal:5435</code></td></tr>
+      <tr><td>Username</td><td style="font-weight:400"><code>lab</code></td></tr>
+      <tr><td>Password</td><td style="font-weight:400"><code>lab</code></td></tr>
+      <tr><td>Database</td><td style="font-weight:400"><code>policy</code></td></tr>
+    </tbody>
+  </table></div>
+  <ol class="steps" start="3">
+    <li><span class="k">3</span><div><h4>Look around</h4><p>The page lists the tables with their approximate row counts. Click a table name to see its columns, then "Select data" to see its rows. "SQL command" in the menu on the left runs a query of your own, such as the one in step 4 of lab 1. The <code>embedding</code> column of <code>chunks</code> is the vector and shows as a very long list of numbers: untick it under "Select" to keep the page readable. An empty list of tables means lab 1 has not been run yet.</p></div></li>
+    <li><span class="k">4</span><div><h4>Remove it when you are done</h4><p>Run <code>docker rm -f adminer</code>. The lab's <code>reset.py</code> does not remove Adminer, because it is not part of the lab. After a reset, log in again once lab 1 has rebuilt the tables.</p></div></li>
+  </ol>
+  <div class="prose">
+    <p>Tested for this page on Linux with Adminer 6.3.0: the login with the values above, and the list of three tables. On the build machine the container needed a different listen address because that machine has no IPv6, which should not concern a laptop. Not tested on Windows or macOS, where Docker Desktop provides <code>host.docker.internal</code> itself and the <code>--add-host</code> option is harmless.</p>
   </div>
 
   <h3>Lab 1: glossary terms and entitlement tags on every chunk</h3>
@@ -1334,6 +1363,9 @@ The index is left as the changed configuration built it. Record the decision in 
       <tr><td>"Cannot reach PostgreSQL" from any script</td><td style="font-weight:400">The container is not running or not ready yet</td><td style="font-weight:400"><code>docker compose up -d</code>, then <code>docker compose ps</code> until the status is healthy. <code>docker compose logs postgres</code> shows why it stopped.</td></tr>
       <tr><td><code>docker compose up</code> reports that port 5435 is already allocated</td><td style="font-weight:400">Another program uses the port</td><td style="font-weight:400">In <code>docker-compose.yml</code> change <code>"5435:5432"</code> to <code>"5436:5432"</code>, start again, and set the variable <code>LAB_DSN</code> to <code>host=localhost port=5436 dbname=policy user=lab password=lab</code> in the terminal</td></tr>
       <tr><td><code>ModuleNotFoundError: No module named 'psycopg'</code> (or fastembed, openai)</td><td style="font-weight:400">The virtual environment is not active in this terminal</td><td style="font-weight:400">Run the activate line of setup step 3 again. The prompt should start with <code>(.venv)</code>.</td></tr>
+      <tr><td><code>setup_lab.py</code> reports that fastembed cannot load, with "DLL load failed while importing onnxruntime_pybind11_state" (Windows)</td><td style="font-weight:400">The package is installed. <code>onnxruntime</code>, which runs the two local models, needs the Microsoft Visual C++ runtime, and the machine does not have it</td><td style="font-weight:400">Install the Microsoft Visual C++ Redistributable 2015-2022 (x64) from <code>https://aka.ms/vs/17/release/vc_redist.x64.exe</code>, which needs administrator rights. Open a new terminal, activate <code>.venv</code> and run <code>python setup_lab.py</code> again</td></tr>
+      <tr><td>Adminer (the optional web page) answers the login with a connection error</td><td style="font-weight:400">The lab's database is not running, or the Server field still says <code>db</code> or <code>localhost</code></td><td style="font-weight:400">Run <code>docker compose ps</code> in the lab folder and wait until <code>esi-pg</code> is healthy. In the form, the server is <code>host.docker.internal:5435</code>.</td></tr>
+      <tr><td>Adminer logs in and shows no tables</td><td style="font-weight:400">The index has not been built yet, or the lab was reset</td><td style="font-weight:400"><code>python lab01_enrich.py</code>, then refresh the page</td></tr>
       <tr><td>The model download fails or hangs</td><td style="font-weight:400">No route to huggingface.co, often a corporate proxy</td><td style="font-weight:400">Ask the facilitator for the <code>.models</code> folder and copy it into the lab folder. The scripts then load the models from disk.</td></tr>
       <tr><td>"The index holds vectors of 384 dimensions and the embedding model in this terminal produces 1536" (or the reverse)</td><td style="font-weight:400">The key was set or removed after the index was built</td><td style="font-weight:400"><code>python lab01_enrich.py</code> then <code>python lab02_refresh.py</code>, in the terminal you will keep using</td></tr>
       <tr><td>An <code>AuthenticationError</code> or <code>RateLimitError</code> from openai</td><td style="font-weight:400">The key is wrong, has no credit, or the account's rate limit was reached</td><td style="font-weight:400">Check the key. To continue without it, set <code>EMBED_PROVIDER</code> to <code>local</code> and rebuild the index as in the row above.</td></tr>
