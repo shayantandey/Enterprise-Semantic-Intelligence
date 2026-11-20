@@ -1,0 +1,7 @@
+# Which components does a supplier supply, and to which plants? Stated agreements in force.
+# area: network    parameters: supplier
+SELECT ?agreement ?component ?componentName ?plant ?plantName WHERE {
+  id:{supplier} ph:hasActiveAgreement ?agreement .
+  ?agreement ph:component ?component ; ph:toPlant ?plant .
+  ?component rdfs:label ?componentName . ?plant rdfs:label ?plantName .
+} ORDER BY ?componentName ?plantName

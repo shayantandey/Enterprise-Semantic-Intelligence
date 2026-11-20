@@ -1,0 +1,14 @@
+{
+  "users": {
+    "asha": {"name": "Asha Rao", "role": "executive"},
+    "farid": {"name": "Farid Khan", "role": "finance_analyst"},
+    "priya": {"name": "Priya Nair", "role": "procurement_manager"},
+    "meera": {"name": "Meera Iyer", "role": "procurement_counsel"}
+  },
+  "roles": {
+    "executive":           {"metrics": ["finance", "procurement"], "graph": ["network", "quality"],              "documents": ["all_staff"]},
+    "finance_analyst":     {"metrics": ["finance"],                "graph": ["network"],                         "documents": ["all_staff"]},
+    "procurement_manager": {"metrics": ["procurement"],            "graph": ["network", "quality"],              "documents": ["all_staff"]},
+    "procurement_counsel": {"metrics": ["procurement"],            "graph": ["network", "quality", "contracts"], "documents": ["all_staff", "procurement_legal"]}
+  }
+}

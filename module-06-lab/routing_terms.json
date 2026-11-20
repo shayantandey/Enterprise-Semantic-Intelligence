@@ -1,0 +1,5 @@
+{
+  "metrics": ["net revenue", "gross revenue", "revenue", "procurement spend", "spend", "share of procurement", "percent of procurement", "on-time-in-full", "on-time", "otif", "delivery rate", "delivery performance", "how much", "ebitda", "margin", "profit", "headcount", "forecast", "inventory"],
+  "graph": ["supply", "supplies", "supplied", "supplier of", "suppliers of", "which plants", "which suppliers", "which products", "sole-source", "sole source", "only supplier", "audit finding", "audit findings", "findings", "gmp certificate", "certificate", "certificates", "exposed", "depend on", "depends on", "contract"],
+  "documents": ["policy", "policies", "standard", "code of conduct", "notice", "approve", "approves", "approval", "allowed", "defined", "definition", "what counts", "grounds", "how often", "who decides", "contract", "gift", "gifts", "rule", "rules", "must"]
+}

@@ -1,0 +1,7 @@
+# Components that exactly one supplier supplies to a plant under an agreement in force (sole-source positions).
+# area: network    parameters: none
+SELECT ?component ?componentName ?plant ?plantName (SAMPLE(?s) AS ?supplier) (SAMPLE(?sn) AS ?name) WHERE {
+  ?s ph:hasActiveAgreement ?a ; rdfs:label ?sn .
+  ?a ph:component ?component ; ph:toPlant ?plant .
+  ?component rdfs:label ?componentName . ?plant rdfs:label ?plantName .
+} GROUP BY ?component ?componentName ?plant ?plantName HAVING (COUNT(DISTINCT ?s) = 1) ORDER BY ?componentName ?plantName

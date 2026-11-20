@@ -1,0 +1,7 @@
+# The stated agreements behind suppliers_of_plant: one row per agreement in force that delivers to the plant.
+# area: network    parameters: plant
+SELECT ?agreement ?supplier ?name ?component ?componentName WHERE {
+  ?supplier ph:hasActiveAgreement ?agreement ; rdfs:label ?name .
+  ?agreement ph:toPlant id:{plant} ; ph:component ?component .
+  ?component rdfs:label ?componentName .
+} ORDER BY ?name ?componentName

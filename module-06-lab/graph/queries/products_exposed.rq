@@ -1,0 +1,8 @@
+# Products that contain a component the supplier supplies to the plant where the product is made. A three-hop traversal.
+# area: network    parameters: supplier
+SELECT DISTINCT ?product ?productName ?critical ?componentName ?plantName WHERE {
+  id:{supplier} ph:hasActiveAgreement ?a .
+  ?a ph:component ?component ; ph:toPlant ?plant .
+  ?product ph:hasComponent ?component ; ph:madeAt ?plant ; rdfs:label ?productName ; ph:critical ?critical .
+  ?component rdfs:label ?componentName . ?plant rdfs:label ?plantName .
+} ORDER BY ?productName

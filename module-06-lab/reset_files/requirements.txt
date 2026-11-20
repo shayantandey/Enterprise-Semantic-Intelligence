@@ -1,0 +1,6 @@
+langgraph==1.2.24
+pydantic>=2.9
+psycopg[binary]==3.3.9
+openai==3.53.0
+fastembed==0.9.1
+numpy>=2.1

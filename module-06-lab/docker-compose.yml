@@ -1,0 +1,31 @@
+# Module 6 lab: two containers. GraphDB holds the supply graph, PostgreSQL with pgvector holds the policy documents.
+# Start: docker compose up -d      Stop: docker compose stop      Remove with data: docker compose down -v
+services:
+  graphdb:
+    image: ontotext/graphdb:10.8.14
+    container_name: esi6-graphdb
+    ports:
+      - "7206:7200"          # host port 7206, so the Module 4 container on 7200 can keep running
+    environment:
+      GDB_JAVA_OPTS: "-Xmx2g"
+    volumes:
+      - graphdb6-home:/opt/graphdb/home
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: esi6-pg
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: answers
+    ports:
+      - "5436:5432"          # host port 5436, so the Module 5 container on 5435 can keep running
+    volumes:
+      - pg6-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d answers"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  graphdb6-home:
+  pg6-data:

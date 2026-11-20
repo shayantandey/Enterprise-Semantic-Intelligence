@@ -1,0 +1,5 @@
+# Notice period and early termination fee in a supplier's contract. Restricted.
+# area: contracts    parameters: supplier
+SELECT ?contract ?noticeDays ?earlyTerminationFee WHERE {
+  GRAPH g:contracts { ?contract a ph:Contract ; ph:withSupplier id:{supplier} ; ph:noticeDays ?noticeDays ; ph:earlyTerminationFee ?earlyTerminationFee . }
+}

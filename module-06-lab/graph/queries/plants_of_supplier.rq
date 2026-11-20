@@ -1,0 +1,5 @@
+# Which plants does a supplier supply? Uses the inferred relationship ph:suppliesPlant.
+# area: network    parameters: supplier
+SELECT DISTINCT ?plant ?name WHERE {
+  id:{supplier} ph:suppliesPlant ?plant . ?plant rdfs:label ?name .
+} ORDER BY ?name

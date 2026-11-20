@@ -1,0 +1,6 @@
+# GMP certificate status of every supplier.
+# area: quality    parameters: none
+SELECT ?certificate ?supplier ?name ?status ?validUntil WHERE {
+  GRAPH g:quality { ?certificate a ph:GmpCertificate ; ph:heldBy ?supplier ; ph:status ?status ; ph:validUntil ?validUntil . }
+  ?supplier rdfs:label ?name .
+} ORDER BY ?name

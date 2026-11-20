@@ -1,0 +1,45 @@
+{
+  "dimensions": {
+    "region": {"values": ["Europe", "India", "North America", "Rest of world"], "description": "Sales region from the governed country mapping. Europe is the EU countries, the United Kingdom and Switzerland."},
+    "product_family": {"values": ["Oral solids", "Injectables"], "description": "Product family of the invoiced product."},
+    "quarter": {"values": ["2025-Q4", "2026-Q1", "2026-Q2", "2026-Q3"], "description": "Calendar quarter. The lab holds the last four complete quarters."},
+    "supplier": {"values": "dim_supplier", "description": "Supplier by golden key, shown with its name."}
+  },
+  "metrics": {
+    "net_revenue": {
+      "label": "Net revenue", "unit": "EUR thousand", "domain": "finance", "owner": "Group Finance", "glossary_term": "GT-NETREV", "version": 2,
+      "description": "Gross invoiced amount less credit notes for returns, less rebate accruals.",
+      "dimensions": ["region", "product_family", "quarter"],
+      "base": "SELECT i.quarter, d.region, i.product_family, i.gross - COALESCE(c.returns, 0) - COALESCE(r.rebates, 0) AS amount FROM (SELECT quarter, country, product_family, SUM(gross_amount) AS gross FROM invoices GROUP BY 1, 2, 3) i LEFT JOIN (SELECT v.quarter, v.country, v.product_family, SUM(n.amount) AS returns FROM credit_notes n JOIN invoices v USING (invoice_id) GROUP BY 1, 2, 3) c USING (quarter, country, product_family) LEFT JOIN (SELECT quarter, country, product_family, SUM(amount) AS rebates FROM rebate_accruals GROUP BY 1, 2, 3) r USING (quarter, country, product_family) JOIN dim_country d USING (country)",
+      "expression": "ROUND(SUM(amount), 1)"
+    },
+    "gross_revenue": {
+      "label": "Gross revenue", "unit": "EUR thousand", "domain": "finance", "owner": "Group Finance", "glossary_term": "GT-GROSSREV", "version": 1,
+      "description": "Invoiced amount before returns and rebates.",
+      "dimensions": ["region", "product_family", "quarter"],
+      "base": "SELECT i.quarter, d.region, i.product_family, i.gross_amount AS amount FROM invoices i JOIN dim_country d USING (country)",
+      "expression": "ROUND(SUM(amount), 1)"
+    },
+    "procurement_spend": {
+      "label": "Procurement spend", "unit": "EUR thousand", "domain": "procurement", "owner": "Group Procurement", "glossary_term": "GT-PROCSPEND", "version": 1,
+      "description": "Value of purchase orders placed with suppliers.",
+      "dimensions": ["supplier", "quarter"],
+      "base": "SELECT p.quarter, p.supplier_key || ' ' || s.supplier_name AS supplier, p.amount FROM purchase_orders p JOIN dim_supplier s USING (supplier_key)",
+      "expression": "ROUND(SUM(amount), 1)"
+    },
+    "procurement_spend_share": {
+      "label": "Share of procurement spend", "unit": "percent", "domain": "procurement", "owner": "Group Procurement", "glossary_term": "GT-SPENDSHARE", "version": 1,
+      "description": "A supplier's procurement spend as a percentage of all procurement spend in the same quarters.",
+      "dimensions": ["supplier", "quarter"], "requires_group_by": ["supplier"],
+      "base": "SELECT p.quarter, p.supplier_key || ' ' || s.supplier_name AS supplier, p.amount FROM purchase_orders p JOIN dim_supplier s USING (supplier_key)",
+      "expression": "ROUND(100.0 * SUM(amount) / (SELECT SUM(amount) FROM purchase_orders WHERE {quarter_filter}), 1)"
+    },
+    "otif_rate": {
+      "label": "On-time-in-full delivery rate", "unit": "percent", "domain": "procurement", "owner": "Supply Chain", "glossary_term": "GT-OTIF", "version": 1,
+      "description": "Deliveries received on time and in full, as a percentage of all deliveries.",
+      "dimensions": ["supplier", "quarter"],
+      "base": "SELECT e.quarter, e.supplier_key || ' ' || s.supplier_name AS supplier, e.on_time_in_full FROM deliveries e JOIN dim_supplier s USING (supplier_key)",
+      "expression": "ROUND(100.0 * SUM(on_time_in_full) / COUNT(*), 1)"
+    }
+  }
+}

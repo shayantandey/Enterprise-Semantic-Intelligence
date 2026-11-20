@@ -1,0 +1,32 @@
+# The part of the Module 4 ontology that Module 6 uses, with two property chains.
+# A property chain lets the reasoner state a direct relationship that the data holds only through an intermediate node.
+@prefix ph: <https://example.org/pharma#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/pharma> a owl:Ontology ; rdfs:label "Corvane supply ontology, Module 6 extract" .
+
+ph:Supplier a owl:Class ; rdfs:label "Supplier" .
+ph:Plant a owl:Class ; rdfs:label "Plant" .
+ph:Component a owl:Class ; rdfs:label "Component" .
+ph:Product a owl:Class ; rdfs:label "Product" .
+ph:SupplyAgreement a owl:Class ; rdfs:label "Supply agreement" .
+ph:AuditFinding a owl:Class ; rdfs:label "Audit finding" .
+ph:GmpCertificate a owl:Class ; rdfs:label "GMP certificate" .
+ph:Contract a owl:Class ; rdfs:label "Contract" .
+
+ph:supplier a owl:ObjectProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range ph:Supplier .
+ph:component a owl:ObjectProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range ph:Component .
+ph:toPlant a owl:ObjectProperty ; rdfs:domain ph:SupplyAgreement ; rdfs:range ph:Plant .
+ph:hasActiveAgreement a owl:ObjectProperty ; rdfs:domain ph:Supplier ; rdfs:range ph:SupplyAgreement ;
+    rdfs:comment "Stated by the loader for every agreement in force on the load date." .
+ph:madeAt a owl:ObjectProperty ; rdfs:domain ph:Product ; rdfs:range ph:Plant .
+ph:hasComponent a owl:ObjectProperty ; rdfs:domain ph:Product ; rdfs:range ph:Component .
+
+# Inferred: a supplier supplies a plant when it has an agreement in force that delivers to that plant.
+ph:suppliesPlant a owl:ObjectProperty ; rdfs:label "supplies plant" ;
+    owl:propertyChainAxiom ( ph:hasActiveAgreement ph:toPlant ) .
+# Inferred: a supplier supplies a component when it has an agreement in force for that component.
+ph:suppliesComponent a owl:ObjectProperty ; rdfs:label "supplies component" ;
+    owl:propertyChainAxiom ( ph:hasActiveAgreement ph:component ) .

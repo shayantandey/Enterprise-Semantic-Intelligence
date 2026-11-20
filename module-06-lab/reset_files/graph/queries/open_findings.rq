@@ -1,0 +1,7 @@
+# Audit findings that are still open, with the number of days each has been open on the lab's today.
+# area: quality    parameters: none
+SELECT ?finding ?supplier ?name ?severity ?openedOn ?summary WHERE {
+  GRAPH g:quality { ?finding a ph:AuditFinding ; ph:aboutSupplier ?supplier ; ph:severity ?severity ; ph:openedOn ?openedOn ; rdfs:comment ?summary .
+                    FILTER NOT EXISTS { ?finding ph:closedOn ?c } }
+  ?supplier rdfs:label ?name .
+} ORDER BY ?openedOn
